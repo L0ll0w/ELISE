@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
+  m_Name: JakeTest
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  nodes:
+  - nodeID: jakeTest
+    characterName: Jake
+    portrait: {fileID: 21300000, guid: a54ba14e4d001954ca3c53e7fb9a1129, type: 3}
+    sentence: "Salut ptit gars ! pas trop fatigu\xE9 du voyage ?"
+    choices:
+    - text: Je suis Ko...
+      nextNodeID: choix A
+    - text: "Nan \xE7a vas !"
+      nextNodeID: choix B
+    nextNodeID: 
+  - nodeID: choix A
+    characterName: Jake
+    portrait: {fileID: 21300000, guid: a54ba14e4d001954ca3c53e7fb9a1129, type: 3}
+    sentence: "Je ne peux que te comprendre, pire que visser des boulon toute la
+      journ\xE9e..."
+    choices: []
+    nextNodeID: Elise
+  - nodeID: choix B
+    characterName: Jake
+    portrait: {fileID: 21300000, guid: a54ba14e4d001954ca3c53e7fb9a1129, type: 3}
+    sentence: Sans blague , je sens plus mes pied moi !
+    choices: []
+    nextNodeID: 
+  - nodeID: Elise
+    characterName: Elise
+    portrait: {fileID: 21300000, guid: adad8540f0bf7754d9e9d366e190acdd, type: 3}
+    sentence: Je suis sur que tu te debrouillais tres bien !
+    choices: []
+    nextNodeID: jake Blur
+  - nodeID: jake Blur
+    characterName: Jake
+    portrait: {fileID: 21300000, guid: a54ba14e4d001954ca3c53e7fb9a1129, type: 3}
+    sentence: Ah ah...
+    choices: []
+    nextNodeID: 
