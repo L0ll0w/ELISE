@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 1459e4cb57704aee91bcd81d2afd9515
+timeCreated: 1764811029
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Editor/URP/Scripts/Internal/PipelineDefinerEditor.cs
+  uploadId: 922206

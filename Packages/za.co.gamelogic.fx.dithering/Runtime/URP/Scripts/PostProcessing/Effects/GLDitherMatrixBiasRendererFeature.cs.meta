@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: b8a1c9aff65f47d38eee9842ee530996
+timeCreated: 1763244006
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Runtime/URP/Scripts/PostProcessing/Effects/GLDitherMatrixBiasRendererFeature.cs
+  uploadId: 922206

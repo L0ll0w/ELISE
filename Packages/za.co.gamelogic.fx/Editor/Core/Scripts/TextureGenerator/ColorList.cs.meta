@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 887b0f4a09574e542958a4056d15a519
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Editor/Core/Scripts/TextureGenerator/ColorList.cs
+  uploadId: 922206

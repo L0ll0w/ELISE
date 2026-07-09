@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: a472dda8865340cd8d6be3bd70d6cbf7
+timeCreated: 1764808022
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLConvexHullMapRendererFeature.cs
+  uploadId: 922206

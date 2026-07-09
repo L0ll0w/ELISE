@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 8bec0416b36c4d30b1a3b3d40bd463e8
+timeCreated: 1767623107
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Runtime/Core/Scripts/PostProcessing/Effects/DitherTextureBiasProperties.cs
+  uploadId: 922206

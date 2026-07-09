@@ -1,0 +1,31 @@
+{
+  "name": "za.co.gamelogic.fx.dithering",
+  "version": "4.0.0",
+  "description": "Provides dithering visual effects. Import samples from the package manager.",
+  "displayName": "Gamelogic Fx Dithering",
+  "author": "Gamelogic <support@gamelogic.co.za> (https://www.gamelogic.co.za)",
+  "unity": "2019.4",
+  "hideInEditor": false,
+  "documentationUrl": "https://www.gamelogic.co.za/documentation/fx/dithering/",
+  "changelogUrl": "https://www.gamelogic.co.za/documentation/fx/dithering/docs/changes.html",
+  "keywords": [
+    "dithering",
+    "vfx",
+    "post effects",
+    "alpha dithering"
+  ],
+  "samples": [
+    {
+      "displayName": "Post Process Dithering Test Scenes",
+      "description": "Shows a scene with post-process dithering for the built-in render pipeline, and URP.",
+      "path": "Samples~"
+    }
+  ],
+  "dependencies": {
+    "com.unity.ugui": "1.0.0",
+    "com.unity.2d.sprite": "1.0.0",
+    "za.co.gamelogic.extensions": "4.6.1",
+    "za.co.gamelogic.fx": "4.0.0",
+    "com.nol1fe.delaunator": "1.0.11"
+  }
+}

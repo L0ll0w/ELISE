@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: ca8ad78f9e724cb5b059617faa7a5b42
+timeCreated: 1763780904
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Editor/PropertyDrawers/InspectorTextDrawer.cs
+  uploadId: 922206

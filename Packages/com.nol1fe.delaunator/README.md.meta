@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1cc4ee45e125ec34c865185d137ec022
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/com.nol1fe.delaunator/README.md
+  uploadId: 922206

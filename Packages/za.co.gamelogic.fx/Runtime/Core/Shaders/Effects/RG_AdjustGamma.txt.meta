@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 22b6f884f066b7c4aaed912ebba88a7b
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/Effects/RG_AdjustGamma.txt
+  uploadId: 922206

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: e59baa7de6c29444da4e3dd2f208ecd0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/PostProcessing/Effects/AdjustGammaPostProcess.cs
+  uploadId: 922206

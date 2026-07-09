@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6c0e382d52a86f448ba06f8ff7c14a96
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/com.nol1fe.delaunator/Samples~/Prefabs/Voronoi_PointPrefab.prefab
+  uploadId: 922206

@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: b4baf02a3317485cae91b998df2150aa
+timeCreated: 1764889794
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/Internal/ColorShaderPropertyList.cs
+  uploadId: 922206

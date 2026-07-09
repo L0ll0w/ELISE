@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: bb3d356c3b284ec9a0745ad05701f275
+timeCreated: 1763427022
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Editor/Core/Scripts/Internal/WrappedFloatMatrix.cs
+  uploadId: 922206

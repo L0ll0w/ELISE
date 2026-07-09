@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: f580d2368e8ef58439b914d78330ea28
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Editor/PropertyDrawers/Texture2DTilingPropertyDrawer.cs
+  uploadId: 922206

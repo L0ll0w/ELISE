@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c5d82fa185d78334199d0cfd6751110d
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/com.nol1fe.delaunator/Samples~/Prefabs/DelaunatorPreview.prefab
+  uploadId: 922206

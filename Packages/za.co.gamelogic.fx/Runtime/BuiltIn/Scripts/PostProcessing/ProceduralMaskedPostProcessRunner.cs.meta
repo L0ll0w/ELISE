@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 9b58abbba28152e4badf4c5ee742a6df
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/PostProcessing/ProceduralMaskedPostProcessRunner.cs
+  uploadId: 922206

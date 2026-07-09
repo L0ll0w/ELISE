@@ -1,0 +1,31 @@
+{
+    "name": "Gamelogic.Fx.Editor.URP",
+    "rootNamespace": "Gamelogic.Fx.Editor.URP",
+    "references": [
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Gamelogic.Fx.URP",
+        "Gamelogic.Extensions.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "GAMELOGIC_HAS_URP"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.0.0",
+            "define": "GAMELOGIC_HAS_URP_RENDER_GRAPH"
+        }
+    ],
+    "noEngineReferences": false
+}

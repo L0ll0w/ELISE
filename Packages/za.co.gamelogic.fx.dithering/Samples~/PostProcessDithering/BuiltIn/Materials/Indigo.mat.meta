@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bcd7c2d2999b41f4e8e3aff0062b4043
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/BuiltIn/Materials/Indigo.mat
+  uploadId: 922206

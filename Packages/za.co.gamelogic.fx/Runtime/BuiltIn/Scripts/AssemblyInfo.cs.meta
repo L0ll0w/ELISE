@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: d67d569dbb4d4e84b693515b28ca2a56
+timeCreated: 1762912769
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/AssemblyInfo.cs
+  uploadId: 922206

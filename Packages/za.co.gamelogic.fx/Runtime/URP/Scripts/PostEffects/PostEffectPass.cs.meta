@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 9782cc778da6403abc901060af758051
+timeCreated: 1762903290
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/PostEffectPass.cs
+  uploadId: 922206

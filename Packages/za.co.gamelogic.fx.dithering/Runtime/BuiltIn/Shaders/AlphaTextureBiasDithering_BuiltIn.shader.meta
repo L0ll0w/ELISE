@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 32f7a41a83e28914aa7f64369a80a33c
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Runtime/BuiltIn/Shaders/AlphaTextureBiasDithering_BuiltIn.shader
+  uploadId: 922206

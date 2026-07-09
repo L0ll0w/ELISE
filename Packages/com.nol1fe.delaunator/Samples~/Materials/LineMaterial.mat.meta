@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fe60369f18361df418fb98a1ee9d6ea5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/com.nol1fe.delaunator/Samples~/Materials/LineMaterial.mat
+  uploadId: 922206

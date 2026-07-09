@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 09619190d1124b55a029d153bb846cf7
+timeCreated: 1723908416
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Runtime/Attributes/PopupList/PopupListAttribute.cs
+  uploadId: 922206

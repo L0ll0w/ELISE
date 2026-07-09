@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 11b8b9c005e94f9592f1cbe245c59f39
+timeCreated: 1763260201
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Runtime/URP/Shaders/UnlitAlphaTextureBiasDithering_URP.shader
+  uploadId: 922206

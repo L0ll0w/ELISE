@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 8b0e3a6af4fb4077bb34715e2331b313
+timeCreated: 1764777357
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLBilateralFilterRendererFeature.cs
+  uploadId: 922206

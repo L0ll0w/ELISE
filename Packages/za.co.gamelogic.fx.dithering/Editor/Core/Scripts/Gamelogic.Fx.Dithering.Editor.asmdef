@@ -1,0 +1,24 @@
+﻿{
+	"name": "Gamelogic.Fx.Dithering.Editor",
+	"rootNamespace": "Gamelogic.Fx.Dithering.Editor",
+	"references": [
+		"Gamelogic.Extensions",
+		"Gamelogic.Extensions.Editor",
+		"Gamelogic.Fx",
+		"Gamelogic.Fx.Editor",
+		"Gamelogic.Fx.Dithering",
+		"UnityEngine.UI",
+		"UnityEditor.UI",
+		"Unity.Mathematics"
+	],
+	"includePlatforms": [
+		"Editor"
+	],
+	"excludePlatforms": [],
+	"allowUnsafeCode": false,
+	"overrideReferences": false,
+	"precompiledReferences": [],
+	"autoReferenced": true,
+	"defineConstraints": [],
+	"noEngineReferences": false
+}

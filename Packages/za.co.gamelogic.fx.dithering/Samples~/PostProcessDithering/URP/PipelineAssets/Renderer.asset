@@ -1,0 +1,1775 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8737017385493911175
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 2
+      z: 2
+    matrixR:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixG:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixB:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.169
+    ditherAmountMax: 0.077
+    smoothness: 0
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-7628835016864370223
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 90, y: 90}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: 497a55ff7b1f7ae49a915ec828abdce2, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.228
+    ditherAmountMax: 0.105
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0.636
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+    applyDepthCompensation: 0
+--- !u!114 &-7474666751135631428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfe084fd547142340bd64206f3c90666, type: 3}
+  m_Name: GLAdjustGammaRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: a9216734fa3fed34cb487d881c613b05, type: 3}
+    gamma: 0.8
+--- !u!114 &-6617098215592406797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddd03adde184ab346844bea9200c07d1, type: 3}
+  m_Name: GLTriToneMapRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fcf0946cf0b8001419c04321fe58e939, type: 3}
+    lowColor: {r: 0.30817598, g: 0, b: 0.23337606, a: 1}
+    midColor: {r: 1, g: 0.52408695, b: 0, a: 0}
+    highColor: {r: 0.96862745, g: 1, b: 0.5568628, a: 1}
+    lowValue: 0.106
+    midValue: 0.298
+    highValue: 1
+--- !u!114 &-6317172567527650163
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 735234f72ac5426a8f8d8c1a1b18aa69, type: 3}
+  m_Name: GLAddTextureRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 7a61c919eb32f964aafefbce2bd2b881, type: 3}
+    overlayTexture:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: cb722c23a35d20b4ab8c89e50f9d0c2b, type: 3}
+    minRGB:
+      vector: {x: -0.1, y: -0.1, z: -0.1}
+      locked: 1
+    maxRGB:
+      vector: {x: 0.1, y: 0.1, z: 0.1}
+      locked: 1
+--- !u!114 &-6113822796576702479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 100, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: f5bc805513eab054eace58fa85c814c5, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.166
+    ditherAmountMax: 0.096
+    levelCount:
+      x: 4
+      y: 4
+      z: 4
+    smoothness: 0.432
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-5772146366038915595
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 6, y: 6}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 2800000, guid: 9455b5268171246458cf7e942fc26c74, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.458
+    ditherAmountMax: 0.184
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0.427
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-5114261105581111824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    matrixR:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 8
+      - 9
+      - 10
+      - 11
+      - 4
+      - 5
+      - 6
+      - 7
+      - 12
+      - 13
+      - 14
+      - 15
+    matrixG:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 8
+      - 9
+      - 10
+      - 11
+      - 4
+      - 5
+      - 6
+      - 7
+      - 12
+      - 13
+      - 14
+      - 15
+    matrixB:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 8
+      - 9
+      - 10
+      - 11
+      - 4
+      - 5
+      - 6
+      - 7
+      - 12
+      - 13
+      - 14
+      - 15
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.1
+    ditherAmountMax: 0.1
+    smoothness: 0.1
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-4726451218028669377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a409cf58c2020e48891ef9f02faa372, type: 3}
+  m_Name: GLQuantizeRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 14d7e710ce9ba6d468121aacf3c1300f, type: 3}
+    levelCount:
+      x: 2
+      y: 2
+      z: 2
+    smoothness: 0
+--- !u!114 &-4528651289499278126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42cf184ab62e63d49a38b706cf541227, type: 3}
+  m_Name: GLAdjustSaturationRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 03f5d5c86d8344828a6714fbe1a26c85, type: 3}
+    saturation: 1.214
+--- !u!114 &-3793311576125118512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 1, y: 100}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 2800000, guid: 7b231d0e0f70c114d9cb4967fe956a17, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.166
+    ditherAmountMax: 0.277
+    levelCount:
+      x: 4
+      y: 4
+      z: 4
+    smoothness: 0.474
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-3372368926271070464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 3
+      z: 4
+    matrixR:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 8
+      - 2
+      - 10
+      - 12
+      - 4
+      - 14
+      - 6
+      - 3
+      - 11
+      - 1
+      - 9
+      - 15
+      - 7
+      - 13
+      - 5
+    matrixG:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 8
+      - 2
+      - 10
+      - 12
+      - 4
+      - 14
+      - 6
+      - 3
+      - 11
+      - 1
+      - 9
+      - 15
+      - 7
+      - 13
+      - 5
+    matrixB:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 8
+      - 2
+      - 10
+      - 12
+      - 4
+      - 14
+      - 6
+      - 3
+      - 11
+      - 1
+      - 9
+      - 15
+      - 7
+      - 13
+      - 5
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.146
+    ditherAmountMax: 0.063
+    smoothness: 0
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-3202780879905942319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    matrixR:
+      width: 4
+      height: 1
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixG:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixB:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+      - 3
+      - 0
+      - 2
+      - 1
+      - 1
+      - 3
+      - 0
+      - 2
+      - 2
+      - 1
+      - 3
+      - 0
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.1
+    ditherAmountMax: 0.1
+    smoothness: 0.1
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-2696522108349323956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e659045203862a840b260e33df511094, type: 3}
+  m_Name: GLBlendTextureRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 39bbb66d19e68304c805a585063cbe28, type: 3}
+    overlayTexture:
+      tilingScale: {x: 0.67, y: 0.67}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: 92a564a8893126e4cb4672b592a59871, type: 3}
+    opacity: 0.328
+    useMask: 0
+    maskTexture:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+--- !u!114 &-2440926259718675548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 1.054688, y: 1.0546875}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: 92a564a8893126e4cb4672b592a59871, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.5
+    ditherAmountMax: 0.5
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-1713960751243227543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    matrixR:
+      width: 8
+      height: 8
+      values:
+      - 0
+      - 48
+      - 12
+      - 60
+      - 3
+      - 51
+      - 15
+      - 63
+      - 32
+      - 16
+      - 44
+      - 28
+      - 35
+      - 19
+      - 47
+      - 31
+      - 8
+      - 56
+      - 4
+      - 52
+      - 11
+      - 59
+      - 7
+      - 55
+      - 40
+      - 24
+      - 36
+      - 20
+      - 43
+      - 27
+      - 39
+      - 23
+      - 2
+      - 50
+      - 14
+      - 62
+      - 1
+      - 49
+      - 13
+      - 61
+      - 34
+      - 18
+      - 46
+      - 30
+      - 33
+      - 17
+      - 45
+      - 29
+      - 10
+      - 58
+      - 6
+      - 54
+      - 9
+      - 57
+      - 5
+      - 53
+      - 42
+      - 26
+      - 38
+      - 22
+      - 41
+      - 25
+      - 37
+      - 21
+    matrixG:
+      width: 8
+      height: 8
+      values:
+      - 0
+      - 48
+      - 12
+      - 60
+      - 3
+      - 51
+      - 15
+      - 63
+      - 32
+      - 16
+      - 44
+      - 28
+      - 35
+      - 19
+      - 47
+      - 31
+      - 8
+      - 56
+      - 4
+      - 52
+      - 11
+      - 59
+      - 7
+      - 55
+      - 40
+      - 24
+      - 36
+      - 20
+      - 43
+      - 27
+      - 39
+      - 23
+      - 2
+      - 50
+      - 14
+      - 62
+      - 1
+      - 49
+      - 13
+      - 61
+      - 34
+      - 18
+      - 46
+      - 30
+      - 33
+      - 17
+      - 45
+      - 29
+      - 10
+      - 58
+      - 6
+      - 54
+      - 9
+      - 57
+      - 5
+      - 53
+      - 42
+      - 26
+      - 38
+      - 22
+      - 41
+      - 25
+      - 37
+      - 21
+    matrixB:
+      width: 8
+      height: 8
+      values:
+      - 0
+      - 48
+      - 12
+      - 60
+      - 3
+      - 51
+      - 15
+      - 63
+      - 32
+      - 16
+      - 44
+      - 28
+      - 35
+      - 19
+      - 47
+      - 31
+      - 8
+      - 56
+      - 4
+      - 52
+      - 11
+      - 59
+      - 7
+      - 55
+      - 40
+      - 24
+      - 36
+      - 20
+      - 43
+      - 27
+      - 39
+      - 23
+      - 2
+      - 50
+      - 14
+      - 62
+      - 1
+      - 49
+      - 13
+      - 61
+      - 34
+      - 18
+      - 46
+      - 30
+      - 33
+      - 17
+      - 45
+      - 29
+      - 10
+      - 58
+      - 6
+      - 54
+      - 9
+      - 57
+      - 5
+      - 53
+      - 42
+      - 26
+      - 38
+      - 22
+      - 41
+      - 25
+      - 37
+      - 21
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.279
+    ditherAmountMax: 0.193
+    smoothness: 0
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &-1626331223506773958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f1921bfe1b00a64b9c0d5c294ac1bf4, type: 3}
+  m_Name: GLQuadToneMapRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 9cb3bf750e6e955418c3207023291f82, type: 3}
+    lowColor: {r: 0.18823531, g: 0.15686275, b: 0.4784314, a: 1}
+    mid0Color: {r: 0.007843138, g: 0.5921569, b: 0.9960785, a: 1}
+    mid1Color: {r: 0.97647065, g: 0.6392157, b: 0.19607845, a: 1}
+    highColor: {r: 1, g: 1, b: 1, a: 1}
+    lowValue: 0
+    mid0Value: 0.451
+    mid1Value: 0.695
+    highValue: 1
+--- !u!114 &-1548291527827424213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eff7023850aa9f4f95de8b6a64865fc, type: 3}
+  m_Name: GluvMapRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  passEvent: 300
+  updateRenderListEachFrame: 0
+  updateRenderListEachFrameInEditor: 1
+  targetTexture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+  cameraScope: 0
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  mapProperties:
+    shader: {fileID: 4800000, guid: c657b4ea71b945019fe2e881854831ba, type: 3}
+    backgroundShader: {fileID: 4800000, guid: 1c6a9e7aa5d3c5347b815a1d9ce94cd1, type: 3}
+    uvBackgroundScale: {x: 0.5, y: 0.5}
+    uvBackgroundOffset: {x: 0, y: 0}
+    adjustByMaterialTiling: 1
+    adjustByDistance: 0
+    adjustByScale: 1
+--- !u!114 &-1263896417947670441
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b0e3a6af4fb4077bb34715e2331b313, type: 3}
+  m_Name: GLBilateralFilterRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 3df208721e228944588e7cd331f6500f, type: 3}
+    kernel:
+      offset: -1
+      size: 3
+      jumpSize: 1
+    spatialSigma: 2
+    rangeSigma: 0.1
+--- !u!114 &-1169838590603733076
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab7e951fa95c489d84f6836857e1081d, type: 3}
+  m_Name: GlidMapRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  passEvent: 300
+  updateRenderListEachFrame: 0
+  updateRenderListEachFrameInEditor: 1
+  targetTexture: {fileID: 8400000, guid: f68ffb2b238ac664c812133d1e8ada5d, type: 2}
+  cameraScope: 0
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  mapProperties:
+    shader: {fileID: 4800000, guid: 578c855a4b2d47af90c07cdb597eafe5, type: 3}
+    backgroundShader: {fileID: 0}
+--- !u!114 &-882128722153023468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: 92a564a8893126e4cb4672b592a59871, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.3
+    ditherAmountMax: 0.303
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0.256
+    useUvMap: 1
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+    applyDepthCompensation: 0
+--- !u!114 &-629513579068869803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9087c7c906b30c34db7fd762b4193f15, type: 3}
+  m_Name: GLPixelateRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 824ed8de7ca0ff342b484ae0f2288529, type: 3}
+    pixelSize: {x: 4, y: 4}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de640fe3d0db1804a85f9fc8f5cadab6, type: 3}
+  m_Name: Renderer
+  m_EditorClassIdentifier: 
+  debugShaders:
+    debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7,
+      type: 3}
+  m_RendererFeatures:
+  - {fileID: -1263896417947670441}
+  - {fileID: 5513518042551403184}
+  - {fileID: 2153557382035396446}
+  - {fileID: 4134401998608904949}
+  - {fileID: 8527038983526554895}
+  - {fileID: -7474666751135631428}
+  - {fileID: -6317172567527650163}
+  - {fileID: -2696522108349323956}
+  - {fileID: -4726451218028669377}
+  - {fileID: 5608120594949613862}
+  - {fileID: 7713349590963052953}
+  - {fileID: 2940836964208237242}
+  - {fileID: -629513579068869803}
+  - {fileID: -3372368926271070464}
+  - {fileID: 5097076263162108991}
+  - {fileID: -8737017385493911175}
+  - {fileID: 3015480049409857934}
+  - {fileID: -1713960751243227543}
+  - {fileID: -3202780879905942319}
+  - {fileID: -5114261105581111824}
+  - {fileID: 5674998461921337681}
+  - {fileID: 7841862627614035790}
+  - {fileID: -2440926259718675548}
+  - {fileID: 8828438781037645972}
+  - {fileID: -3793311576125118512}
+  - {fileID: -6113822796576702479}
+  - {fileID: 6887728425831799914}
+  - {fileID: 2346479424620774111}
+  - {fileID: -5772146366038915595}
+  - {fileID: -7628835016864370223}
+  - {fileID: 7011705149735889143}
+  - {fileID: 8628569374674380870}
+  - {fileID: -882128722153023468}
+  - {fileID: -6617098215592406797}
+  - {fileID: -1626331223506773958}
+  - {fileID: -4528651289499278126}
+  - {fileID: -1548291527827424213}
+  - {fileID: 2968316695457042984}
+  - {fileID: 13025135613829107}
+  - {fileID: -1169838590603733076}
+  m_RendererFeatureMap: 2b7c19030f5d83ea5be6c2ed149200e7f3df69b54a462e00ac5785faffe5c3ef281294c54e943129
+  m_UseNativeRenderPass: 0
+  postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
+  xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
+  shaders:
+    blitPS: {fileID: 4800000, guid: c17132b1f77d20942aa75f8429c0f8bc, type: 3}
+    copyDepthPS: {fileID: 4800000, guid: d6dae50ee9e1bfa4db75f19f99355220, type: 3}
+    screenSpaceShadowPS: {fileID: 0}
+    samplingPS: {fileID: 4800000, guid: 04c410c9937594faa893a11dceb85f7e, type: 3}
+    stencilDeferredPS: {fileID: 4800000, guid: e9155b26e1bc55942a41e518703fe304, type: 3}
+    fallbackErrorPS: {fileID: 4800000, guid: e6e9a19c3678ded42a3bc431ebef7dbd, type: 3}
+    materialErrorPS: {fileID: 4800000, guid: 5fd9a8feb75a4b5894c241777f519d4e, type: 3}
+    coreBlitPS: {fileID: 4800000, guid: 93446b5c5339d4f00b85c159e1159b7c, type: 3}
+    coreBlitColorAndDepthPS: {fileID: 4800000, guid: d104b2fc1ca6445babb8e90b0758136b,
+      type: 3}
+    cameraMotionVector: {fileID: 4800000, guid: c56b7e0d4c7cb484e959caeeedae9bbf,
+      type: 3}
+    objectMotionVector: {fileID: 4800000, guid: 7b3ede40266cd49a395def176e1bc486,
+      type: 3}
+  m_AssetVersion: 2
+  m_OpaqueLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_TransparentLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_DefaultStencilState:
+    overrideStencilState: 0
+    stencilReference: 0
+    stencilCompareFunction: 8
+    passOperation: 2
+    failOperation: 0
+    zFailOperation: 0
+  m_ShadowTransparentReceive: 1
+  m_RenderingMode: 0
+  m_DepthPrimingMode: 0
+  m_CopyDepthMode: 0
+  m_AccurateGbufferNormals: 0
+  m_ClusteredRendering: 0
+  m_TileSize: 32
+  m_IntermediateTextureMode: 1
+--- !u!114 &13025135613829107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f07abb5e425e4656acfb815b0ac2d2c1, type: 3}
+  m_Name: GLDepthMapRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  passEvent: 300
+  updateRenderListEachFrame: 0
+  updateRenderListEachFrameInEditor: 1
+  targetTexture: {fileID: 8400000, guid: 991c3baf18692c147b165b1161145545, type: 2}
+  cameraScope: 0
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  mapProperties:
+    shader: {fileID: 4800000, guid: 3398ad27b8d34998a4a2a5b418ccd0f8, type: 3}
+    backgroundShader: {fileID: 0}
+    encoding: 0
+--- !u!114 &2153557382035396446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d73ef9de55a84f978ebbc54dfc3e35d8, type: 3}
+  m_Name: GLGaussianBlurRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: b3bf6c2bed3928747a22e5e9a3892bbd, type: 3}
+    kernel:
+      offset: -7
+      size: 15
+      jumpSize: 1
+    sigma: 16
+--- !u!114 &2346479424620774111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 6, y: 6}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 2800000, guid: 918302a5566724541808ad63db36f87c, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.458
+    ditherAmountMax: 0.184
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0.748
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &2940836964208237242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b79c8f57a9974c3b9fe1d922b9ed9018, type: 3}
+  m_Name: GLMaxRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 376f765664be5af479f913814062c7fb, type: 3}
+    kernel:
+      offset: -1
+      size: 3
+      jumpSize: 1
+--- !u!114 &2968316695457042984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0909b6a7b04e45e29e91f27fd883c569, type: 3}
+  m_Name: GLNormalMapRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  passEvent: 300
+  updateRenderListEachFrame: 0
+  updateRenderListEachFrameInEditor: 1
+  targetTexture: {fileID: 8400000, guid: 1ba3fb34c4459ad4b98f8963edb0bf92, type: 2}
+  cameraScope: 0
+  layerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  mapProperties:
+    shader: {fileID: 4800000, guid: af22afba7370482cb2138c6bb4c1d115, type: 3}
+    backgroundShader: {fileID: 0}
+    encoding: 0
+--- !u!114 &3015480049409857934
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    matrixR:
+      width: 4
+      height: 1
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixG:
+      width: 4
+      height: 1
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixB:
+      width: 4
+      height: 1
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.169
+    ditherAmountMax: 0.077
+    smoothness: 0.008
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &4134401998608904949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3634370355634384b4de4d171de450f1, type: 3}
+  m_Name: GLPowerMeanRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: af61f7bd0580fbe46879abae8eb676c7, type: 3}
+    kernel:
+      offset: -5
+      size: 12
+      jumpSize: 1
+    power: 12
+--- !u!114 &5097076263162108991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    matrixR:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixG:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixB:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    pixelSize: {x: 4, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.251
+    ditherAmountMax: 0.043
+    smoothness: 0
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &5513518042551403184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5016fa804a994970b9b5bd819dfebcf7, type: 3}
+  m_Name: GLBoxBlurRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 730d11cf90c0acc49b65a2c559078d01, type: 3}
+    kernel:
+      offset: 0
+      size: 1
+      jumpSize: 1
+--- !u!114 &5608120594949613862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fb19bb7712188d4d85e5e137595cf6d, type: 3}
+  m_Name: GLSimpleOutlineRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 708846ec75ea4a35bbebc8b1d7f653a5, type: 3}
+    outlineSource: 2
+    outlineSourceTexture: {fileID: 8400000, guid: f68ffb2b238ac664c812133d1e8ada5d,
+      type: 2}
+    jumpSize: 1
+    edgeFactor: 1
+    threshold: 0.5
+    lineColor: {r: 0, g: 0.057632934, b: 0.2264151, a: 1}
+    backgroundColor: {r: 1, g: 1, b: 1, a: 0}
+--- !u!114 &5674998461921337681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 2
+      z: 2
+    matrixR:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 8
+      - 2
+      - 10
+      - 12
+      - 4
+      - 14
+      - 6
+      - 3
+      - 11
+      - 1
+      - 9
+      - 15
+      - 7
+      - 13
+      - 5
+    matrixG:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 8
+      - 2
+      - 10
+      - 12
+      - 4
+      - 14
+      - 6
+      - 3
+      - 11
+      - 1
+      - 9
+      - 15
+      - 7
+      - 13
+      - 5
+    matrixB:
+      width: 4
+      height: 4
+      values:
+      - 0
+      - 8
+      - 2
+      - 10
+      - 12
+      - 4
+      - 14
+      - 6
+      - 3
+      - 11
+      - 1
+      - 9
+      - 15
+      - 7
+      - 13
+      - 5
+    pixelSize: {x: 12, y: 4}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.304
+    ditherAmountMax: 0.175
+    smoothness: 0.772
+    useUvMap: 1
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+    applyDepthCompensation: 0
+--- !u!114 &6887728425831799914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 0.25, y: 0.25}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 2800000, guid: cad88831747c38b44b6f959079212d20, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.438
+    ditherAmountMax: 0.092
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0.66
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0
+--- !u!114 &7011705149735889143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 1, y: 120}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 2800000, guid: 7b231d0e0f70c114d9cb4967fe956a17, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.166
+    ditherAmountMax: 0.277
+    levelCount:
+      x: 4
+      y: 4
+      z: 4
+    smoothness: 0.29
+    useUvMap: 1
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+    applyDepthCompensation: 0
+--- !u!114 &7713349590963052953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f66e92b0768f49389a7f35ec12918860, type: 3}
+  m_Name: GLMinRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: 1a2c2f4f2720b5b4c9655d15a64e4d05, type: 3}
+    kernel:
+      offset: -2
+      size: 5
+      jumpSize: 1
+--- !u!114 &7841862627614035790
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8a1c9aff65f47d38eee9842ee530996, type: 3}
+  m_Name: GLDitherMatrixBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: ad3d24791aa44a07a4706b1a80372eba, type: 3}
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    matrixR:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixG:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    matrixB:
+      width: 1
+      height: 4
+      values:
+      - 0
+      - 2
+      - 1
+      - 3
+    pixelSize: {x: 2, y: 2}
+    pixelOffset: {x: 0, y: 0, z: 0}
+    ditherAmountMin: -0.281
+    ditherAmountMax: 0.113
+    smoothness: 0.204
+    useUvMap: 1
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+    applyDepthCompensation: 0
+--- !u!114 &8527038983526554895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9e09c2936544d5bae8af7396f602878, type: 3}
+  m_Name: GLDesaturateRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: a318308c8d96f1a4fb06ecc5b326381a, type: 3}
+--- !u!114 &8628569374674380870
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 80, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: f5bc805513eab054eace58fa85c814c5, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.166
+    ditherAmountMax: 0.096
+    levelCount:
+      x: 4
+      y: 4
+      z: 4
+    smoothness: 0.958
+    useUvMap: 1
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 8400000, guid: b9d6926c3c389e34b98187814c6ac133, type: 2}
+    applyDepthCompensation: 0
+--- !u!114 &8828438781037645972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1f5e00a9e7f014ca3e89f890908186, type: 3}
+  m_Name: GLDitherTextureBiasRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  injectionPoint: 600
+  cameraScope: 0
+  properties:
+    shader: {fileID: 4800000, guid: fb9cc5c0d72f26a45905b66b900ca3a8, type: 3}
+    ditherPattern:
+      tilingScale: {x: 90, y: 90}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 1
+      texture: {fileID: 2800000, guid: 497a55ff7b1f7ae49a915ec828abdce2, type: 3}
+    mipMapBias: 0.5
+    ditherAmountMin: -0.219
+    ditherAmountMax: 0.249
+    levelCount:
+      x: 2
+      y: 4
+      z: 4
+    smoothness: 0.075
+    useUvMap: 0
+    uvMap:
+      tilingScale: {x: 1, y: 1}
+      tilingOffset: {x: 0, y: 0}
+      useScreenAspect: 0
+      texture: {fileID: 0}
+    applyDepthCompensation: 0

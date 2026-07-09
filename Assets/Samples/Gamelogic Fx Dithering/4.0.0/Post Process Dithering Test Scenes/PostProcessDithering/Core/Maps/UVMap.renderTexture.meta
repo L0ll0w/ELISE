@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b9d6926c3c389e34b98187814c6ac133
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/Core/Maps/UVMap.renderTexture
+  uploadId: 922206

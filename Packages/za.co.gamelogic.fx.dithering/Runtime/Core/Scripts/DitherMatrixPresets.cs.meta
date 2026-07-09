@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 685404bad2e04bdd9fb3bddcd62e0cbd
+timeCreated: 1763214887
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Runtime/Core/Scripts/DitherMatrixPresets.cs
+  uploadId: 922206

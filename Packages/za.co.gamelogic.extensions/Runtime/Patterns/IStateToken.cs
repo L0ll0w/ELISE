@@ -1,0 +1,15 @@
+﻿// Copyright Gamelogic (c) http://www.gamelogic.co.za
+
+namespace Gamelogic.Extensions
+{
+	/// <summary>
+	/// When a new state is started in a tracker, a token is created
+	/// that wraps custom data, and can be used to stop the state later.
+	/// </summary>
+	/// <typeparam name="TStateData">The type of the state data.</typeparam>
+	public interface IStateToken<out TStateData>
+	{
+		/// <summary>Gets the state data associated with this token.</summary>
+		TStateData State { get; }
+	}
+}

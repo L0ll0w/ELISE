@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 708846ec75ea4a35bbebc8b1d7f653a5
+timeCreated: 1767395803
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/Effects/SimpleOutline.shader
+  uploadId: 922206

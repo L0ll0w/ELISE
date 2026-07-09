@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b926766a9a995a544a51ccf2be60f128
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Materials/Aqua
+    URP.mat
+  uploadId: 922206

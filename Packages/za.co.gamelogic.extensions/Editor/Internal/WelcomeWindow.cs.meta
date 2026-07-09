@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: f678df5984d6cbd4aaf077e1a3b5b97d
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Editor/Internal/WelcomeWindow.cs
+  uploadId: 922206

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 69e25f36ff4bcb94bb61a8c78a51696d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/BuiltIn/Materials/Alpha
+    Dither TextureBias BuiltIn.mat
+  uploadId: 922206

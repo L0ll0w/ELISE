@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: a3cfa4bbd5bf41bd921e60e08b61510f
+timeCreated: 1767960362
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/Mapping/MapPass.cs
+  uploadId: 922206

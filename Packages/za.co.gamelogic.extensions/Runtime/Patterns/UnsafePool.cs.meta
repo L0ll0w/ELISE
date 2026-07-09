@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 75446f1bf0da4967862e35a659f869fd
+timeCreated: 1718423681
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Runtime/Patterns/UnsafePool.cs
+  uploadId: 922206

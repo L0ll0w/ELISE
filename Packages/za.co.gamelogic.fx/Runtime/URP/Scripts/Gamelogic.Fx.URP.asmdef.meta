@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b4c11e3be5eeb264a95444037d74234f
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/Gamelogic.Fx.URP.asmdef
+  uploadId: 922206

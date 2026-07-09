@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 890a3f8c2e178974b95629966aad562e
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/ThirdParty/Delaunator/LICENSE.md
+  uploadId: 922206

@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 8bcb43c07ced4f1c821eb9cbdecc76d6
+timeCreated: 1767623680
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/PostProcessing/Effects/AdjustSaturationProperties.cs
+  uploadId: 922206

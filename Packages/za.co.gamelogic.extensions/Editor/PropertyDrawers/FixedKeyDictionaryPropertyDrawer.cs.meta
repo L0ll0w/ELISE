@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 0f27fcc90ba540a4ba90ac2b4209bb8b
+timeCreated: 1763993934
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Editor/PropertyDrawers/FixedKeyDictionaryPropertyDrawer.cs
+  uploadId: 922206

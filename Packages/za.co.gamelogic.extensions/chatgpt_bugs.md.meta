@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6566ff944e41a2641ad477ac9532e377
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/chatgpt_bugs.md
+  uploadId: 922206

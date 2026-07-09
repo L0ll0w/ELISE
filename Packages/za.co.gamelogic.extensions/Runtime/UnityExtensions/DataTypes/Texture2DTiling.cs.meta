@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: cdac5b6bb93552446a975bbc95061163
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Runtime/UnityExtensions/DataTypes/Texture2DTiling.cs
+  uploadId: 922206

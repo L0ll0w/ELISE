@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: a86d2b7f7b810814f903985fa9e68a26
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/Effects/MixboxConvexHullMap.shader
+  uploadId: 922206

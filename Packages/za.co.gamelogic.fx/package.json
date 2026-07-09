@@ -1,0 +1,21 @@
+{
+  "name": "za.co.gamelogic.fx",
+  "version": "4.0.0",
+  "description": "Provides visual effects.",
+  "displayName": "Gamelogic Fx",
+  "author": "Gamelogic <support@gamelogic.co.za> (https://www.gamelogic.co.za)",
+  "unity": "2019.4",
+  "hideInEditor": false,
+  "documentationUrl": "https://www.gamelogic.co.za/documentation/fx/dithering/",
+  "changelogUrl": "https://www.gamelogic.co.za/documentation/fx/common/docs/changes.html",
+  "keywords": [
+    "vfx",
+    "post effects"
+  ],
+  "samples": [],
+  "dependencies": {
+    "za.co.gamelogic.extensions": "4.6.1",
+    "com.unity.mathematics": "1.2.6",
+    "com.nol1fe.delaunator": "1.0.11"
+  }
+}

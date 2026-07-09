@@ -1,0 +1,21 @@
+{
+	"name": "Gamelogic.Fx.BuiltIn",
+	"rootNamespace": "Gamelogic.Fx.BuiltIn",
+	"references": [
+		"Unity.Mathematics",
+		"Gamelogic.Extensions",
+		"Gamelogic.Fx",
+		"UnityEditor.UI",
+		"UnityEngine.UI",
+		"Unity.RenderPipelines.Core.Runtime"
+	],
+	"includePlatforms": [],
+	"excludePlatforms": [],
+	"allowUnsafeCode": false,
+	"overrideReferences": false,
+	"precompiledReferences": [],
+	"autoReferenced": true,
+	"defineConstraints": [],
+	"versionDefines": [],
+	"noEngineReferences": false
+}

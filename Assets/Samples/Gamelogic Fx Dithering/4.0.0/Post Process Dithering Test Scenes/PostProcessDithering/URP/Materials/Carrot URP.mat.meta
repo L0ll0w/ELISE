@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5065bae2b931385448c79f13a688d359
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Materials/Carrot
+    URP.mat
+  uploadId: 922206

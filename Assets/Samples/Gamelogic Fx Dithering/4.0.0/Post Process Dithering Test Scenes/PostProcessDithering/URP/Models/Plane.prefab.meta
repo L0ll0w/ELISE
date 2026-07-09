@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 22b5e14bfc36ad74eb8f33bb6c26a785
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Models/Plane.prefab
+  uploadId: 922206

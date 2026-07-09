@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: bc5d8a300ae24e41b5d9f9b2c332dfbe
+timeCreated: 1762919835
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Editor/Core/Scripts/TextureGenerator/GradientTextureGenerator.cs
+  uploadId: 922206

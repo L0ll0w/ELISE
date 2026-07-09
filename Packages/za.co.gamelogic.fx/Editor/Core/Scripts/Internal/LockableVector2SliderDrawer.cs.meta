@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 9967618f57934a25bff5df1b8e0e6e15
+timeCreated: 1765242847
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Editor/Core/Scripts/Internal/LockableVector2SliderDrawer.cs
+  uploadId: 922206

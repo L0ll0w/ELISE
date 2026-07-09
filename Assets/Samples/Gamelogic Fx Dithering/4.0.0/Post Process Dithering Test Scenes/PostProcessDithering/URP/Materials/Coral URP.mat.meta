@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 10cf8ddeb31206247a771c940296d24c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Materials/Coral
+    URP.mat
+  uploadId: 922206

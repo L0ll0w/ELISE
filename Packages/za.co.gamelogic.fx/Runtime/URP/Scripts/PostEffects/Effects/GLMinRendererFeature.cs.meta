@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: f66e92b0768f49389a7f35ec12918860
+timeCreated: 1764777356
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLMinRendererFeature.cs
+  uploadId: 922206

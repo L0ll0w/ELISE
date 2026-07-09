@@ -1,0 +1,21 @@
+{
+	"name": "Gamelogic.Fx.Dithering.BuiltIn",
+	"rootNamespace": "Gamelogic.Fx.Dithering.BuiltIn",
+	"references": [
+		"Gamelogic.Fx",
+		"Gamelogic.Fx.Dithering",
+		"Gamelogic.Fx.BuiltIn",
+		"Gamelogic.Extensions",
+		"UnityEditor.UI",
+		"UnityEngine.UI"
+	],
+	"includePlatforms": [],
+	"excludePlatforms": [],
+	"allowUnsafeCode": false,
+	"overrideReferences": false,
+	"precompiledReferences": [],
+	"autoReferenced": true,
+	"defineConstraints": [],
+	"versionDefines": [],
+	"noEngineReferences": false
+}

@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 498108c6ce614c7b92969bbdb1f43ee7
+timeCreated: 1762837781
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/PostProcessing/Effects/AddTexturePostProcess.cs
+  uploadId: 922206

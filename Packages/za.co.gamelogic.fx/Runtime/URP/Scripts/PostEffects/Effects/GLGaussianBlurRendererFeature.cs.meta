@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: d73ef9de55a84f978ebbc54dfc3e35d8
+timeCreated: 1764777356
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLGaussianBlurRendererFeature.cs
+  uploadId: 922206

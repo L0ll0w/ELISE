@@ -1,0 +1,24 @@
+﻿{
+	"name": "Gamelogic.Fx.URP",
+	"rootNamespace": "Gamelogic.Fx.URP",
+	"references": [
+		"Gamelogic.Extensions",
+		"Gamelogic.Fx",
+		"Unity.RenderPipelines.Universal.Runtime",
+		"Unity.RenderPipelines.Core.Runtime",
+		"UnityEditor.UI",
+		"UnityEngine.UI"
+	],
+	"versionDefines": [
+		{
+			"name": "com.unity.render-pipelines.universal",
+			"expression": "",
+			"define": "GAMELOGIC_HAS_URP"
+		},
+		{
+			"name": "com.unity.render-pipelines.universal",
+			"expression": "17.0.0",
+			"define": "GAMELOGIC_HAS_URP_RENDER_GRAPH"
+		}
+	]
+}

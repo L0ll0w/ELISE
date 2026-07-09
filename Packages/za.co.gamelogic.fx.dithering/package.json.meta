@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 400a12fb4a8d4ea4d93a3124cdd881be
+PackageManifestImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/package.json
+  uploadId: 922206

@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: f546f4f2015c433fb290e15b423c1a30
+timeCreated: 1767704473
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/Mapping/Maps/UVMapRenderer.cs
+  uploadId: 922206

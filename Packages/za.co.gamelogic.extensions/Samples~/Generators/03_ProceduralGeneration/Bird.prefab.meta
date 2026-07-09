@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 73303eb53a4a2b94293c77d285b515fa
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Samples~/Generators/03_ProceduralGeneration/Bird.prefab
+  uploadId: 922206

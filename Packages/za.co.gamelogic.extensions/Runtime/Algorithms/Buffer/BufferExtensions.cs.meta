@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 4d4096073e0645ceb9cd044defd5c7b8
+timeCreated: 1720744475
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Runtime/Algorithms/Buffer/BufferExtensions.cs
+  uploadId: 922206

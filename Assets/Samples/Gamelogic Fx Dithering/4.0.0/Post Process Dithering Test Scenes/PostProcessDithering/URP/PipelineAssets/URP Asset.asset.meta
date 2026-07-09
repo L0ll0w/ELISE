@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 7b9a820a3a6630a46bb811c78bc007d4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/PipelineAssets/URP
+    Asset.asset
+  uploadId: 922206

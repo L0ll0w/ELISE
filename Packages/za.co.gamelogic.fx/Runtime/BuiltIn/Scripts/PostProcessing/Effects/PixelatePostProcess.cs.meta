@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: b2c5a60289c54c21801ec64010156b1f
+timeCreated: 1762890289
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/PostProcessing/Effects/PixelatePostProcess.cs
+  uploadId: 922206

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 79844f7bb4825c54e8a8842ddb32c3f7
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Problems.md
+  uploadId: 922206

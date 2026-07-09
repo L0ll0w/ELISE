@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: e68f0ec73212491aaca2745d334b3234
+timeCreated: 1765159494
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/Internal/LockableVectorRangeAttribute.cs
+  uploadId: 922206

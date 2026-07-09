@@ -1,0 +1,31 @@
+{
+    "name": "Gamelogic.Fx.Editor",
+    "rootNamespace": "Gamelogic.Fx.Editor",
+    "references": [
+        "Gamelogic.Extensions",
+        "Gamelogic.Extensions.Editor",
+        "Gamelogic.Fx",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "UnityEditor.UI",
+        "UnityEngine.UI",
+        "Scrtwpns.Mixbox",        
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "",
+            "define": "GAMELOGIC_HAS_URP"
+        }
+    ],
+    "noEngineReferences": false
+}

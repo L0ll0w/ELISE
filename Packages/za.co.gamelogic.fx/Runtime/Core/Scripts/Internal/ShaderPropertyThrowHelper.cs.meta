@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: b71f49c0e4e641e6b7b8642291ac3852
+timeCreated: 1764283062
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/Internal/ShaderPropertyThrowHelper.cs
+  uploadId: 922206

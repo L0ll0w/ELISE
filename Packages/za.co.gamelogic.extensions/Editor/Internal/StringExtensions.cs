@@ -1,0 +1,41 @@
+﻿// Copyright Gamelogic (c) http://www.gamelogic.co.za
+
+using System.Text.RegularExpressions;
+
+namespace Gamelogic.Extensions.Editor.Internal
+{
+	/// <summary>
+	/// Class for string extensions.
+	/// </summary>
+	//  From: http://social.msdn.microsoft.com/Forums/en-US/csharpgeneral/thread/791963c8-9e20-4e9e-b184-f0e592b943b0/
+	public static class StringExtensions
+	{
+		/// <summary>
+		/// Takes a string in camel case, split it into separate words, and 
+		/// capitalizes each word.
+		/// </summary>
+		/// <param name="str">The camel-case string to split.</param>
+		/// <returns>A string with spaces inserted between words, with the first letter capitalized.</returns>
+		public static string SplitCamelCase(this string str)
+		{
+			if (string.IsNullOrEmpty(str))
+			{
+				return str;
+			}
+
+			string camelCase = Regex.Replace(Regex.Replace(str, @"(\P{Ll})(\P{Ll}\p{Ll})", "$1 $2"), @"(\p{Ll})(\P{Ll})", "$1 $2");
+			string firstLetter = camelCase.Substring(0, 1).ToUpper();
+
+			if (str.Length > 1)
+			{
+				string rest = camelCase.Substring(1);
+
+				return firstLetter + rest;
+			}
+			else
+			{
+				return firstLetter;
+			}
+		}
+	}
+}

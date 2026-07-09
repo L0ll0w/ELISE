@@ -1,0 +1,28 @@
+﻿// Copyright Gamelogic (c) http://www.gamelogic.co.za
+
+using UnityEditor;
+using UnityEngine;
+
+namespace Gamelogic.Extensions.Editor
+{
+	/// <summary>
+	/// Draws a property marked with the Dummy attribute (that is, does not draw it).
+	/// </summary>
+	[CustomPropertyDrawer(typeof(DummyAttribute))]
+	public class DummyPropertyDrawer : PropertyDrawer
+	{
+		/// <inheritdoc />
+		public override void OnGUI(Rect position,
+			SerializedProperty prop,
+			GUIContent label)
+		{
+			//Do nothing
+		}
+
+		/// <inheritdoc />
+		public override float GetPropertyHeight(SerializedProperty prop, GUIContent label)
+		{
+			return 0;
+		}
+	}
+}

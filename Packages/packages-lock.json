@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.nol1fe.delaunator": {
+      "version": "file:com.nol1fe.delaunator",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -90,7 +96,7 @@
     },
     "com.unity.mathematics": {
       "version": "1.3.3",
-      "depth": 2,
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -226,6 +232,37 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "za.co.gamelogic.extensions": {
+      "version": "file:za.co.gamelogic.extensions",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.2d.sprite": "1.0.0"
+      }
+    },
+    "za.co.gamelogic.fx": {
+      "version": "file:za.co.gamelogic.fx",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "za.co.gamelogic.extensions": "4.6.1",
+        "com.unity.mathematics": "1.2.6",
+        "com.nol1fe.delaunator": "1.0.11"
+      }
+    },
+    "za.co.gamelogic.fx.dithering": {
+      "version": "file:za.co.gamelogic.fx.dithering",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.2d.sprite": "1.0.0",
+        "za.co.gamelogic.extensions": "4.6.1",
+        "za.co.gamelogic.fx": "4.0.0",
+        "com.nol1fe.delaunator": "1.0.11"
+      }
     },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",

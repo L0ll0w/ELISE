@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: ebb77af7db0196545a2d4b0d258f8271
+timeCreated: 1764285381
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/PostProcessing/Effects/MixboxConvexHullMapPostProcess.cs
+  uploadId: 922206

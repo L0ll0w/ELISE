@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7d68f1a105d3dd74da4eb17ca12384ba
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/LICENSE.md
+  uploadId: 922206

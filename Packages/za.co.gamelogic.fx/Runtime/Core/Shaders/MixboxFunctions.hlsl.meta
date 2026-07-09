@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: eeca9eda3bb342e09d6501ccbea79d21
+timeCreated: 1764975311
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/MixboxFunctions.hlsl
+  uploadId: 922206

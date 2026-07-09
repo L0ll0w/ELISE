@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: cb64c9e50f22c0e4aaaef39a3eb68bc8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Materials/Indigo
+    URP.mat
+  uploadId: 922206

@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: be4d382856fd48eeb9d23397a5c998c6
+timeCreated: 1763174669
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Editor/Core/Scripts/Internal/FloatMatrixPropertyDrawer.cs
+  uploadId: 922206

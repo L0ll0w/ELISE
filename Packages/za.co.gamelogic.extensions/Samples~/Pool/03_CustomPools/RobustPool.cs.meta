@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 9a03c23c9dfb4cd683268a7be70fcf03
+timeCreated: 1718221089
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Samples~/Pool/03_CustomPools/RobustPool.cs
+  uploadId: 922206

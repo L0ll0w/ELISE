@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: d7ff55e5afde32a42b22ebeda195e90e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/PostProcessing/Effects/TriToneMapProperties.cs
+  uploadId: 922206

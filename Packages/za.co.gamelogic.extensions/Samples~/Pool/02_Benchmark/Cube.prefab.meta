@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 5543f7831bd845c479084b1ae275e9af
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Samples~/Pool/02_Benchmark/Cube.prefab
+  uploadId: 922206

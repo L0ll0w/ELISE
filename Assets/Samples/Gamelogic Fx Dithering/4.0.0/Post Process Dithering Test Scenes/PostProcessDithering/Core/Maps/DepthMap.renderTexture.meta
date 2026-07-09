@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 991c3baf18692c147b165b1161145545
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/Core/Maps/DepthMap.renderTexture
+  uploadId: 922206

@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 1279f71e596b4bfcbad0f2ae507d0ebb
+timeCreated: 1767113233
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/Effects/Invert.shader
+  uploadId: 922206

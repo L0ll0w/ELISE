@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 0764931f292b404e8e9d5221e33753a6
+timeCreated: 1765379693
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/IFloatMatrix.cs
+  uploadId: 922206

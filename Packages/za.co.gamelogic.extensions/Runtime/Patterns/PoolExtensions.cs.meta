@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: d0e3b863187a4d4987b12ffc53bc23cd
+timeCreated: 1718308724
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Runtime/Patterns/PoolExtensions.cs
+  uploadId: 922206

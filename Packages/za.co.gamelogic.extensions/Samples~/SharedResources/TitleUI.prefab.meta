@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a5865e44ae00f0048be23b2cf563eea2
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Samples~/SharedResources/TitleUI.prefab
+  uploadId: 922206

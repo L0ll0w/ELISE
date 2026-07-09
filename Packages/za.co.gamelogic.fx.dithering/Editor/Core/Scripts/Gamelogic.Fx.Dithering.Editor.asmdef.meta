@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 229a1b2e06ba4d6fafc4b694142dabfb
+timeCreated: 1763211097
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Editor/Core/Scripts/Gamelogic.Fx.Dithering.Editor.asmdef
+  uploadId: 922206

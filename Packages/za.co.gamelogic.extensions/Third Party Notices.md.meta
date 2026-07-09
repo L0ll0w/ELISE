@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 4cb4918f9bd265c46ac95c441cc04691
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Third Party Notices.md
+  uploadId: 922206

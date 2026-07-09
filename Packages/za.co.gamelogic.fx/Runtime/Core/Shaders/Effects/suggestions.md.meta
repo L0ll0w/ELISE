@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8afa230d0cfe9ce459ac6c357f4c10bd
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/Effects/suggestions.md
+  uploadId: 922206

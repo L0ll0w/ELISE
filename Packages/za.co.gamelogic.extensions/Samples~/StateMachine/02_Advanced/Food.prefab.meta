@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ba1a06559770c184fb3c53359b777adf
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Samples~/StateMachine/02_Advanced/Food.prefab
+  uploadId: 922206

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f7c5b88a39394314e874750ef4655131
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/com.nol1fe.delaunator/Runtime/DelaunatorSharp.Runtime.asmdef
+  uploadId: 922206

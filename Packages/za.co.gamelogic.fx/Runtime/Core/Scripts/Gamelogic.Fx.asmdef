@@ -1,0 +1,26 @@
+{
+    "name": "Gamelogic.Fx",
+    "rootNamespace": "Gamelogic.Fx",
+    "references": [
+        "Gamelogic.Extensions",
+        "Unity.Mathematics",
+        "UnityEditor.UI",
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.scrtwpns.mixbox",
+            "expression": "",
+            "define": "GAMELOGIC_HAS_MIXBOX"
+        }
+    ],
+    "noEngineReferences": false
+}

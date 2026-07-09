@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 5016fa804a994970b9b5bd819dfebcf7
+timeCreated: 1764777356
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLBoxBlurRendererFeature.cs
+  uploadId: 922206

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 79dedf8968e201243a0b8d3d264a2822
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Materials/White
+    URP.mat
+  uploadId: 922206

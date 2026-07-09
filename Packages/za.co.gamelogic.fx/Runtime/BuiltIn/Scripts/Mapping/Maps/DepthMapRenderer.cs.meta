@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 4e6d2294ebfe4753b711c7770f8b9170
+timeCreated: 1768066271
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/Mapping/Maps/DepthMapRenderer.cs
+  uploadId: 922206

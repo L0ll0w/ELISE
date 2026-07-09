@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 13ddd128d757410d80ddea995115435b
+timeCreated: 1764897607
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/Internal/LockableVector3.cs
+  uploadId: 922206

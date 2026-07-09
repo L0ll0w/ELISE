@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 3634370355634384b4de4d171de450f1
+timeCreated: 1764938642
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLPowerMeanRendererFeature.cs
+  uploadId: 922206

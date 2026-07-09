@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 4b8b36aa7e77449da5fc12a7282884e1
+timeCreated: 1716651040
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.extensions/Runtime/Algorithms/ResponseCurve/IResponseCurve.cs
+  uploadId: 922206

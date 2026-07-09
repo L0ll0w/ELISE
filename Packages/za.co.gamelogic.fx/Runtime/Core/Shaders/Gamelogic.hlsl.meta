@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: bfb8707259cd4a70971c6341acc81b13
+timeCreated: 1762826419
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Shaders/Gamelogic.hlsl
+  uploadId: 922206

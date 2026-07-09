@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: d9e09c2936544d5bae8af7396f602878
+timeCreated: 1762903268
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/URP/Scripts/PostEffects/Effects/GLDesaturateRendererFeature.cs
+  uploadId: 922206

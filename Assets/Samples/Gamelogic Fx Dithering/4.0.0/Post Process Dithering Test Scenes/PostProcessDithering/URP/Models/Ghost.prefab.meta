@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7c4cff01e1531af4ab051816d1aade12
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Models/Ghost.prefab
+  uploadId: 922206

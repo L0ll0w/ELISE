@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 19f761d10c8d4a9ab61e2e5e1566fc95
+timeCreated: 1765716018
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/Core/Scripts/RequiresMixboxAttribute.cs
+  uploadId: 922206

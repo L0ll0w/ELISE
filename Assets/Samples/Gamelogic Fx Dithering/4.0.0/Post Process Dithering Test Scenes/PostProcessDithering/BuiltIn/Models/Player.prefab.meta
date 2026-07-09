@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 16f81ddff52cb224b9afc092e4b91986
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/BuiltIn/Models/Player.prefab
+  uploadId: 922206

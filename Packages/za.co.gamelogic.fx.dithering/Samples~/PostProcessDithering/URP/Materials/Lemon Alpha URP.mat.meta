@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: ddc0a33c766f3fe40a2296ed565fa5ce
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/URP/Materials/Lemon
+    Alpha URP.mat
+  uploadId: 922206

@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: e716297b9e23442498b8572199412d8a
+timeCreated: 1764282064
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx/Runtime/BuiltIn/Scripts/PostProcessing/Effects/BoxBlurPostProcess.cs
+  uploadId: 922206

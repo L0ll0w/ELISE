@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: feb4e6ce080ed574fa216f421e1c868c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 345412
+  packageName: Gamelogic Fx Dithering
+  packageVersion: 4.0.0
+  assetPath: Packages/za.co.gamelogic.fx.dithering/Samples~/PostProcessDithering/BuiltIn/Materials/LemonUnlit
+    BuiltIn.mat
+  uploadId: 922206
