@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8155862981930704326
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5005212656023108938}
+  - component: {fileID: 6466996693331724070}
+  m_Layer: 0
+  m_Name: MenuManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5005212656023108938
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8155862981930704326}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1151.0999, y: 0.00002, z: 1251.2333}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6466996693331724070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8155862981930704326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4418e5d50e6159b46b1cea3336a93d26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MenuManager
+  menuRoot: {fileID: 0}
+  inventoryPanel: {fileID: 0}
+  groupPanel: {fileID: 0}
+  settingsPanel: {fileID: 0}
+  groupMembersContainer: {fileID: 0}
+  groupListContainer: {fileID: 0}
+  notePanel: {fileID: 0}
+  charProfilePanel: {fileID: 0}
+  statPanel: {fileID: 0}
+  groupMemberUIItemPrefab: {fileID: 3877054772017440488, guid: d1fc1366b58da8f4c919090c1b26ea3f, type: 3}
+  detailNameText: {fileID: 0}
+  detailPortraitImage: {fileID: 0}
+  levelText: {fileID: 0}
+  hpText: {fileID: 0}
+  mpText: {fileID: 0}
+  strengthText: {fileID: 0}
+  defenseText: {fileID: 0}
+  speedText: {fileID: 0}
+  offensiveEquipText: {fileID: 0}
+  defensiveEquipText: {fileID: 0}
+  bonusEquipText: {fileID: 0}

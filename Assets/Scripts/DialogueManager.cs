@@ -87,6 +87,25 @@ public class DialogueManager : MonoBehaviour
         if (choicesPanel != null) choicesPanel.SetActive(false);
     }
 
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            canvas.worldCamera = Camera.main;
+        }
+    }
+
     private void Update()
     {
         if (!isDialogueActive) return;
@@ -121,7 +140,14 @@ public class DialogueManager : MonoBehaviour
         onDialogueCompleteCallback = onComplete;
         dialogueStartFrame = Time.frameCount; // Enregistre la frame de départ
 
-        TogglePlayerMovement(false);
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance.RequestPause(PauseManager.PauseSource.Dialogue);
+        }
+        else
+        {
+            TogglePlayerMovement(false);
+        }
 
         if (dialoguePanel != null) dialoguePanel.SetActive(true);
         if (choicesPanel != null) choicesPanel.SetActive(false);
@@ -331,7 +357,14 @@ public class DialogueManager : MonoBehaviour
 
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
 
-        TogglePlayerMovement(true);
+        if (PauseManager.Instance != null)
+        {
+            PauseManager.Instance.RequestUnpause(PauseManager.PauseSource.Dialogue);
+        }
+        else
+        {
+            TogglePlayerMovement(true);
+        }
 
         // Enregistre la frame de fin de dialogue pour éviter la propagation d'input
         dialogueEndFrame = Time.frameCount;

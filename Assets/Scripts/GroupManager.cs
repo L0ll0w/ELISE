@@ -55,6 +55,16 @@ public class GroupManager : MonoBehaviour
 
     // Liste des scripts followers actifs
     private List<GroupFollower> activeFollowers = new List<GroupFollower>();
+
+    /// <summary>
+    /// Liste en lecture seule des compagnons actuellement actifs dans le groupe.
+    /// </summary>
+    public IReadOnlyList<GroupFollower> ActiveFollowers => activeFollowers;
+
+    /// <summary>
+    /// Le Transform du leader actuel du groupe (généralement le joueur).
+    /// </summary>
+    public Transform Leader => leader;
     
     // Historique des positions du leader (pour le mode Trail)
     private List<Vector3> trail = new List<Vector3>();
@@ -74,6 +84,7 @@ public class GroupManager : MonoBehaviour
             return;
         }
         Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
@@ -98,8 +109,67 @@ public class GroupManager : MonoBehaviour
 
         if (leader != null)
         {
+            DontDestroyOnLoad(leader.gameObject);
             lastLeaderPosition = leader.position;
             trail.Add(leader.position);
+        }
+    }
+
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        if (leader != null)
+        {
+            // Trouver s'il y a un autre joueur local présent dans la nouvelle scène
+            PlayerMovement[] allPlayers = FindObjectsByType<PlayerMovement>(FindObjectsSortMode.None);
+            foreach (var p in allPlayers)
+            {
+                // Si c'est un autre GameObject de joueur
+                if (p.gameObject != leader.gameObject)
+                {
+                    Debug.Log($"Joueur local trouvé dans la scène chargée : '{p.gameObject.name}'. On le remplace par le joueur persistant.");
+                    
+                    // Téléporter le joueur persistant sur le joueur local de la scène
+                    leader.position = p.transform.position;
+                    leader.rotation = p.transform.rotation;
+                    
+                    // Détruire le joueur local de la scène pour éviter le doublon
+                    Destroy(p.gameObject);
+                    break;
+                }
+            }
+
+            // Réinitialiser le trail à la nouvelle position du leader
+            trail.Clear();
+            trail.Add(leader.position);
+            lastLeaderPosition = leader.position;
+
+            // Replacer les compagnons sur le joueur et réappliquer les collisions ignorées
+            TeleportPartyToLeader();
+            ReapplyAllCollisions();
+        }
+    }
+
+    /// <summary>
+    /// Réapplique les ignores de collisions physiques entre tous les membres actifs du groupe.
+    /// </summary>
+    public void ReapplyAllCollisions()
+    {
+        foreach (var follower in activeFollowers)
+        {
+            if (follower != null)
+            {
+                IgnoreCollisionsFor(follower.gameObject);
+            }
         }
     }
 
@@ -292,6 +362,7 @@ public class GroupManager : MonoBehaviour
         Vector3 spawnPos = leader != null ? leader.position : transform.position;
 
         GameObject followerGo = Instantiate(prefab, spawnPos, Quaternion.identity);
+        DontDestroyOnLoad(followerGo); // Rendre le compagnon persistant entre les scènes
         GroupFollower follower = followerGo.GetComponent<GroupFollower>();
         
         if (follower == null)

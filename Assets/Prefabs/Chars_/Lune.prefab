@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1879026794728105456}
   - component: {fileID: 4036130726499223028}
   - component: {fileID: 8166436663945131425}
+  - component: {fileID: 1976669446072150412}
   m_Layer: 0
   m_Name: Lune
   m_TagString: Untagged
@@ -131,3 +132,18 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0.019314468}
+--- !u!114 &1976669446072150412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5035174391424248313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56306358c0e54bc408190ac8b76c2a4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GroupMemberInfo
+  characterData: {fileID: 11400000, guid: 8102c1a9ae8f74241a1d0296d0abbd8f, type: 2}
+  characterName: Lune
+  portrait: {fileID: 21300000, guid: 2ee3f7b13f4928c4e9f1ac73e8ab6857, type: 3}

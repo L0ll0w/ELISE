@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1857433681800482479}
   - component: {fileID: 4925761183640270338}
   - component: {fileID: 3313348498998830617}
+  - component: {fileID: 8345301313321288150}
   m_Layer: 0
   m_Name: Jake
   m_TagString: Untagged
@@ -131,3 +132,18 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0.019314468}
+--- !u!114 &8345301313321288150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3008118398194043329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56306358c0e54bc408190ac8b76c2a4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GroupMemberInfo
+  characterData: {fileID: 11400000, guid: 775d00a5d59f3974ea82ea78dd64f9d5, type: 2}
+  characterName: Jake
+  portrait: {fileID: 21300000, guid: a54ba14e4d001954ca3c53e7fb9a1129, type: 3}

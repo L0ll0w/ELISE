@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6394606345597023411}
   - component: {fileID: 1400545543572407318}
   - component: {fileID: 7997310828476488322}
+  - component: {fileID: 2167332759620254559}
   m_Layer: 0
   m_Name: Elise
   m_TagString: Untagged
@@ -131,3 +132,18 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0.019314468}
+--- !u!114 &2167332759620254559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6528211263685507713}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56306358c0e54bc408190ac8b76c2a4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GroupMemberInfo
+  characterData: {fileID: 11400000, guid: 79bb95de6ea401c4bb3f9d093f71ad68, type: 2}
+  characterName: Elise
+  portrait: {fileID: 21300000, guid: adad8540f0bf7754d9e9d366e190acdd, type: 3}

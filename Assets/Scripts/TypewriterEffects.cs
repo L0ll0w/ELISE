@@ -137,7 +137,7 @@ public class TypewriterEffects : MonoBehaviour
             }
 
             float waitTime = GetPauseTime(lastChar);
-            yield return new WaitForSeconds(waitTime);
+            yield return new WaitForSecondsRealtime(waitTime);
         }
 
         isTyping = false;
@@ -187,7 +187,7 @@ public class TypewriterEffects : MonoBehaviour
         textComponent.ForceMeshUpdate();
         TMP_TextInfo textInfo = textComponent.textInfo;
 
-        float time = Time.time;
+        float time = Time.unscaledTime;
 
         for (int i = 0; i < activeEffects.Count; i++)
         {
