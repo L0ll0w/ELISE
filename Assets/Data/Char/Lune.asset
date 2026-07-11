@@ -23,6 +23,6 @@ MonoBehaviour:
   strength: 10
   defense: 10
   speed: 10
-  offensiveEquipment: Aucun
-  defensiveEquipment: Aucun
-  bonusEquipment: Aucun
+  offensiveEquipment: {fileID: 0}
+  defensiveEquipment: {fileID: 0}
+  bonusEquipment: {fileID: 0}

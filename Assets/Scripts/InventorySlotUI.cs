@@ -69,8 +69,8 @@ public class InventorySlotUI : MonoBehaviour
         {
             // Affiche la quantité formatée (ex: "x15" ou "15")
             quantityText.text = $"x{quantity}";
-            // On peut optionnellement masquer la quantité si c'est 1
-            quantityText.gameObject.SetActive(quantity > 0);
+            // Masque la quantité si c'est un équipement ou si la quantité est nulle
+            quantityText.gameObject.SetActive(item.itemType != ItemType.Equipment && quantity > 0);
         }
 
         // Réinitialise la couleur par défaut

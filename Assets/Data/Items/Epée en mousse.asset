@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41ed717c30207894bb23daa8d821eccc, type: 3}
-  m_Name: Casquette elico
+  m_Name: "Ep\xE9e en mousse"
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemID: elico casquette
-  itemName: Casquette Elico
-  description: "Une casquette color\xE9, qui pourait permetre de vol\xE9."
-  icon: {fileID: 21300000, guid: de3aa20a1523eac48b9543634ab6be07, type: 3}
+  itemID: Epee en mousse
+  itemName: "Ep\xE9e en Mousse"
+  description: "Une ep\xE9e pour les plus petit Hero !"
+  icon: {fileID: 21300000, guid: ebb65e832b66ccc42b93442401906e9c, type: 3}
   itemType: 0
-  equipmentType: 2
+  equipmentType: 1

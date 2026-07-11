@@ -20,6 +20,14 @@ public class GroupMemberInfo : MonoBehaviour
     [Tooltip("L'icône ou sprite de ce personnage à afficher dans la liste (ScrollView).")]
     [SerializeField] private Sprite menuIcon;
 
+    private void Awake()
+    {
+        if (characterData != null)
+        {
+            characterData = Instantiate(characterData);
+        }
+    }
+
     public CharacterData CharacterData
     {
         get => characterData;

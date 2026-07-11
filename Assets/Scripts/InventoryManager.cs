@@ -46,14 +46,25 @@ public class InventoryManager : MonoBehaviour
     {
         if (item == null || amount <= 0) return;
 
-        InventoryEntry entry = FindEntry(item);
-        if (entry != null)
+        if (item.itemType == ItemType.Equipment)
         {
-            entry.quantity += amount;
+            // Equipments do NOT stack, add as separate slots
+            for (int i = 0; i < amount; i++)
+            {
+                inventory.Add(new InventoryEntry(item, 1));
+            }
         }
         else
         {
-            inventory.Add(new InventoryEntry(item, amount));
+            InventoryEntry entry = FindEntry(item);
+            if (entry != null)
+            {
+                entry.quantity += amount;
+            }
+            else
+            {
+                inventory.Add(new InventoryEntry(item, amount));
+            }
         }
 
         Debug.Log($"Ajouté à l'inventaire : {item.itemName} x{amount}. Total possédés : {GetItemQuantity(item)}");
@@ -72,22 +83,41 @@ public class InventoryManager : MonoBehaviour
     {
         if (item == null || amount <= 0) return;
 
-        InventoryEntry entry = FindEntry(item);
-        if (entry != null)
+        if (item.itemType == ItemType.Equipment)
         {
-            entry.quantity -= amount;
-            if (entry.quantity <= 0)
+            // Remove separate entries one by one
+            for (int i = 0; i < amount; i++)
             {
-                inventory.Remove(entry);
+                InventoryEntry entry = FindEntry(item);
+                if (entry != null)
+                {
+                    inventory.Remove(entry);
+                }
+                else
+                {
+                    break;
+                }
             }
-
-            Debug.Log($"Retiré de l'inventaire : {item.itemName} x{amount}.");
-
-            // Si le MenuManager est actif, on actualise l'UI
-            if (MenuManager.Instance != null && MenuManager.Instance.IsMenuOpen)
+        }
+        else
+        {
+            InventoryEntry entry = FindEntry(item);
+            if (entry != null)
             {
-                MenuManager.Instance.PopulateInventory();
+                entry.quantity -= amount;
+                if (entry.quantity <= 0)
+                {
+                    inventory.Remove(entry);
+                }
             }
+        }
+
+        Debug.Log($"Retiré de l'inventaire : {item.itemName} x{amount}.");
+
+        // Si le MenuManager est actif, on actualise l'UI
+        if (MenuManager.Instance != null && MenuManager.Instance.IsMenuOpen)
+        {
+            MenuManager.Instance.PopulateInventory();
         }
     }
 
@@ -97,8 +127,15 @@ public class InventoryManager : MonoBehaviour
     public int GetItemQuantity(ItemData item)
     {
         if (item == null) return 0;
-        InventoryEntry entry = FindEntry(item);
-        return entry != null ? entry.quantity : 0;
+        int total = 0;
+        foreach (var entry in inventory)
+        {
+            if (entry != null && entry.item != null && entry.item.itemID == item.itemID)
+            {
+                total += entry.quantity;
+            }
+        }
+        return total;
     }
 
     /// <summary>

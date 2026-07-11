@@ -41,11 +41,11 @@ public class CharacterData : ScriptableObject
 
     [Header("Équipements Équipés")]
     [Tooltip("Équipement offensif (arme, etc.).")]
-    public string offensiveEquipment = "Aucun";
+    public ItemData offensiveEquipment;
 
     [Tooltip("Équipement défensif (armure, bouclier, etc.).")]
-    public string defensiveEquipment = "Aucun";
+    public ItemData defensiveEquipment;
 
     [Tooltip("Équipement bonus (accessoires, anneaux, etc.).")]
-    public string bonusEquipment = "Aucun";
+    public ItemData bonusEquipment;
 }

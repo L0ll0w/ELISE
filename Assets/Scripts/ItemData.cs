@@ -11,6 +11,17 @@ public enum ItemType
 }
 
 /// <summary>
+/// Définit les types d'équipements pour le profil de personnage.
+/// </summary>
+public enum EquipmentType
+{
+    None,
+    Offensive,
+    Defensive,
+    Bonus
+}
+
+/// <summary>
 /// ScriptableObject représentant les données d'un objet dans le jeu.
 /// </summary>
 [CreateAssetMenu(fileName = "NewItemData", menuName = "2.5D RPG/Item Data")]
@@ -33,4 +44,7 @@ public class ItemData : ScriptableObject
     [Header("Configuration")]
     [Tooltip("Catégorie de l'objet.")]
     public ItemType itemType = ItemType.Item;
+
+    [Tooltip("Type d'équipement (actif uniquement si itemType est Equipment).")]
+    public EquipmentType equipmentType = EquipmentType.None;
 }

@@ -88,6 +88,22 @@ public class MenuManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI defensiveEquipText;
     [SerializeField] private TextMeshProUGUI bonusEquipText;
 
+    [Header("UI Equipement boutons (Optionnels)")]
+    [SerializeField] private Button offensiveEquipButton;
+    [SerializeField] private Button defensiveEquipButton;
+    [SerializeField] private Button bonusEquipButton;
+
+    [Header("Configuration Equip Panel")]
+    [Tooltip("Le panneau EquipPanel à activer lors du choix d'un équipement.")]
+    [SerializeField] private GameObject equipPanel;
+
+    [Tooltip("Conteneur des éléments de la liste des équipements dans l'EquipPanel.")]
+    [SerializeField] private Transform equipItemsContainer;
+
+    [Tooltip("Prefab d'un bouton d'équipement dans l'EquipPanel (doit avoir un Button et un TextMeshProUGUI).")]
+    [SerializeField] private GameObject equipItemButtonPrefab;
+
+    private CharacterData selectedCharacterData;
     private bool isMenuOpen = false;
     private InventorySlotUI selectedSlotUI;
 
@@ -115,6 +131,27 @@ public class MenuManager : MonoBehaviour
             menuRoot.SetActive(false);
         }
         isMenuOpen = false;
+
+        // Auto-détection des boutons sur les textes d'équipement s'ils ne sont pas assignés
+        if (offensiveEquipButton == null && offensiveEquipText != null) offensiveEquipButton = offensiveEquipText.GetComponent<Button>();
+        if (offensiveEquipButton == null && offensiveEquipText != null) offensiveEquipButton = offensiveEquipText.GetComponentInParent<Button>();
+
+        if (defensiveEquipButton == null && defensiveEquipText != null) defensiveEquipButton = defensiveEquipText.GetComponent<Button>();
+        if (defensiveEquipButton == null && defensiveEquipText != null) defensiveEquipButton = defensiveEquipText.GetComponentInParent<Button>();
+
+        if (bonusEquipButton == null && bonusEquipText != null) bonusEquipButton = bonusEquipText.GetComponent<Button>();
+        if (bonusEquipButton == null && bonusEquipText != null) bonusEquipButton = bonusEquipText.GetComponentInParent<Button>();
+
+        // Affectation des listeners
+        if (offensiveEquipButton != null) offensiveEquipButton.onClick.AddListener(() => OpenEquipPanel(EquipmentType.Offensive));
+        if (defensiveEquipButton != null) defensiveEquipButton.onClick.AddListener(() => OpenEquipPanel(EquipmentType.Defensive));
+        if (bonusEquipButton != null) bonusEquipButton.onClick.AddListener(() => OpenEquipPanel(EquipmentType.Bonus));
+
+        // Masquer l'EquipPanel au départ
+        if (equipPanel != null)
+        {
+            equipPanel.SetActive(false);
+        }
     }
 
     private void OnEnable()
@@ -234,6 +271,8 @@ public class MenuManager : MonoBehaviour
         {
             PauseManager.Instance.RequestUnpause(PauseManager.PauseSource.Menu);
         }
+
+        CloseEquipPanel();
     }
 
     #region Navigation Onglets
@@ -282,6 +321,7 @@ public class MenuManager : MonoBehaviour
         if (inventoryPanel != null) inventoryPanel.SetActive(inventoryPanel == panelToActivate);
         if (groupPanel != null) groupPanel.SetActive(groupPanel == panelToActivate);
         if (settingsPanel != null) settingsPanel.SetActive(settingsPanel == panelToActivate);
+        CloseEquipPanel();
     }
 
     #endregion
@@ -567,6 +607,8 @@ public class MenuManager : MonoBehaviour
     {
         if (data == null) return;
 
+        selectedCharacterData = data;
+
         // 1. Activer/Désactiver les panneaux correspondants
         if (groupListContainer != null) groupListContainer.SetActive(false);
         if (notePanel != null) notePanel.SetActive(false);
@@ -590,9 +632,9 @@ public class MenuManager : MonoBehaviour
         if (speedText != null) speedText.text = $"Vitesse : {data.speed}";
 
         // Équipements
-        if (offensiveEquipText != null) offensiveEquipText.text = $"Arme : {data.offensiveEquipment}";
-        if (defensiveEquipText != null) defensiveEquipText.text = $"Armure : {data.defensiveEquipment}";
-        if (bonusEquipText != null) bonusEquipText.text = $"Accessoire : {data.bonusEquipment}";
+        if (offensiveEquipText != null) offensiveEquipText.text = $"Arme : {(data.offensiveEquipment != null ? data.offensiveEquipment.itemName : "Aucun")}";
+        if (defensiveEquipText != null) defensiveEquipText.text = $"Armure : {(data.defensiveEquipment != null ? data.defensiveEquipment.itemName : "Aucun")}";
+        if (bonusEquipText != null) bonusEquipText.text = $"Accessoire : {(data.bonusEquipment != null ? data.bonusEquipment.itemName : "Aucun")}";
     }
 
     /// <summary>
@@ -604,7 +646,206 @@ public class MenuManager : MonoBehaviour
         if (notePanel != null) notePanel.SetActive(true);
         if (charProfilePanel != null) charProfilePanel.SetActive(false);
         if (statPanel != null) statPanel.SetActive(false);
+        CloseEquipPanel();
     }
+
+    #region Gestion Equipement
+    
+    /// <summary>
+    /// Récupère la liste de tous les CharacterData du groupe (leader + compagnons).
+    /// </summary>
+    public List<CharacterData> GetAllGroupMembersData()
+    {
+        List<CharacterData> list = new List<CharacterData>();
+        
+        if (GroupManager.Instance != null)
+        {
+            // Leader
+            if (GroupManager.Instance.Leader != null)
+            {
+                GroupMemberInfo info = GroupManager.Instance.Leader.GetComponent<GroupMemberInfo>();
+                if (info == null) info = GroupManager.Instance.Leader.GetComponentInChildren<GroupMemberInfo>();
+                if (info != null && info.CharacterData != null)
+                {
+                    list.Add(info.CharacterData);
+                }
+            }
+            
+            // Followers
+            if (GroupManager.Instance.ActiveFollowers != null)
+            {
+                foreach (var follower in GroupManager.Instance.ActiveFollowers)
+                {
+                    if (follower != null)
+                    {
+                        GroupMemberInfo info = follower.GetComponent<GroupMemberInfo>();
+                        if (info == null) info = follower.GetComponentInChildren<GroupMemberInfo>();
+                        if (info != null && info.CharacterData != null)
+                        {
+                            list.Add(info.CharacterData);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return list;
+    }
+
+    /// <summary>
+    /// Ouvre le panneau EquipPanel pour choisir un équipement de la catégorie donnée.
+    /// </summary>
+    public void OpenEquipPanel(EquipmentType category)
+    {
+        if (selectedCharacterData == null || equipPanel == null || equipItemsContainer == null) return;
+
+        equipPanel.SetActive(true);
+
+        // Vider le conteneur
+        foreach (Transform child in equipItemsContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // 1. Bouton "Aucun" (pour déséquiper)
+        if (equipItemButtonPrefab != null)
+        {
+            GameObject noneButtonObj = Instantiate(equipItemButtonPrefab, equipItemsContainer);
+            Button btn = noneButtonObj.GetComponent<Button>();
+            TextMeshProUGUI txt = noneButtonObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null)
+            {
+                txt.text = "Aucun";
+                txt.color = Color.white;
+            }
+            if (btn != null)
+            {
+                btn.onClick.AddListener(() => EquipItem(null, category, false));
+            }
+        }
+
+        // 2. Parcourir les équipements dans l'inventaire
+        if (InventoryManager.Instance != null)
+        {
+            List<InventoryEntry> allEquipments = InventoryManager.Instance.GetItemsByType(ItemType.Equipment);
+            List<CharacterData> allMembers = GetAllGroupMembersData();
+
+            // Créer une liste de tous les objets de cette catégorie équipés par les membres du groupe
+            List<ItemData> equippedItemsList = new List<ItemData>();
+            foreach (var member in allMembers)
+            {
+                ItemData equipped = null;
+                if (category == EquipmentType.Offensive) equipped = member.offensiveEquipment;
+                else if (category == EquipmentType.Defensive) equipped = member.defensiveEquipment;
+                else if (category == EquipmentType.Bonus) equipped = member.bonusEquipment;
+
+                if (equipped != null)
+                {
+                    equippedItemsList.Add(equipped);
+                }
+            }
+
+            foreach (var entry in allEquipments)
+            {
+                if (entry == null || entry.item == null || entry.item.equipmentType != category) continue;
+
+                ItemData item = entry.item;
+
+                // Si l'objet est présent dans la liste des objets équipés, il est coloré en jaune, et on le retire
+                // de la liste temporaire pour que les autres doublons éventuels restent blancs (disponibles)
+                bool isEquippedByAnyone = false;
+                if (equippedItemsList.Contains(item))
+                {
+                    isEquippedByAnyone = true;
+                    equippedItemsList.Remove(item);
+                }
+
+                if (equipItemButtonPrefab != null)
+                {
+                    GameObject itemButtonObj = Instantiate(equipItemButtonPrefab, equipItemsContainer);
+                    Button btn = itemButtonObj.GetComponent<Button>();
+                    TextMeshProUGUI txt = itemButtonObj.GetComponentInChildren<TextMeshProUGUI>();
+
+                    if (txt != null)
+                    {
+                        txt.text = item.itemName;
+                        txt.color = isEquippedByAnyone ? Color.yellow : Color.white;
+                    }
+
+                    if (btn != null)
+                    {
+                        ItemData targetItem = item;
+                        bool isStealing = isEquippedByAnyone;
+                        btn.onClick.AddListener(() => EquipItem(targetItem, category, isStealing));
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ferme l'EquipPanel.
+    /// </summary>
+    public void CloseEquipPanel()
+    {
+        if (equipPanel != null)
+        {
+            equipPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Équipe un objet dans une catégorie sur le personnage sélectionné.
+    /// Gère également le transfert d'équipement d'un personnage à un autre.
+    /// </summary>
+    private void EquipItem(ItemData item, EquipmentType category, bool stealFromOther)
+    {
+        if (selectedCharacterData == null) return;
+
+        // Si l'objet à équiper est non nul et que stealFromOther est vrai, on le retire d'abord de quiconque le porte
+        if (item != null && stealFromOther)
+        {
+            List<CharacterData> allMembers = GetAllGroupMembersData();
+            foreach (var member in allMembers)
+            {
+                if (category == EquipmentType.Offensive && member.offensiveEquipment == item)
+                {
+                    member.offensiveEquipment = null;
+                    break;
+                }
+                else if (category == EquipmentType.Defensive && member.defensiveEquipment == item)
+                {
+                    member.defensiveEquipment = null;
+                    break;
+                }
+                else if (category == EquipmentType.Bonus && member.bonusEquipment == item)
+                {
+                    member.bonusEquipment = null;
+                    break;
+                }
+            }
+        }
+
+        // Équiper sur le personnage sélectionné
+        if (category == EquipmentType.Offensive)
+        {
+            selectedCharacterData.offensiveEquipment = item;
+        }
+        else if (category == EquipmentType.Defensive)
+        {
+            selectedCharacterData.defensiveEquipment = item;
+        }
+        else if (category == EquipmentType.Bonus)
+        {
+            selectedCharacterData.bonusEquipment = item;
+        }
+
+        // Rafraîchir l'affichage
+        ShowCharacterDetails(selectedCharacterData);
+        CloseEquipPanel();
+    }
+
+    #endregion
 
     #endregion
 }
