@@ -27,6 +27,35 @@ public class MenuManager : MonoBehaviour
     [Tooltip("Panneau de l'onglet Paramètres.")]
     [SerializeField] private GameObject settingsPanel;
 
+    [Header("Configuration Inventaire UI")]
+    [Tooltip("Conteneur pour les objets de type Équipement.")]
+    [SerializeField] private Transform equipmentContainer;
+
+    [Tooltip("Conteneur pour les objets de type Standard (Items).")]
+    [SerializeField] private Transform itemsContainer;
+
+    [Tooltip("Conteneur pour les objets de type Clé.")]
+    [SerializeField] private Transform keysContainer;
+
+    [Tooltip("Prefab d'un slot d'inventaire (contenant le script InventorySlotUI).")]
+    [SerializeField] private GameObject inventorySlotPrefab;
+
+    [Tooltip("Zone de texte globale de description d'objet (ailleurs dans le menu d'inventaire).")]
+    [SerializeField] private TextMeshProUGUI inventoryDescriptionText;
+
+    [Tooltip("Zone de texte globale du nom d'objet (dans le panneau de description de l'inventaire).")]
+    [SerializeField] private TextMeshProUGUI inventoryItemNameText;
+
+    [Header("Scroll Views de l'Inventaire")]
+    [Tooltip("La Scroll View contenant les items consommables.")]
+    [SerializeField] private GameObject scrollViewItems;
+
+    [Tooltip("La Scroll View contenant les équipements.")]
+    [SerializeField] private GameObject scrollViewEquip;
+
+    [Tooltip("La Scroll View contenant les clés.")]
+    [SerializeField] private GameObject scrollViewKeys;
+
     [Header("Configuration Groupe UI")]
     [Tooltip("Conteneur (Content de ScrollView) où seront instanciés les éléments de groupe.")]
     [SerializeField] private Transform groupMembersContainer;
@@ -60,6 +89,7 @@ public class MenuManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI bonusEquipText;
 
     private bool isMenuOpen = false;
+    private InventorySlotUI selectedSlotUI;
 
     /// <summary>
     /// Indique si le menu est actuellement ouvert.
@@ -214,6 +244,16 @@ public class MenuManager : MonoBehaviour
     public void ShowInventory()
     {
         SetPanelActive(inventoryPanel);
+        if (inventoryItemNameText != null)
+        {
+            inventoryItemNameText.text = "";
+        }
+        if (inventoryDescriptionText != null)
+        {
+            inventoryDescriptionText.text = "Sélectionnez un objet pour voir sa description.";
+        }
+        PopulateInventory();
+        ShowInventoryItemsTab(); // Par défaut, on affiche le scroll view des items
     }
 
     /// <summary>
@@ -242,6 +282,165 @@ public class MenuManager : MonoBehaviour
         if (inventoryPanel != null) inventoryPanel.SetActive(inventoryPanel == panelToActivate);
         if (groupPanel != null) groupPanel.SetActive(groupPanel == panelToActivate);
         if (settingsPanel != null) settingsPanel.SetActive(settingsPanel == panelToActivate);
+    }
+
+    #endregion
+
+    #region Gestion de l'Inventaire UI
+
+    /// <summary>
+    /// Vide et repeuple dynamiquement l'UI d'inventaire par catégories d'objets.
+    /// </summary>
+    public void PopulateInventory()
+    {
+        // Réinitialise la case sélectionnée avant de repeupler
+        selectedSlotUI = null;
+
+        if (InventoryManager.Instance == null)
+        {
+            Debug.LogWarning("InventoryManager.Instance est introuvable. Impossible d'afficher l'inventaire.");
+            return;
+        }
+
+        if (inventorySlotPrefab == null)
+        {
+            Debug.LogWarning("Le prefab 'Inventory Slot Prefab' n'est pas assigné dans le MenuManager.");
+            return;
+        }
+
+        // 1. Remplir la catégorie Équipements
+        PopulateCategory(ItemType.Equipment, equipmentContainer);
+
+        // 2. Remplir la catégorie Items
+        PopulateCategory(ItemType.Item, itemsContainer);
+
+        // 3. Remplir la catégorie Clés
+        PopulateCategory(ItemType.Key, keysContainer);
+    }
+
+    /// <summary>
+    /// Helper pour vider et repeupler un conteneur d'inventaire spécifique.
+    /// </summary>
+    private void PopulateCategory(ItemType type, Transform container)
+    {
+        if (container == null) return;
+
+        // Vider le conteneur
+        foreach (Transform child in container)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Récupérer les objets de ce type
+        List<InventoryEntry> entries = InventoryManager.Instance.GetItemsByType(type);
+
+        // Instancier les slots
+        foreach (var entry in entries)
+        {
+            if (entry == null || entry.item == null) continue;
+
+            GameObject slotObj = Instantiate(inventorySlotPrefab, container);
+            InventorySlotUI slotUI = slotObj.GetComponent<InventorySlotUI>();
+
+            if (slotUI != null)
+            {
+                slotUI.Setup(entry.item, entry.quantity);
+            }
+            else
+            {
+                Debug.LogWarning($"Le prefab '{inventorySlotPrefab.name}' ne possède pas le script InventorySlotUI.");
+            }
+
+            // Liaison du clic sur le bouton pour sélectionner la case et afficher la description globale
+            Button button = slotObj.GetComponent<Button>();
+            if (button != null && slotUI != null)
+            {
+                ItemData item = entry.item;
+                InventorySlotUI targetSlot = slotUI;
+                button.onClick.AddListener(() => OnSlotClicked(targetSlot, item));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gère la sélection visuelle d'un slot et affiche son nom et sa description.
+    /// </summary>
+    private void OnSlotClicked(InventorySlotUI clickedSlot, ItemData item)
+    {
+        // 1. Désélectionner le précédent slot
+        if (selectedSlotUI != null)
+        {
+            selectedSlotUI.SetSelected(false);
+        }
+
+        // 2. Sélectionner le nouveau slot
+        selectedSlotUI = clickedSlot;
+        if (selectedSlotUI != null)
+        {
+            selectedSlotUI.SetSelected(true);
+        }
+
+        // 3. Afficher la description globale
+        ShowItemDescription(item);
+    }
+
+    /// <summary>
+    /// Affiche la description d'un objet sélectionné dans la zone de description globale de l'inventaire.
+    /// </summary>
+    public void ShowItemDescription(ItemData item)
+    {
+        if (item != null)
+        {
+            if (inventoryItemNameText != null)
+            {
+                inventoryItemNameText.text = item.itemName;
+            }
+            if (inventoryDescriptionText != null)
+            {
+                inventoryDescriptionText.text = item.description;
+            }
+        }
+        else
+        {
+            if (inventoryItemNameText != null)
+            {
+                inventoryItemNameText.text = "";
+            }
+            if (inventoryDescriptionText != null)
+            {
+                inventoryDescriptionText.text = "Sélectionnez un objet pour voir sa description.";
+            }
+        }
+    }
+
+    /// <summary>
+    /// Affiche la Scroll View des items standard (consommables) et masque les autres.
+    /// </summary>
+    public void ShowInventoryItemsTab()
+    {
+        if (scrollViewItems != null) scrollViewItems.SetActive(true);
+        if (scrollViewEquip != null) scrollViewEquip.SetActive(false);
+        if (scrollViewKeys != null) scrollViewKeys.SetActive(false);
+    }
+
+    /// <summary>
+    /// Affiche la Scroll View des équipements et masque les autres.
+    /// </summary>
+    public void ShowInventoryEquipmentsTab()
+    {
+        if (scrollViewItems != null) scrollViewItems.SetActive(false);
+        if (scrollViewEquip != null) scrollViewEquip.SetActive(true);
+        if (scrollViewKeys != null) scrollViewKeys.SetActive(false);
+    }
+
+    /// <summary>
+    /// Affiche la Scroll View des clés / objets de quête et masque les autres.
+    /// </summary>
+    public void ShowInventoryKeysTab()
+    {
+        if (scrollViewItems != null) scrollViewItems.SetActive(false);
+        if (scrollViewEquip != null) scrollViewEquip.SetActive(false);
+        if (scrollViewKeys != null) scrollViewKeys.SetActive(true);
     }
 
     #endregion

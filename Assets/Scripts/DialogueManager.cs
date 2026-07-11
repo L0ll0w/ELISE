@@ -30,6 +30,7 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private GameObject dialoguePanel;
     [SerializeField] private Image portraitImage;
     [SerializeField] private TextMeshProUGUI nameText;
+    [SerializeField] private GameObject namePanel; // Cadre/Background du nom du personnage
     [SerializeField] private TextMeshProUGUI dialogueText;
 
     [Header("UI Réf - Choix")]
@@ -163,6 +164,11 @@ public class DialogueManager : MonoBehaviour
         {
             nameText.text = node.characterName;
             nameText.gameObject.SetActive(!string.IsNullOrEmpty(node.characterName));
+        }
+
+        if (namePanel != null)
+        {
+            namePanel.SetActive(!string.IsNullOrEmpty(node.characterName));
         }
 
         if (portraitImage != null)

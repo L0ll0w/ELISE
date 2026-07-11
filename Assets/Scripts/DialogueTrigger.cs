@@ -18,53 +18,15 @@ public struct ConditionalDialogue
 
 [RequireComponent(typeof(BoxCollider))]
 [AddComponentMenu("2.5D RPG/Dialogue Trigger")]
-public class DialogueTrigger : MonoBehaviour
+public class DialogueTrigger : Interactable
 {
     [Header("Dialogues Conditionnels")]
     [Tooltip("Ordre de priorité : du haut vers le bas. Le premier dialogue dont la condition est remplie sera joué.")]
     [SerializeField] private ConditionalDialogue[] conditionalDialogues;
 
-    private bool isPlayerInRange = false;
-    private BoxCollider triggerCollider;
-
-    private void Reset()
+    protected override void Interact()
     {
-        // Configure automatiquement la case isTrigger lorsque le script est ajouté dans l'éditeur
-        BoxCollider col = GetComponent<BoxCollider>();
-        if (col != null)
-        {
-            col.isTrigger = true;
-        }
-    }
-
-    private void Start()
-    {
-        triggerCollider = GetComponent<BoxCollider>();
-        triggerCollider.isTrigger = true;
-    }
-
-    private void Update()
-    {
-        if (isPlayerInRange && DialogueManager.Instance.CanStartDialogue)
-        {
-            bool interact = false;
-            #if ENABLE_INPUT_SYSTEM
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.eKey.wasPressedThisFrame)
-            {
-                interact = true;
-            }
-            #else
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                interact = true;
-            }
-            #endif
-
-            if (interact)
-            {
-                TriggerDialogue();
-            }
-        }
+        TriggerDialogue();
     }
 
     private void TriggerDialogue()
@@ -102,20 +64,13 @@ public class DialogueTrigger : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    protected override void OnTriggerExit(Collider other)
     {
+        base.OnTriggerExit(other);
+        
         if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
         {
-            isPlayerInRange = true;
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
-        {
-            isPlayerInRange = false;
-            if (DialogueManager.Instance.IsDialogueActive)
+            if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
             {
                 DialogueManager.Instance.EndDialogue();
             }
