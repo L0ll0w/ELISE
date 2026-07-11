@@ -53,6 +53,12 @@ public class Chest : Interactable
         }
     }
 
+    protected override bool CanInteract()
+    {
+        if (isOpen) return false;
+        return base.CanInteract();
+    }
+
     /// <summary>
     /// Implémentation de l'interaction (lorsque le joueur appuie sur E).
     /// </summary>
@@ -148,7 +154,15 @@ public class Chest : Interactable
         }
         else
         {
-            DialogueManager.Instance.StartDialogue(acquisitionData);
+            DialogueManager.Instance.StartDialogue(acquisitionData, () =>
+            {
+                enabled = false;
+                Collider col = GetComponent<Collider>();
+                if (col != null)
+                {
+                    col.enabled = false;
+                }
+            });
         }
     }
 
