@@ -119,9 +119,10 @@ public class DialogueManager : MonoBehaviour
 
         bool interact = false;
         #if ENABLE_INPUT_SYSTEM
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) interact = true;
+        if ((Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) ||
+            (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame)) interact = true;
         #else
-        if (Input.GetKeyDown(KeyCode.E)) interact = true;
+        if (Input.GetKeyDown(KeyCode.E) || Input.GetButtonDown("Submit") || Input.GetKeyDown(KeyCode.JoystickButton0)) interact = true;
         #endif
 
         // Empêche de consommer la touche d'interaction sur la même frame que l'ouverture

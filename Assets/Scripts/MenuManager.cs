@@ -103,9 +103,25 @@ public class MenuManager : MonoBehaviour
     [Tooltip("Prefab d'un bouton d'équipement dans l'EquipPanel (doit avoir un Button et un TextMeshProUGUI).")]
     [SerializeField] private GameObject equipItemButtonPrefab;
 
+    [Header("Controller Navigation Configuration")]
+    [Tooltip("Bouton de l'onglet Inventaire pour y placer le focus.")]
+    [SerializeField] private Button inventoryTabButton;
+    [Tooltip("Bouton de l'onglet Groupe pour y placer le focus.")]
+    [SerializeField] private Button groupTabButton;
+    [Tooltip("Bouton de l'onglet Paramètres pour y placer le focus.")]
+    [SerializeField] private Button settingsTabButton;
+
     private CharacterData selectedCharacterData;
     private bool isMenuOpen = false;
     private InventorySlotUI selectedSlotUI;
+
+    private int currentTab = 0; // 0: Inventaire, 1: Groupe, 2: Paramètres
+    private GameObject lastSelectedSlotButton;
+    private GameObject lastSelectedGroupMemberButton;
+
+    private GameObject previousSelectedObject;
+    private Color previousObjectOriginalColor = Color.white;
+    private bool hasOriginalColorStored = false;
 
     /// <summary>
     /// Indique si le menu est actuellement ouvert.
@@ -200,18 +216,68 @@ public class MenuManager : MonoBehaviour
 
     private void Update()
     {
-        // Écoute de la touche Tab du nouveau système d'input
+        bool toggle = false;
+
+        // Écoute de la touche Tab (Clavier)
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null && keyboard.tabKey.wasPressedThisFrame)
+        {
+            toggle = true;
+        }
+
+        // Écoute du bouton Y / Triangle (Manette)
+        Gamepad gamepad = Gamepad.current;
+        if (gamepad != null && gamepad.buttonNorth.wasPressedThisFrame)
+        {
+            toggle = true;
+        }
+
+        if (toggle)
         {
             // Vérification si un dialogue est en cours (si DialogueManager existe)
             if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
             {
-                Debug.Log("Impossible d'ouvrir le menu : un dialogue est en cours.");
+                Debug.Log("Impossible d'ouvrir/fermer le menu : un dialogue est en cours.");
                 return;
             }
 
             ToggleMenu();
+        }
+
+        // Contrôles manette quand le menu est ouvert
+        if (isMenuOpen)
+        {
+            UpdateSelectionHighlight();
+
+            if (gamepad != null)
+            {
+                // Navigation par onglets avec LB/RB
+                if (gamepad.leftShoulder.wasPressedThisFrame)
+                {
+                    CycleTab(-1);
+                }
+                else if (gamepad.rightShoulder.wasPressedThisFrame)
+                {
+                    CycleTab(1);
+                }
+
+                // Bouton Retour (B / Cercle)
+                if (gamepad.buttonEast.wasPressedThisFrame)
+                {
+                    if (equipPanel != null && equipPanel.activeSelf)
+                    {
+                        CloseEquipPanel();
+                    }
+                    else if (charProfilePanel != null && charProfilePanel.activeSelf)
+                    {
+                        HideCharacterDetails();
+                    }
+                    else
+                    {
+                        CloseMenu();
+                    }
+                }
+            }
         }
     }
 
@@ -251,6 +317,12 @@ public class MenuManager : MonoBehaviour
 
         // Affiche le premier onglet par défaut
         ShowInventory();
+
+        // Placer le focus EventSystem sur le bouton d'onglet Inventaire pour la navigation manette
+        if (UnityEngine.EventSystems.EventSystem.current != null && inventoryTabButton != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(inventoryTabButton.gameObject);
+        }
     }
 
     /// <summary>
@@ -273,6 +345,7 @@ public class MenuManager : MonoBehaviour
         }
 
         CloseEquipPanel();
+        ResetSelectionHighlight();
     }
 
     #region Navigation Onglets
@@ -282,6 +355,7 @@ public class MenuManager : MonoBehaviour
     /// </summary>
     public void ShowInventory()
     {
+        currentTab = 0;
         SetPanelActive(inventoryPanel);
         if (inventoryItemNameText != null)
         {
@@ -300,6 +374,7 @@ public class MenuManager : MonoBehaviour
     /// </summary>
     public void ShowGroup()
     {
+        currentTab = 1;
         SetPanelActive(groupPanel);
         HideCharacterDetails(); // Réinitialise l'affichage sur la liste principale au clic sur l'onglet
         PopulateGroupList();
@@ -310,6 +385,7 @@ public class MenuManager : MonoBehaviour
     /// </summary>
     public void ShowSettings()
     {
+        currentTab = 2;
         SetPanelActive(settingsPanel);
     }
 
@@ -322,6 +398,31 @@ public class MenuManager : MonoBehaviour
         if (groupPanel != null) groupPanel.SetActive(groupPanel == panelToActivate);
         if (settingsPanel != null) settingsPanel.SetActive(settingsPanel == panelToActivate);
         CloseEquipPanel();
+    }
+
+    /// <summary>
+    /// Cycle entre les onglets du menu principal (LB / RB).
+    /// </summary>
+    private void CycleTab(int direction)
+    {
+        currentTab += direction;
+        if (currentTab < 0) currentTab = 2;
+        else if (currentTab > 2) currentTab = 0;
+
+        if (currentTab == 0) ShowInventory();
+        else if (currentTab == 1) ShowGroup();
+        else if (currentTab == 2) ShowSettings();
+
+        // Placer le focus EventSystem sur le bouton d'onglet actif
+        GameObject tabToSelect = null;
+        if (currentTab == 0 && inventoryTabButton != null) tabToSelect = inventoryTabButton.gameObject;
+        else if (currentTab == 1 && groupTabButton != null) tabToSelect = groupTabButton.gameObject;
+        else if (currentTab == 2 && settingsTabButton != null) tabToSelect = settingsTabButton.gameObject;
+
+        if (UnityEngine.EventSystems.EventSystem.current != null && tabToSelect != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(tabToSelect);
+        }
     }
 
     #endregion
@@ -582,10 +683,14 @@ public class MenuManager : MonoBehaviour
             Button button = itemObj.GetComponent<Button>();
             if (button != null)
             {
+                GameObject targetBtnObj = button.gameObject;
                 if (info != null && info.CharacterData != null)
                 {
                     CharacterData data = info.CharacterData;
-                    button.onClick.AddListener(() => ShowCharacterDetails(data));
+                    button.onClick.AddListener(() => {
+                        lastSelectedGroupMemberButton = targetBtnObj;
+                        ShowCharacterDetails(data);
+                    });
                 }
                 else
                 {
@@ -594,7 +699,10 @@ public class MenuManager : MonoBehaviour
                     fallbackData.characterName = name;
                     fallbackData.portrait = portrait;
                     fallbackData.menuIcon = listIcon;
-                    button.onClick.AddListener(() => ShowCharacterDetails(fallbackData));
+                    button.onClick.AddListener(() => {
+                        lastSelectedGroupMemberButton = targetBtnObj;
+                        ShowCharacterDetails(fallbackData);
+                    });
                 }
             }
         }
@@ -635,6 +743,12 @@ public class MenuManager : MonoBehaviour
         if (offensiveEquipText != null) offensiveEquipText.text = $"Arme : {(data.offensiveEquipment != null ? data.offensiveEquipment.itemName : "Aucun")}";
         if (defensiveEquipText != null) defensiveEquipText.text = $"Armure : {(data.defensiveEquipment != null ? data.defensiveEquipment.itemName : "Aucun")}";
         if (bonusEquipText != null) bonusEquipText.text = $"Accessoire : {(data.bonusEquipment != null ? data.bonusEquipment.itemName : "Aucun")}";
+
+        // Placer le focus EventSystem sur le bouton d'équipement offensif pour manette
+        if (UnityEngine.EventSystems.EventSystem.current != null && offensiveEquipButton != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(offensiveEquipButton.gameObject);
+        }
     }
 
     /// <summary>
@@ -647,6 +761,12 @@ public class MenuManager : MonoBehaviour
         if (charProfilePanel != null) charProfilePanel.SetActive(false);
         if (statPanel != null) statPanel.SetActive(false);
         CloseEquipPanel();
+
+        // Restaurer le focus EventSystem sur le compagnon précédemment sélectionné
+        if (UnityEngine.EventSystems.EventSystem.current != null && lastSelectedGroupMemberButton != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(lastSelectedGroupMemberButton);
+        }
     }
 
     #region Gestion Equipement
@@ -699,6 +819,9 @@ public class MenuManager : MonoBehaviour
     {
         if (selectedCharacterData == null || equipPanel == null || equipItemsContainer == null) return;
 
+        // Enregistrer le bouton de slot actuellement sélectionné pour pouvoir y revenir
+        lastSelectedSlotButton = UnityEngine.EventSystems.EventSystem.current != null ? UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject : null;
+
         equipPanel.SetActive(true);
 
         // Vider le conteneur
@@ -707,10 +830,13 @@ public class MenuManager : MonoBehaviour
             Destroy(child.gameObject);
         }
 
+        GameObject firstSelected = null;
+
         // 1. Bouton "Aucun" (pour déséquiper)
         if (equipItemButtonPrefab != null)
         {
             GameObject noneButtonObj = Instantiate(equipItemButtonPrefab, equipItemsContainer);
+            firstSelected = noneButtonObj;
             Button btn = noneButtonObj.GetComponent<Button>();
             TextMeshProUGUI txt = noneButtonObj.GetComponentInChildren<TextMeshProUGUI>();
             if (txt != null)
@@ -721,6 +847,16 @@ public class MenuManager : MonoBehaviour
             if (btn != null)
             {
                 btn.onClick.AddListener(() => EquipItem(null, category, false));
+            }
+
+            // Désactiver toute image enfant sur le bouton Aucun
+            Image[] images = noneButtonObj.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                if (img.gameObject != noneButtonObj)
+                {
+                    img.enabled = false;
+                }
             }
         }
 
@@ -751,12 +887,31 @@ public class MenuManager : MonoBehaviour
 
                 ItemData item = entry.item;
 
-                // Si l'objet est présent dans la liste des objets équipés, il est coloré en jaune, et on le retire
-                // de la liste temporaire pour que les autres doublons éventuels restent blancs (disponibles)
-                bool isEquippedByAnyone = false;
+                // Trouver si cet item est équipé par un membre du groupe
+                CharacterData equippingMember = null;
                 if (equippedItemsList.Contains(item))
                 {
-                    isEquippedByAnyone = true;
+                    // Trouver le premier membre du groupe qui l'équipe dans cette catégorie
+                    foreach (var member in allMembers)
+                    {
+                        if (category == EquipmentType.Offensive && member.offensiveEquipment == item)
+                        {
+                            equippingMember = member;
+                            break;
+                        }
+                        else if (category == EquipmentType.Defensive && member.defensiveEquipment == item)
+                        {
+                            equippingMember = member;
+                            break;
+                        }
+                        else if (category == EquipmentType.Bonus && member.bonusEquipment == item)
+                        {
+                            equippingMember = member;
+                            break;
+                        }
+                    }
+
+                    // On retire l'objet de la liste temporaire pour que les autres doublons éventuels restent disponibles
                     equippedItemsList.Remove(item);
                 }
 
@@ -766,10 +921,58 @@ public class MenuManager : MonoBehaviour
                     Button btn = itemButtonObj.GetComponent<Button>();
                     TextMeshProUGUI txt = itemButtonObj.GetComponentInChildren<TextMeshProUGUI>();
 
+                    bool isEquippedByAnyone = (equippingMember != null);
+
                     if (txt != null)
                     {
                         txt.text = item.itemName;
-                        txt.color = isEquippedByAnyone ? Color.yellow : Color.white;
+                        txt.color = isEquippedByAnyone ? Color.red : Color.white;
+                    }
+
+                    // Gérer l'affichage de l'icône du personnage qui l'équipe
+                    Image iconImg = null;
+                    Image[] images = itemButtonObj.GetComponentsInChildren<Image>(true);
+                    foreach (var img in images)
+                    {
+                        if (img.gameObject != itemButtonObj)
+                        {
+                            iconImg = img;
+                            break;
+                        }
+                    }
+
+                    if (isEquippedByAnyone)
+                    {
+                        // S'il n'y a pas d'image enfant existante, on la crée programmatiquement
+                        if (iconImg == null)
+                        {
+                            GameObject iconGo = new GameObject("EquippedCharIcon");
+                            iconGo.transform.SetParent(itemButtonObj.transform, false);
+                            iconImg = iconGo.AddComponent<Image>();
+                            RectTransform rect = iconGo.GetComponent<RectTransform>();
+                            if (rect != null)
+                            {
+                                rect.anchorMin = new Vector2(1f, 0.5f);
+                                rect.anchorMax = new Vector2(1f, 0.5f);
+                                rect.pivot = new Vector2(1f, 0.5f);
+                                rect.anchoredPosition = new Vector2(-10f, 0f);
+                                rect.sizeDelta = new Vector2(30f, 30f);
+                            }
+                        }
+
+                        if (iconImg != null)
+                        {
+                            iconImg.sprite = equippingMember.menuIcon;
+                            iconImg.enabled = equippingMember.menuIcon != null;
+                        }
+                    }
+                    else
+                    {
+                        // Désactiver les images enfants si l'objet n'est pas équipé
+                        if (iconImg != null)
+                        {
+                            iconImg.enabled = false;
+                        }
                     }
 
                     if (btn != null)
@@ -781,6 +984,12 @@ public class MenuManager : MonoBehaviour
                 }
             }
         }
+
+        // Placer le focus EventSystem sur le premier élément (bouton Aucun) pour la manette
+        if (UnityEngine.EventSystems.EventSystem.current != null && firstSelected != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(firstSelected);
+        }
     }
 
     /// <summary>
@@ -791,6 +1000,12 @@ public class MenuManager : MonoBehaviour
         if (equipPanel != null)
         {
             equipPanel.SetActive(false);
+        }
+
+        // Restaurer le focus EventSystem sur le slot d'équipement qui avait ouvert le panneau
+        if (UnityEngine.EventSystems.EventSystem.current != null && lastSelectedSlotButton != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(lastSelectedSlotButton);
         }
     }
 
@@ -843,6 +1058,100 @@ public class MenuManager : MonoBehaviour
         // Rafraîchir l'affichage
         ShowCharacterDetails(selectedCharacterData);
         CloseEquipPanel();
+    }
+
+    /// <summary>
+    /// Met à jour la surbrillance jaune du texte du bouton actuellement sélectionné par l'EventSystem.
+    /// </summary>
+    private void UpdateSelectionHighlight()
+    {
+        if (UnityEngine.EventSystems.EventSystem.current == null) return;
+
+        GameObject currentSelected = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
+
+        if (currentSelected != previousSelectedObject)
+        {
+            // 1. Restaurer la couleur de l'ancien objet sélectionné
+            if (previousSelectedObject != null && hasOriginalColorStored)
+            {
+                TextMeshProUGUI txt = previousSelectedObject.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null)
+                {
+                    txt.color = previousObjectOriginalColor;
+                }
+                else
+                {
+                    UnityEngine.UI.Text legacyText = previousSelectedObject.GetComponentInChildren<UnityEngine.UI.Text>();
+                    if (legacyText != null)
+                    {
+                        legacyText.color = previousObjectOriginalColor;
+                    }
+                }
+            }
+
+            // 2. Enregistrer et appliquer la couleur jaune sur le nouvel objet sélectionné
+            previousSelectedObject = currentSelected;
+            hasOriginalColorStored = false;
+
+            if (currentSelected != null)
+            {
+                TextMeshProUGUI txt = currentSelected.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null)
+                {
+                    previousObjectOriginalColor = txt.color;
+                    hasOriginalColorStored = true;
+                    txt.color = Color.yellow;
+                }
+                else
+                {
+                    UnityEngine.UI.Text legacyText = currentSelected.GetComponentInChildren<UnityEngine.UI.Text>();
+                    if (legacyText != null)
+                    {
+                        previousObjectOriginalColor = legacyText.color;
+                        hasOriginalColorStored = true;
+                        legacyText.color = Color.yellow;
+                    }
+                }
+
+                // Ajuster dynamiquement les couleurs du composant Button s'il existe et utilise ColorTint
+                Button btn = currentSelected.GetComponent<Button>();
+                if (btn != null && btn.transition == Selectable.Transition.ColorTint)
+                {
+                    ColorBlock cb = btn.colors;
+                    if (cb.highlightedColor != Color.yellow || cb.selectedColor != Color.yellow)
+                    {
+                        cb.highlightedColor = Color.yellow;
+                        cb.selectedColor = Color.yellow;
+                        btn.colors = cb;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Réinitialise la couleur jaune de l'élément sélectionné lorsque le menu se ferme.
+    /// </summary>
+    private void ResetSelectionHighlight()
+    {
+        if (previousSelectedObject != null && hasOriginalColorStored)
+        {
+            TextMeshProUGUI txt = previousSelectedObject.GetComponentInChildren<TextMeshProUGUI>();
+            if (txt != null)
+            {
+                txt.color = previousObjectOriginalColor;
+            }
+            else
+            {
+                UnityEngine.UI.Text legacyText = previousSelectedObject.GetComponentInChildren<UnityEngine.UI.Text>();
+                if (legacyText != null)
+                {
+                    legacyText.color = previousObjectOriginalColor;
+                }
+            }
+        }
+        previousSelectedObject = null;
+        hasOriginalColorStored = false;
     }
 
     #endregion

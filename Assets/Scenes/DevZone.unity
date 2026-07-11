@@ -284,6 +284,43 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -5890819124141360062, guid: d611fe1d1893fb74cb34587ea80ffc62, type: 3}
+--- !u!84 &103204785
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 512
+  m_Height: 512
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 94
+  m_ColorFormat: 4
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &175783330 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5241237735442108300, guid: c881f824049100541b784e8315c71582, type: 3}
@@ -167806,7 +167843,7 @@ MonoBehaviour:
     normal: {x: 0, y: 1, z: 0}
     length: {x: 0.084, y: 0.199}
     color: {x: 0.41460484, y: 0.7264151, z: 0.46073973}
-  m_InstantiatedMaterial: {fileID: 1621394177}
+  m_InstantiatedMaterial: {fileID: 1830312579}
 --- !u!4 &210928568
 Transform:
   m_ObjectHideFlags: 0
@@ -168914,7 +168951,7 @@ Camera:
     serializedVersion: 2
     m_Bits: 1
   m_RenderingPath: -1
-  m_TargetTexture: {fileID: 1808117468}
+  m_TargetTexture: {fileID: 103204785}
   m_TargetDisplay: 0
   m_TargetEye: 3
   m_HDR: 1
@@ -171125,52 +171162,6 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -7219406648052404195, guid: d611fe1d1893fb74cb34587ea80ffc62, type: 3}
---- !u!21 &1621394177
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Shader Graphs_ShaderGraph GrassUnlitBasic(Clone)
-  m_Shader: {fileID: -6465566751694194690, guid: 36d2cf141ab5adb4fb2d31a3ac652b6c, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 1
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses:
-  - MOTIONVECTORS
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - unity_Lightmaps:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - unity_LightmapsInd:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - unity_ShadowMasks:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _Blend: 1
-    - _BlendMult: 1
-    - _BlendOff: 0.5
-    - _QueueControl: 0
-    - _QueueOffset: 0
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1627560301 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 9222040872610848220, guid: 210f83e68be6a8845886a74e9e936a2e, type: 3}
@@ -171252,43 +171243,6 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -3818372414012180234, guid: d611fe1d1893fb74cb34587ea80ffc62, type: 3}
---- !u!84 &1808117468
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 512
-  m_Height: 512
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 94
-  m_ColorFormat: 4
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &1816924508 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 7491096876089089941, guid: c3352ba8054d77a459ca0d76b62f2f24, type: 3}
@@ -171343,6 +171297,52 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -9144429934272139156, guid: d611fe1d1893fb74cb34587ea80ffc62, type: 3}
+--- !u!21 &1830312579
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Shader Graphs_ShaderGraph GrassUnlitBasic(Clone)
+  m_Shader: {fileID: -6465566751694194690, guid: 36d2cf141ab5adb4fb2d31a3ac652b6c, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Blend: 1
+    - _BlendMult: 1
+    - _BlendOff: 0.5
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &1836189798
 GameObject:
   m_ObjectHideFlags: 0
@@ -172720,6 +172720,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 6845367309526614259}
     - target: {fileID: 6466996693331724070, guid: 00ff609e781737e48a4836fa37867636, type: 3}
+      propertyPath: groupTabButton
+      value: 
+      objectReference: {fileID: 8793982441413393778}
+    - target: {fileID: 6466996693331724070, guid: 00ff609e781737e48a4836fa37867636, type: 3}
       propertyPath: inventoryPanel
       value: 
       objectReference: {fileID: 6990771906758492876}
@@ -172748,6 +172752,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 3725216672076170085}
     - target: {fileID: 6466996693331724070, guid: 00ff609e781737e48a4836fa37867636, type: 3}
+      propertyPath: settingsTabButton
+      value: 
+      objectReference: {fileID: 3995529606771007010}
+    - target: {fileID: 6466996693331724070, guid: 00ff609e781737e48a4836fa37867636, type: 3}
       propertyPath: defensiveEquipText
       value: 
       objectReference: {fileID: 5593552314090903372}
@@ -172759,6 +172767,10 @@ PrefabInstance:
       propertyPath: groupListContainer
       value: 
       objectReference: {fileID: 5626225368803287486}
+    - target: {fileID: 6466996693331724070, guid: 00ff609e781737e48a4836fa37867636, type: 3}
+      propertyPath: inventoryTabButton
+      value: 
+      objectReference: {fileID: 7520547562534257466}
     - target: {fileID: 6466996693331724070, guid: 00ff609e781737e48a4836fa37867636, type: 3}
       propertyPath: offensiveEquipText
       value: 
