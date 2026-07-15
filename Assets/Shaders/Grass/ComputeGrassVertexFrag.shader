@@ -56,6 +56,14 @@ Shader "Custom/GrassComputeVertexFrag"
     uniform sampler2D _TerrainDiffuse;
     float _AmbientAdjustment;
     sampler2D _DiffuseTex;
+
+    // Day/Night Split Sky Global Properties
+    uniform float3 _DayNightSplitDirection;
+    uniform float3 _DayNightWorldCenter;
+    uniform float _DayNightBaseOffset;
+    uniform float _DayNightPositionSensitivity;
+    uniform float _DayNightTransitionWidth;
+    uniform float4 _DayNightGrassNightTint;
     
     // Vertex function
     struct unityTransferVertexToFragmentSucksHack
@@ -138,6 +146,14 @@ Shader "Custom/GrassComputeVertexFrag"
                  float4 texturetest = tex2D(_DiffuseTex, i.uv);
                   float verticalFade = saturate((i.uv.y) + _Fade) ;
                 float4 baseColor = lerp(_BottomTint , _TopTint,verticalFade * texturetest) * float4(i.diffuseColor, 1);
+
+                // Tint dynamique de combat Jour/Nuit basé sur la position monde du brin d'herbe
+                float3 toGrass = i.positionWS - _DayNightWorldCenter;
+                float posOffset = dot(toGrass, normalize(_DayNightSplitDirection)) * _DayNightPositionSensitivity;
+                float splitVal = _DayNightBaseOffset + posOffset;
+                float localTransition = smoothstep(-_DayNightTransitionWidth * 0.5, _DayNightTransitionWidth * 0.5, splitVal);
+                float3 grassTint = lerp(_DayNightGrassNightTint.rgb, float3(1.0, 1.0, 1.0), localTransition);
+                baseColor.rgb *= grassTint;
                
                 // get the floor map
                 float4 terrainForBlending = tex2D(_TerrainDiffuse, uv);
