@@ -111,13 +111,27 @@ public class PlayerMovement : MonoBehaviour
         // Application du déplacement via le Rigidbody si disponible
         if (rb != null)
         {
-            Vector3 targetVelocity = moveDirection * speed;
-            
-            // Sécurité anti-décollage lors des collisions : on ne préserve la vitesse verticale que si elle est descendante (gravité)
-            float currentYVelocity = rb.linearVelocity.y;
-            targetVelocity.y = currentYVelocity > 0f ? 0f : currentYVelocity;
-            
-            rb.linearVelocity = targetVelocity;
+            if (moveDirection.magnitude < 0.01f)
+            {
+                // Bloque la position X et Z dans le moteur physique pour stopper tout glissement sur les pentes
+                rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+                
+                // On met à zéro la vitesse horizontale mais on conserve la gravité verticale (chute)
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            }
+            else
+            {
+                // Libère X et Z pour le déplacement, tout en maintenant les rotations figées
+                rb.constraints = RigidbodyConstraints.FreezeRotation;
+
+                Vector3 targetVelocity = moveDirection * speed;
+                
+                // Sécurité anti-décollage lors des collisions : on ne préserve la vitesse verticale que si elle est descendante (gravité)
+                float currentYVelocity = rb.linearVelocity.y;
+                targetVelocity.y = currentYVelocity > 0f ? 0f : currentYVelocity;
+                
+                rb.linearVelocity = targetVelocity;
+            }
         }
     }
 }

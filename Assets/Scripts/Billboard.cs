@@ -4,6 +4,7 @@ using UnityEngine;
 /// Micro-script de Billboard pour aligner un sprite 2.5D avec la caméra ou une cible (ex: le Joueur).
 /// </summary>
 [ExecuteAlways]
+[DefaultExecutionOrder(9999)]
 [AddComponentMenu("2.5D RPG/Billboard")]
 public class Billboard : MonoBehaviour
 {
