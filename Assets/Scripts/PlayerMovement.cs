@@ -22,6 +22,7 @@ public class PlayerMovement : MonoBehaviour
     private PlayerInput playerInput;
     private InputAction moveAction;
     private Camera mainCamera;
+    private Vector3 moveDirection;
 
     private void Start()
     {
@@ -60,7 +61,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // Calcul du vecteur de déplacement dans l'espace 3D
-        Vector3 moveDirection = Vector3.zero;
+        moveDirection = Vector3.zero;
 
         if (moveRelativeToCamera && mainCamera != null)
         {
@@ -88,14 +89,8 @@ public class PlayerMovement : MonoBehaviour
             moveDirection.Normalize();
         }
 
-        // Application du déplacement (via Rigidbody ou transform en fallback)
-        if (rb != null)
-        {
-            Vector3 targetVelocity = moveDirection * speed;
-            targetVelocity.y = rb.linearVelocity.y; // Préserver la gravité
-            rb.linearVelocity = targetVelocity;
-        }
-        else
+        // Application du déplacement si pas de Rigidbody (fallback)
+        if (rb == null)
         {
             transform.Translate(moveDirection * speed * Time.deltaTime, Space.World);
         }
@@ -108,6 +103,21 @@ public class PlayerMovement : MonoBehaviour
         else if (horizontal > 0.01f)
         {
             spriteRenderer.flipX = false;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        // Application du déplacement via le Rigidbody si disponible
+        if (rb != null)
+        {
+            Vector3 targetVelocity = moveDirection * speed;
+            
+            // Sécurité anti-décollage lors des collisions : on ne préserve la vitesse verticale que si elle est descendante (gravité)
+            float currentYVelocity = rb.linearVelocity.y;
+            targetVelocity.y = currentYVelocity > 0f ? 0f : currentYVelocity;
+            
+            rb.linearVelocity = targetVelocity;
         }
     }
 }
