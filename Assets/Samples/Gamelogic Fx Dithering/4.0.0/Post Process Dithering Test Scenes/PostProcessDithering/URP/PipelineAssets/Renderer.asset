@@ -919,7 +919,8 @@ MonoBehaviour:
   - {fileID: 2968316695457042984}
   - {fileID: 13025135613829107}
   - {fileID: -1169838590603733076}
-  m_RendererFeatureMap: 2b7c19030f5d83ea5be6c2ed149200e7f3df69b54a462e00ac5785faffe5c3ef281294c54e9431291ab8f23b920fd4acd95c640f77561def5d2efa1254a58af43a2cb945a6773818
+  - {fileID: 616935483212732683}
+  m_RendererFeatureMap: 2b7c19030f5d83ea5be6c2ed149200e7f3df69b54a462e00ac5785faffe5c3ef281294c54e9431291ab8f23b920fd4acd95c640f77561def5d2efa1254a58af43a2cb945a67738180b993aa68dcb8f08
   m_UseNativeRenderPass: 0
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -973,6 +974,26 @@ MonoBehaviour:
     shader: {fileID: 4800000, guid: 3398ad27b8d34998a4a2a5b418ccd0f8, type: 3}
     backgroundShader: {fileID: 0}
     encoding: 0
+--- !u!114 &616935483212732683
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
+  m_Name: Elise Fog
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.FullScreenPassRendererFeature
+  m_Active: 1
+  injectionPoint: 550
+  fetchColorBuffer: 1
+  requirements: 1
+  passMaterial: {fileID: 2100000, guid: cfcfc5acde52e7c47a002143020c2d0e, type: 2}
+  passIndex: 0
+  bindDepthStencilAttachment: 0
+  m_Version: 1
 --- !u!114 &2153557382035396446
 MonoBehaviour:
   m_ObjectHideFlags: 0
