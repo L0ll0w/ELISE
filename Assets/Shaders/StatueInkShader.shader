@@ -24,6 +24,7 @@ Shader "Custom/StatueInkShader"
         [Header(Ink Flow Settings)]
         _InkColor ("Ink Color", Color) = (0.05, 0.05, 0.05, 1.0)
         _InkProgress ("Ink Flow Progress (0-1)", Range(0.0, 1.0)) = 0.0
+        _InkTrailProgress ("Ink Trail Progress (0-1)", Range(0.0, 1.0)) = 0.0
         _EyeY ("Eye Height (Local Y)", Float) = 2.8
         _FeetY ("Feet Height (Local Y)", Float) = 0.0
 
@@ -103,6 +104,7 @@ Shader "Custom/StatueInkShader"
 
                 float4 _InkColor;
                 float _InkProgress;
+                float _InkTrailProgress;
                 float _EyeY;
                 float _FeetY;
 
@@ -180,43 +182,83 @@ Shader "Custom/StatueInkShader"
                 half3 finalBodyColor = toonColor + rimGlow;
 
                 // 2. CALCUL DES LIGNES DE LARMES D'ENCRE (Double trace yeux)
-                // Déformation sinueuse des larmes le long de la hauteur projetée
+                // Calcul des échelles globales sur les axes locaux de la statue (pour compenser l'échelle du GameObject)
+                float rightScale = max(0.001, length(mul((float3x3)GetObjectToWorldMatrix(), localRight)));
+                float upScale = max(0.001, length(mul((float3x3)GetObjectToWorldMatrix(), localUp)));
+
+                // Correction des paramètres pour que la larme garde la même taille physique en World Space
+                float correctedDripWidth = _DripWidth / rightScale;
+                float correctedDripBlur = _DripBlur / rightScale;
+                float correctedWiggleStrength = _WiggleStrength / rightScale;
+                float correctedWiggleFreq = _WiggleFreq * upScale;
+
+                // Déformation sinueuse des larmes le long de la hauteur projetée (trajet fixe)
                 float2 wiggle = float2(
-                    Noise2D(float2(height * _WiggleFreq, 1.0)),
-                    Noise2D(float2(height * _WiggleFreq, 2.0))
-                ) * _WiggleStrength;
+                    Noise2D(float2(height * correctedWiggleFreq, 1.0)),
+                    Noise2D(float2(height * correctedWiggleFreq, 2.0))
+                ) * correctedWiggleStrength;
+
+                // Micro-ondulation dans le temps pour simuler la vibration du liquide qui coule
+                float correctedTimeWobbleFreq = 15.0 * upScale;
+                float timeWobble = sin(_Time.y * 6.0 + height * correctedTimeWobbleFreq) * (0.003 / rightScale);
 
                 // Pour que les larmes suivent les courbes 3D du corps (Z) sans se couper au niveau du ventre,
                 // on calcule la distance uniquement sur l'axe horizontal X local (side).
-                float distLeft = abs(side + wiggle.x - (_FaceCenterX - _EyeSpacing * 0.5));
-                float distRight = abs(side + wiggle.x - (_FaceCenterX + _EyeSpacing * 0.5));
-
-                // Masque des deux lignes de larmes
-                float leftDrip = smoothstep(_DripWidth + _DripBlur, _DripWidth - _DripBlur, distLeft);
-                float rightDrip = smoothstep(_DripWidth + _DripBlur, _DripWidth - _DripBlur, distRight);
-                
-                // On limite l'encre à la face avant du modèle (pour éviter qu'elle traverse à l'arrière)
-                float frontMask = smoothstep(_FaceCenterZ - 0.8, _FaceCenterZ - 0.3, depth);
-                float dripMask = saturate(leftDrip + rightDrip) * frontMask;
+                float distLeft = abs(side + wiggle.x + timeWobble - (_FaceCenterX - _EyeSpacing * 0.5));
+                float distRight = abs(side + wiggle.x + timeWobble - (_FaceCenterX + _EyeSpacing * 0.5));
 
                 // 3. Masque d'écoulement progressif (Flow progress)
                 // L'encre progresse entre les yeux (_EyeY) et les pieds (_FeetY)
-                float targetY = lerp(_EyeY, _FeetY, _InkProgress);
+                float leadingY = lerp(_EyeY, _FeetY, _InkProgress);
+                float trailingY = lerp(_EyeY, _FeetY, _InkTrailProgress);
                 
                 // Léger décalage de pointe entre les deux larmes pour le réalisme
                 float tipNoise = Noise2D(float2(side, depth) * 15.0) * 0.05;
-                float flowMask = smoothstep(targetY + tipNoise - 0.01, targetY + tipNoise + 0.01, height);
 
-                // Empêcher l'encre d'apparaître au-dessus des yeux
-                float heightLimit = smoothstep(_EyeY + 0.02, _EyeY - 0.01, height);
+                // Calcul de l'effet de "goutte renflée" (Bulb) à la pointe de l'écoulement
+                // La larme s'élargit légèrement juste avant de s'arrêter pour former une goutte ronde suspendue.
+                float distToTipLeft = height - (leadingY + tipNoise);
+                float correctedBulbRange = 0.15 / upScale;
+                float correctedBulbOffset = 0.04 / upScale;
+                float bulbLeft = 1.0 + smoothstep(correctedBulbRange, 0.0, distToTipLeft) * smoothstep(0.0, correctedBulbOffset, distToTipLeft) * 1.6;
 
-                // Masque d'encre final combiné
-                float inkMask = dripMask * flowMask * heightLimit;
+                float distToTipRight = height - (leadingY - tipNoise); // Décalé
+                float bulbRight = 1.0 + smoothstep(correctedBulbRange, 0.0, distToTipRight) * smoothstep(0.0, correctedBulbOffset, distToTipRight) * 1.6;
 
-                // 4. Rendu de l'encre (brillante et sombre)
-                float inkFresnel = pow(1.0 - saturate(dot(normalWS, viewDirWS)), 2.0);
+                // Ondulations d'épaisseur le long du flux pour simuler les vagues de liquide qui coule
+                float waveNoise = sin(height * (25.0 * upScale) - _Time.y * 12.0) * 0.15;
+
+                // Épaisseurs dynamiques calculées séparément pour chaque larme
+                float leftWidth = correctedDripWidth * bulbLeft * (1.0 + waveNoise);
+                float rightWidth = correctedDripWidth * bulbRight * (1.0 + waveNoise);
+
+                // Masque des deux lignes de larmes
+                float leftDrip = smoothstep(leftWidth + correctedDripBlur, leftWidth - correctedDripBlur, distLeft);
+                float rightDrip = smoothstep(rightWidth + correctedDripBlur, rightWidth - correctedDripBlur, distRight);
+                
+                // On limite l'encre à la face avant du modèle (pour éviter qu'elle traverse à l'arrière)
+                float forwardScale = max(0.001, length(mul((float3x3)GetObjectToWorldMatrix(), localForward)));
+                float frontMask = smoothstep(_FaceCenterZ - 0.8 / forwardScale, _FaceCenterZ - 0.3 / forwardScale, depth);
+                float dripMask = saturate(leftDrip + rightDrip) * frontMask;
+
+                // L'encre est dessinée au-dessus du front d'écoulement (leadingY)
+                float flowEdge = 0.01 / upScale;
+                float flowMask = smoothstep(leadingY + tipNoise - flowEdge, leadingY + tipNoise + flowEdge, height);
+
+                // L'encre s'efface au-dessus de la traîne de fin (trailingY)
+                float flowTailMask = smoothstep(trailingY + flowEdge * 2.0, trailingY - flowEdge, height);
+
+                // Masque d'encre final combiné (la larme n'existe que dans le segment [leadingY, trailingY])
+                float inkMask = dripMask * flowMask * flowTailMask;
+
+                // 4. Rendu de l'encre (brillante, sombre et mouillée avec spéculaire)
+                half3 halfDir = normalize(lightDir + viewDirWS);
+                float NdotH = saturate(dot(normalWS, halfDir));
+                float specular = pow(NdotH, 64.0) * 1.5; // Specular net de liquide brillant
+
+                float inkFresnel = pow(1.0 - saturate(dot(normalWS, viewDirWS)), 3.0);
                 half3 inkBaseColor = _InkColor.rgb;
-                half3 inkGlow = inkFresnel * half3(1.0, 1.0, 1.0) * 1.8;
+                half3 inkGlow = (specular + inkFresnel * 0.6) * half3(1.0, 1.0, 1.0) * 2.0;
                 half3 finalInkColor = inkBaseColor + inkGlow;
 
                 // Mélange final entre le corps de la statue et l'encre

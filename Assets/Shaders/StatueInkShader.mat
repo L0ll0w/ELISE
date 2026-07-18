@@ -29,20 +29,21 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _DripBlur: 0.0138
-    - _DripWidth: 0.059
+    - _DripBlur: 0.0281
+    - _DripWidth: 0.042
     - _EyeSpacing: -0.21
     - _EyeY: 2.07
     - _FaceCenterX: 0
     - _FaceCenterZ: 0.27
     - _FeetY: -3.32
     - _InkProgress: 0
+    - _InkTrailProgress: 0
     - _RimIntensity: 0.84
     - _RimPower: 2.3
     - _ToonSmoothness: 0.2
     - _ToonThreshold: 0.3
     - _WiggleFreq: 3
-    - _WiggleStrength: 0.03
+    - _WiggleStrength: 0.0759
     m_Colors:
     - _BaseColor: {r: 0.6792453, g: 0.6792453, b: 0.6792453, a: 1}
     - _InkColor: {r: 0.049999982, g: 0.049999982, b: 0.049999982, a: 1}

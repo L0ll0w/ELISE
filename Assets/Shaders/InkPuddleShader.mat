@@ -28,9 +28,9 @@ Material:
     - _GlowIntensity: 0
     - _GlowPower: 5
     - _NoiseScale: 8
-    - _NoiseStrength: 0.159
+    - _NoiseStrength: 0.053
     - _PuddleSize: 0
-    - _Smoothness: 0.012
+    - _Smoothness: 0.0576
     m_Colors:
     - _GlowColor: {r: 1, g: 1, b: 1, a: 1}
     - _PuddleColor: {r: 0.049999982, g: 0.049999982, b: 0.049999982, a: 1}
