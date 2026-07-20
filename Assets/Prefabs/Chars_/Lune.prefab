@@ -61,7 +61,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  - {fileID: 2100000, guid: 315e22ed17544d64da338a8cf0d17e19, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -107,6 +107,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
   mode: 0
+  targetTransform: {fileID: 0}
   useMainCamera: 1
   targetCamera: {fileID: 0}
 --- !u!136 &8166436663945131425
@@ -147,3 +148,4 @@ MonoBehaviour:
   characterData: {fileID: 11400000, guid: 8102c1a9ae8f74241a1d0296d0abbd8f, type: 2}
   characterName: Lune
   portrait: {fileID: 21300000, guid: 2ee3f7b13f4928c4e9f1ac73e8ab6857, type: 3}
+  menuIcon: {fileID: 0}
