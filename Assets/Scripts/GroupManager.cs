@@ -483,6 +483,25 @@ public class GroupManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Définit un nouveau leader pour le groupe (ex: après remplacement de prefab).
+    /// </summary>
+    public void SetLeader(Transform newLeader)
+    {
+        leader = newLeader;
+        if (leader != null)
+        {
+            DontDestroyOnLoad(leader.gameObject);
+            lastLeaderPosition = leader.position;
+            trail.Clear();
+            trail.Add(leader.position);
+
+            // Replacer les compagnons sur le joueur et réappliquer les collisions
+            TeleportPartyToLeader();
+            ReapplyAllCollisions();
+        }
+    }
+
+    /// <summary>
     /// Permet de configurer à la volée la formation et le mode de suivi.
     /// </summary>
     public void ChangeFormation(FollowMode mode, FormationDirection direction)

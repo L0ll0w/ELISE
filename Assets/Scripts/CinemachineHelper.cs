@@ -56,14 +56,86 @@ public class CinemachineHelper : MonoBehaviour
     private Vector3 lastPlayerPos;
     private Vector3 currentLookAhead;
     private float currentVerticalSpeed;
+    private float defaultFOV;
+    private Vector3 originalFollowOffset;
+    private Quaternion originalLocalRotation;
+    private float originalFOV;
+    private BindingMode originalBindingMode;
+    private bool hasSavedOriginalSettings = false;
+
+    [Header("Zoom Out dynamique vers la Caméra")]
+    [Tooltip("Activer le zoom out quand le joueur se dirige vers la caméra.")]
+    [SerializeField] private bool zoomOutTowardsCamera = true;
+    [Tooltip("Distance de recul supplémentaire maximale.")]
+    [SerializeField] private float maxZoomOutDistance = 5f;
+    [Tooltip("Augmentation maximale du FOV lors du zoom out.")]
+    [SerializeField] private float maxZoomOutFOV = 10f;
+    [Tooltip("Sensibilité/Vitesse de réaction du zoom out.")]
+    [SerializeField] private float zoomOutSensitivity = 2f;
+    [Tooltip("Vitesse de retour au zoom normal.")]
+    [SerializeField] private float zoomOutReturnSpeed = 3f;
+
+    private float currentZoomOutOffset = 0f;
+    private float currentZoomOutFOVOffset = 0f;
 
     private void OnValidate()
     {
         UpdateCameraSettings();
     }
 
+    public void SaveOriginalSettings()
+    {
+        if (hasSavedOriginalSettings) return;
+
+        if (cinemachineCamera == null)
+        {
+            cinemachineCamera = GetComponent<CinemachineCamera>();
+        }
+
+        if (followComponent == null)
+        {
+            followComponent = GetComponent<CinemachineFollow>();
+            if (followComponent == null)
+            {
+                followComponent = GetComponentInChildren<CinemachineFollow>();
+            }
+        }
+
+        if (cinemachineCamera != null)
+        {
+            originalFOV = cinemachineCamera.Lens.FieldOfView;
+            defaultFOV = originalFOV;
+            originalLocalRotation = transform.localRotation;
+            
+            if (followComponent != null)
+            {
+                originalFollowOffset = followComponent.FollowOffset;
+                originalBindingMode = followComponent.TrackerSettings.BindingMode;
+            }
+            else
+            {
+                originalFollowOffset = new Vector3(0f, height, -distance);
+                originalBindingMode = BindingMode.WorldSpace;
+            }
+
+            hasSavedOriginalSettings = true;
+            
+            // Lister tous les composants pour identifier le composant de suivi Cinemachine
+            var components = GetComponents<Component>();
+            string componentNames = "";
+            foreach (var c in components)
+            {
+                if (c != null) componentNames += c.GetType().Name + ", ";
+            }
+            Debug.Log($"[CinemachineHelper] Camera components: {componentNames}");
+            Debug.Log($"[CinemachineHelper] Saved original settings: Offset={originalFollowOffset}, Rot={originalLocalRotation.eulerAngles}, FOV={originalFOV}");
+        }
+    }
+
     private void Start()
     {
+        SaveOriginalSettings();
+
         // Création d'une cible virtuelle intermédiaire pour l'amorti et le look-ahead
         GameObject dummyObj = new GameObject("Cinemachine_CameraTarget_Proxy");
         dummyTarget = dummyObj.transform;
@@ -79,7 +151,19 @@ public class CinemachineHelper : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (targetPlayer == null || dummyTarget == null) return;
+        if (targetPlayer == null || dummyTarget == null)
+        {
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.LogWarning($"[CinemachineHelper] LateUpdate returned early: targetPlayer={targetPlayer}, dummyTarget={dummyTarget}");
+            }
+            return;
+        }
+
+        if (Time.frameCount % 30 == 0)
+        {
+            Debug.Log($"[CinemachineHelper] LateUpdate running: Player={targetPlayer.name} ({targetPlayer.position}), dummyTarget={dummyTarget.position}, FollowOffset={followComponent?.FollowOffset}, CameraPos={transform.position}, CameraFollowTarget={cinemachineCamera?.Follow?.name}");
+        }
 
         Vector3 playerPos = targetPlayer.position;
         
@@ -95,6 +179,12 @@ public class CinemachineHelper : MonoBehaviour
         Vector3 moveDelta = playerPos - lastPlayerPos;
         moveDelta.y = 0f;
 
+        // Éviter les sauts de zoom lors des téléportations ou chargements de scènes
+        if (moveDelta.magnitude > 2f)
+        {
+            moveDelta = Vector3.zero;
+        }
+
         if (moveDelta.sqrMagnitude > 0.0001f)
         {
             Vector3 moveDir = moveDelta.normalized;
@@ -103,6 +193,40 @@ public class CinemachineHelper : MonoBehaviour
         else
         {
             currentLookAhead = Vector3.Lerp(currentLookAhead, Vector3.zero, deltaTime * lookAheadReturnSpeed);
+        }
+
+        // Calcul du zoom out dynamique quand on se dirige vers la caméra
+        float targetZoomOut = 0f;
+        float targetZoomOutFOV = 0f;
+
+        if (zoomOutTowardsCamera && deltaTime > 0f)
+        {
+            Vector3 camForward = transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+
+            // Vitesse de déplacement vers la caméra (produit scalaire négatif de moveDelta par rapport à la direction de visée de la caméra)
+            float speedTowardsCamera = -Vector3.Dot(moveDelta, camForward) / deltaTime;
+            
+            if (speedTowardsCamera > 0.1f)
+            {
+                // Vitesse maximale attendue pour la normalisation (ex: vitesse de course ~ 5f)
+                float t = Mathf.Clamp01(speedTowardsCamera / 5f);
+                targetZoomOut = t * maxZoomOutDistance;
+                targetZoomOutFOV = t * maxZoomOutFOV;
+            }
+        }
+
+        // Lissage de la transition du zoom out (rapide pour s'éloigner, modéré pour revenir)
+        if (targetZoomOut > currentZoomOutOffset)
+        {
+            currentZoomOutOffset = Mathf.Lerp(currentZoomOutOffset, targetZoomOut, deltaTime * zoomOutSensitivity);
+            currentZoomOutFOVOffset = Mathf.Lerp(currentZoomOutFOVOffset, targetZoomOutFOV, deltaTime * zoomOutSensitivity);
+        }
+        else
+        {
+            currentZoomOutOffset = Mathf.Lerp(currentZoomOutOffset, targetZoomOut, deltaTime * zoomOutReturnSpeed);
+            currentZoomOutFOVOffset = Mathf.Lerp(currentZoomOutFOVOffset, targetZoomOutFOV, deltaTime * zoomOutReturnSpeed);
         }
 
         // Position de suivi de base
@@ -118,8 +242,9 @@ public class CinemachineHelper : MonoBehaviour
         dummyTarget.position = targetFollowPos;
 
         // 3. Calcul de la perspective de base (avec ou sans pente)
-        float targetPitch = pitchAngle;
-        float targetHeight = height;
+        float targetPitch = hasSavedOriginalSettings ? originalLocalRotation.eulerAngles.x : pitchAngle;
+        float targetHeight = hasSavedOriginalSettings ? originalFollowOffset.y : height;
+        float currentDistance = hasSavedOriginalSettings ? -originalFollowOffset.z : distance;
 
         if (adaptToSlope)
         {
@@ -148,7 +273,7 @@ public class CinemachineHelper : MonoBehaviour
         if (preventTerrainClipping && followComponent != null)
         {
             // Position estimée mondiale de la caméra
-            Vector3 estimatedCamPos = dummyTarget.position + new Vector3(0f, targetHeight, -distance);
+            Vector3 estimatedCamPos = dummyTarget.position + new Vector3(0f, targetHeight, -currentDistance);
 
             // Hauteur du sol du terrain sous cette position de caméra
             float terrainHeightAtCam = GetHeightAtPosition(estimatedCamPos);
@@ -163,18 +288,34 @@ public class CinemachineHelper : MonoBehaviour
 
                 // Si la caméra s'élève, on ajuste dynamiquement le pitch pour continuer à centrer le joueur
                 // Angle = atan2(Hauteur, Distance)
-                targetPitch = Mathf.Atan2(targetHeight, distance) * Mathf.Rad2Deg;
+                targetPitch = Mathf.Atan2(targetHeight, currentDistance) * Mathf.Rad2Deg;
             }
         }
 
         // 5. Lissage et application finale
         if (followComponent != null)
         {
-            float activePitch = Mathf.Lerp(transform.localEulerAngles.x, targetPitch, deltaTime * 5f);
-            float activeHeight = Mathf.Lerp(followComponent.FollowOffset.y, targetHeight, deltaTime * 5f);
+            float lerpSpeed = deltaTime * 5f;
+            
+            // Lissage de l'offset complet (X, Y, Z) incluant le zoom out
+            float activeDistance = currentDistance + currentZoomOutOffset;
+            Vector3 targetOffset = hasSavedOriginalSettings 
+                ? new Vector3(originalFollowOffset.x, targetHeight, originalFollowOffset.z - currentZoomOutOffset)
+                : new Vector3(0f, targetHeight, -activeDistance);
+            followComponent.FollowOffset = Vector3.Lerp(followComponent.FollowOffset, targetOffset, lerpSpeed);
 
-            transform.localRotation = Quaternion.Euler(activePitch, 0f, 0f);
-            followComponent.FollowOffset = new Vector3(0f, activeHeight, -distance);
+            // Lissage de la rotation complète (Pitch, Yaw, Roll) pour éviter les sauts d'angle
+            Quaternion targetRot = hasSavedOriginalSettings
+                ? Quaternion.Euler(targetPitch, originalLocalRotation.eulerAngles.y, originalLocalRotation.eulerAngles.z)
+                : Quaternion.Euler(targetPitch, 0f, 0f);
+            transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRot, lerpSpeed);
+
+            // Lissage progressif du FOV vers sa valeur par défaut + zoom out
+            if (defaultFOV > 0f)
+            {
+                float targetFOVValue = defaultFOV + currentZoomOutFOVOffset;
+                cinemachineCamera.Lens.FieldOfView = Mathf.Lerp(cinemachineCamera.Lens.FieldOfView, targetFOVValue, lerpSpeed);
+            }
         }
 
         lastPlayerPos = playerPos;
@@ -195,7 +336,27 @@ public class CinemachineHelper : MonoBehaviour
         return 0f;
     }
 
-    public void UpdateCameraSettings()
+    /// <summary>
+    /// Modifie la cible de la caméra et réinitialise les variables pour éviter les sauts brusques.
+    /// </summary>
+    public void SetTargetPlayer(Transform newTarget)
+    {
+        targetPlayer = newTarget;
+        if (dummyTarget != null && newTarget != null)
+        {
+            dummyTarget.position = newTarget.position;
+            lastPlayerPos = newTarget.position;
+            currentLookAhead = Vector3.zero;
+            currentVerticalSpeed = 0f;
+        }
+        UpdateCameraSettings(true);
+        if (newTarget != null)
+        {
+            Debug.Log($"[CinemachineHelper] SetTargetPlayer called with {newTarget.name} at position {newTarget.position}");
+        }
+    }
+
+    public void UpdateCameraSettings(bool smoothTransition = false)
     {
         if (cinemachineCamera == null)
         {
@@ -232,9 +393,6 @@ public class CinemachineHelper : MonoBehaviour
 
         cinemachineCamera.LookAt = null;
 
-        // Rotation fixe par défaut
-        transform.localRotation = Quaternion.Euler(pitchAngle, 0f, 0f);
-
         // Configuration de la liaison CinemachineFollow
         if (followComponent == null)
         {
@@ -247,8 +405,38 @@ public class CinemachineHelper : MonoBehaviour
 
         if (followComponent != null)
         {
-            followComponent.TrackerSettings.BindingMode = BindingMode.WorldSpace;
-            followComponent.FollowOffset = new Vector3(0f, height, -distance);
+            followComponent.TrackerSettings.BindingMode = hasSavedOriginalSettings ? originalBindingMode : BindingMode.WorldSpace;
+            
+            if (smoothTransition)
+            {
+                // Calcule l'offset actuel de la caméra par rapport au joueur pour initier le Lerp sans saut
+                Vector3 currentTargetPos = dummyTarget != null ? dummyTarget.position : (targetPlayer != null ? targetPlayer.position : transform.position);
+                followComponent.FollowOffset = transform.position - currentTargetPos;
+            }
+            else
+            {
+                if (hasSavedOriginalSettings)
+                {
+                    transform.localRotation = originalLocalRotation;
+                    followComponent.FollowOffset = originalFollowOffset;
+                }
+                else
+                {
+                    transform.localRotation = Quaternion.Euler(pitchAngle, 0f, 0f);
+                    followComponent.FollowOffset = new Vector3(0f, height, -distance);
+                }
+            }
+        }
+        else if (!smoothTransition)
+        {
+            if (hasSavedOriginalSettings)
+            {
+                transform.localRotation = originalLocalRotation;
+            }
+            else
+            {
+                transform.localRotation = Quaternion.Euler(pitchAngle, 0f, 0f);
+            }
         }
     }
 }

@@ -122,6 +122,16 @@ public class CinematicSequence : MonoBehaviour
     [Tooltip("CanvasGroup utilisé pour le fondu au noir (si laissé vide, sera créé automatiquement en jeu).")]
     [SerializeField] private CanvasGroup fadeCanvasGroup;
 
+    [Header("Remplacement du Joueur (Fin de Séquence)")]
+    [Tooltip("Activer le remplacement du joueur actuel par un préfabriqué à la fin de la cinématique.")]
+    [SerializeField] private bool replacePlayerAtEnd = false;
+
+    [Tooltip("Le préfabriqué du joueur à instancier (ex: Prefabs/Player).")]
+    [SerializeField] private GameObject playerPrefab;
+
+    [Tooltip("Le GameObject du joueur actuel à remplacer (si laissé vide, cherchera le joueur actuel).")]
+    [SerializeField] private GameObject playerToReplace;
+
     [Header("Événements")]
     [Tooltip("Déclenché à la fin complète de la cinématique.")]
     public UnityEvent onSequenceComplete;
@@ -195,6 +205,12 @@ public class CinematicSequence : MonoBehaviour
         if (cinemachineCamera != null)
         {
             cinemachineHelper = cinemachineCamera.GetComponent<CinemachineHelper>();
+        }
+
+        // Sauvegarder les paramètres d'origine de la caméra avant qu'ils ne soient modifiés par la cinématique
+        if (cinemachineHelper != null)
+        {
+            cinemachineHelper.SaveOriginalSettings();
         }
 
         playerMovement = FindFirstObjectByType<PlayerMovement>();
@@ -315,10 +331,62 @@ public class CinematicSequence : MonoBehaviour
             yield return StartCoroutine(AnimateCinemaBarsRoutine(false, 0.8f));
         }
 
+        // Remplacement du joueur si configuré
+        if (replacePlayerAtEnd && playerPrefab != null)
+        {
+            GameObject targetToReplaceObj = playerToReplace != null ? playerToReplace : (playerMovement != null ? playerMovement.gameObject : GameObject.FindGameObjectWithTag("Player"));
+
+            if (targetToReplaceObj != null)
+            {
+                Vector3 spawnPos = targetToReplaceObj.transform.position;
+                Quaternion spawnRot = targetToReplaceObj.transform.rotation;
+
+                // Instanciation de la vraie prefab du joueur
+                GameObject newPlayer = Instantiate(playerPrefab, spawnPos, spawnRot);
+                newPlayer.name = playerPrefab.name; // Nettoyer le suffixe "(Clone)"
+
+                // Mettre à jour le cache local pour réactiver les contrôles sur la bonne instance
+                playerMovement = newPlayer.GetComponent<PlayerMovement>();
+
+                // Mettre à jour le GroupManager si disponible
+                if (GroupManager.Instance != null)
+                {
+                    GroupManager.Instance.SetLeader(newPlayer.transform);
+                }
+
+                // Réorienter toutes les caméras possédant un CinemachineHelper sur le nouveau joueur
+                CinemachineHelper[] allHelpers = FindObjectsByType<CinemachineHelper>(FindObjectsSortMode.None);
+                if (allHelpers != null && allHelpers.Length > 0)
+                {
+                    foreach (var helper in allHelpers)
+                    {
+                        helper.SetTargetPlayer(newPlayer.transform);
+                        helper.enabled = true;
+                    }
+                }
+                else if (cinemachineHelper != null)
+                {
+                    cinemachineHelper.SetTargetPlayer(newPlayer.transform);
+                }
+
+                // Détruire l'ancien joueur
+                Destroy(targetToReplaceObj);
+            }
+            else
+            {
+                Debug.LogWarning("CinematicSequence: Impossible de remplacer le joueur car aucun joueur à remplacer n'a été trouvé.");
+            }
+        }
+
         if (cinemachineHelper != null)
         {
             cinemachineHelper.enabled = true;
-            cinemachineHelper.UpdateCameraSettings();
+            // Si le joueur a été remplacé, SetTargetPlayer a déjà fait un appel à UpdateCameraSettings(true).
+            // Sinon, on fait un appel UpdateCameraSettings(true) pour assurer une transition propre vers la caméra de jeu.
+            if (!replacePlayerAtEnd)
+            {
+                cinemachineHelper.UpdateCameraSettings(true);
+            }
         }
 
         if (disablePlayerControls && playerMovement != null)
@@ -344,6 +412,14 @@ public class CinematicSequence : MonoBehaviour
         float safeFOV = shot.fov < 5f ? 40f : shot.fov;
 
         cinemachineCamera.Follow = shot.target;
+
+        var follow = cinemachineCamera.GetComponent<CinemachineFollow>();
+        if (follow == null) follow = cinemachineCamera.GetComponentInChildren<CinemachineFollow>();
+        if (follow != null)
+        {
+            follow.FollowOffset = new Vector3(shot.offsetX, shot.height, -shot.distance);
+        }
+
         cinemachineCamera.transform.position = shot.target.position + new Vector3(shot.offsetX, shot.height, -shot.distance);
         cinemachineCamera.transform.rotation = Quaternion.Euler(shot.pitchAngle, shot.yawAngle, 0f);
         cinemachineCamera.Lens.FieldOfView = safeFOV;
@@ -354,6 +430,9 @@ public class CinematicSequence : MonoBehaviour
         if (cinemachineCamera == null || shot.target == null) yield break;
 
         cinemachineCamera.Follow = shot.target;
+
+        var follow = cinemachineCamera.GetComponent<CinemachineFollow>();
+        if (follow == null) follow = cinemachineCamera.GetComponentInChildren<CinemachineFollow>();
 
         Vector3 startPos = cinemachineCamera.transform.position;
         Quaternion startRot = cinemachineCamera.transform.rotation;
@@ -373,9 +452,15 @@ public class CinematicSequence : MonoBehaviour
             float normalizedTime = Mathf.Clamp01(elapsed / duration);
             float t = curve.Evaluate(normalizedTime);
 
-            cinemachineCamera.transform.position = Vector3.Lerp(startPos, targetPos, t);
+            Vector3 currentPos = Vector3.Lerp(startPos, targetPos, t);
+            cinemachineCamera.transform.position = currentPos;
             cinemachineCamera.transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
             cinemachineCamera.Lens.FieldOfView = Mathf.Lerp(startFOV, targetFOV, t);
+
+            if (follow != null)
+            {
+                follow.FollowOffset = currentPos - shot.target.position;
+            }
 
             yield return null;
         }
@@ -383,11 +468,19 @@ public class CinematicSequence : MonoBehaviour
         cinemachineCamera.transform.position = targetPos;
         cinemachineCamera.transform.rotation = targetRot;
         cinemachineCamera.Lens.FieldOfView = targetFOV;
+
+        if (follow != null)
+        {
+            follow.FollowOffset = targetPos - shot.target.position;
+        }
     }
 
     private IEnumerator SlowDriftHoldRoutine(CinematicShot shot)
     {
         if (cinemachineCamera == null || shot.target == null) yield break;
+
+        var follow = cinemachineCamera.GetComponent<CinemachineFollow>();
+        if (follow == null) follow = cinemachineCamera.GetComponentInChildren<CinemachineFollow>();
 
         Vector3 basePos = shot.target.position + new Vector3(shot.offsetX, shot.height, -shot.distance);
         float baseFOV = shot.fov < 5f ? 40f : shot.fov;
@@ -406,6 +499,11 @@ public class CinematicSequence : MonoBehaviour
 
             cinemachineCamera.Lens.FieldOfView = currentFOV;
             cinemachineCamera.transform.position = currentPos;
+
+            if (follow != null)
+            {
+                follow.FollowOffset = currentPos - shot.target.position;
+            }
 
             yield return null;
         }
