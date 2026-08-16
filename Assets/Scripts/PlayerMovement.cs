@@ -183,5 +183,17 @@ public class PlayerMovement : MonoBehaviour
             }
         }
     }
+
+    private void OnDisable()
+    {
+        // Stopper le Rigidbody immédiatement lors de la désactivation pour éviter que le joueur glisse indéfiniment
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+        }
+        moveDirection = Vector3.zero;
+        shouldJump = false;
+    }
 }
 

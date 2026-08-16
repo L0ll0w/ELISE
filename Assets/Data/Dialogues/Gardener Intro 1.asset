@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
+  m_Name: Gardener Intro 1
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  nodes:
+  - nodeID: intro
+    characterName: ???
+    portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    sentence: Vite vite vite
+    choices: []
+    nextNodeID: intro2
+  - nodeID: intro2
+    characterName: ???
+    portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    sentence: Dieu vas en avoir apres moi si je n'arrose pas toute ces fleurs...
+    choices: []
+    nextNodeID: intro3
+  - nodeID: intro3
+    characterName: ???
+    portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    sentence: "Il vas encore me punir car la fourn\xE9 n'est pas bonne..."
+    choices: []
+    nextNodeID: intro 4
+  - nodeID: intro4
+    characterName: ???
+    portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    sentence: OH !
+    choices: []
+    nextNodeID: 

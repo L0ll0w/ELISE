@@ -63,6 +63,10 @@ public class CinemachineHelper : MonoBehaviour
     private BindingMode originalBindingMode;
     private bool hasSavedOriginalSettings = false;
 
+    public Vector3 OriginalFollowOffset => originalFollowOffset;
+    public Quaternion OriginalLocalRotation => originalLocalRotation;
+    public float OriginalFOV => originalFOV;
+
     [Header("Zoom Out dynamique vers la Caméra")]
     [Tooltip("Activer le zoom out quand le joueur se dirige vers la caméra.")]
     [SerializeField] private bool zoomOutTowardsCamera = true;

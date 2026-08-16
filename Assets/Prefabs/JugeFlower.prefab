@@ -45978,6 +45978,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7464322946962715839}
   - component: {fileID: 965904165111262690}
+  - component: {fileID: 6672513276164854119}
   m_Layer: 0
   m_Name: JugeFlower
   m_TagString: Untagged
@@ -46067,6 +46068,8 @@ MonoBehaviour:
     dropStartPoint: {fileID: 2166160377173350192}
     dropEndPoint: {fileID: 0}
     customInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
+    eyeY: 2.8
+    feetY: 0
     runtimeInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
   - name: 2
     statueRenderer: {fileID: 4795735986774645548}
@@ -46074,6 +46077,8 @@ MonoBehaviour:
     dropStartPoint: {fileID: 6932963352004848680}
     dropEndPoint: {fileID: 0}
     customInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
+    eyeY: 2.8
+    feetY: 0
     runtimeInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
   - name: 0
     statueRenderer: {fileID: 8791085749700447802}
@@ -46081,6 +46086,8 @@ MonoBehaviour:
     dropStartPoint: {fileID: 882075857976018633}
     dropEndPoint: {fileID: 0}
     customInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
+    eyeY: 2.8
+    feetY: 0
     runtimeInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
   - name: 0
     statueRenderer: {fileID: 8791085749700447802}
@@ -46088,6 +46095,8 @@ MonoBehaviour:
     dropStartPoint: {fileID: 882075857976018633}
     dropEndPoint: {fileID: 0}
     customInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
+    eyeY: 2.8
+    feetY: 0
     runtimeInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
   - name: 5
     statueRenderer: {fileID: 1819496162262136363}
@@ -46095,6 +46104,8 @@ MonoBehaviour:
     dropStartPoint: {fileID: 3068113008083303155}
     dropEndPoint: {fileID: 0}
     customInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
+    eyeY: 2.8
+    feetY: 0
     runtimeInkDropObject: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
   sharedPuddleRenderer: {fileID: 0}
   sharedPuddleMaterialSlot: 0
@@ -46102,13 +46113,41 @@ MonoBehaviour:
   puddleGrowthPerDrop: 0.1
   maxPuddleSizeLimit: 1
   puddleGrowthSpeed: 1
+  spawnObjectAnimator: {fileID: 0}
+  spawnAnimationName: Spawn
+  onPuddleMaxSizeReached:
+    m_PersistentCalls:
+      m_Calls: []
   inkDropPrefab: {fileID: 6501371529139906249, guid: 3c8680dec6e789443b1818fa85473f9f, type: 3}
+  splashParticlePrefab: {fileID: 0}
   dropFallSpeed: 6
   minDropDelay: 0.4
   maxDropDelay: 1.2
   minInkSpeed: 0.15
   maxInkSpeed: 0.35
   tearFadeSpeed: 0.5
+--- !u!64 &6672513276164854119
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8388467521625735406}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 0}
 --- !u!1 &8412419696270847764
 GameObject:
   m_ObjectHideFlags: 0
