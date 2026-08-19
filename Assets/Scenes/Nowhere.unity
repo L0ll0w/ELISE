@@ -1225,14 +1225,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 299572172}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 50dfdddab122c0c43ab6c95260d361f5, type: 3}
+  m_Script: {fileID: 11500000, guid: fa2eb759c5d07ee4bbf520d41ac520d4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CinematicTriggerZone
+  m_EditorClassIdentifier: Assembly-CSharp::GardenerCinematicTriggerZone
   oneShot: 1
   focusTarget: {fileID: 736924660}
-  zoomOutDistance: 15
-  zoomHeight: 6
-  zoomPitch: 25
+  zoomOutDistance: 18
+  zoomHeight: 4
+  zoomPitch: 15
+  zoomYaw: -1
   zoomFOV: 40
   delayBeforeCameraMove: 2
   transitionInDuration: 2
@@ -1261,9 +1262,23 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  delayBeforeDialogue: 3
-  dialogueData: {fileID: 11400000, guid: a69a20f448ae5164bad66424afdc4b43, type: 2}
+  delayBeforeDialogue: 2
+  dialogueData: {fileID: 11400000, guid: d7602b1ffd5103649aba7e060cae3d3c, type: 2}
   delayAfterDialogue: 2
+  secondDialogueData: {fileID: 11400000, guid: c47e13c3ff241164791bcb3077363cf5, type: 2}
+  wateringCan: {fileID: 5560639600159493552}
+  gardenerTransform: {fileID: 736924660}
+  throwHeight: 25
+  throwDuration: 5
+  gardenerMoveSpeed: 4
+  gardenerPlayerOffsetX: 1.5
+  gardenerPlayerOffsetY: 0.5
+  gardenerExitDistance: 15
+  gardenerPlayerOffsetZ: 0
+  delayBeforeSecondDialogue: 1.2
+  enableGardenerLevitation: 1
+  gardenerLevitationAmount: 0.15
+  gardenerLevitationSpeed: 6
 --- !u!1001 &307114640
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2104,7 +2119,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+  m_Sprite: {fileID: -627362963, guid: d02ddd2592b2d0343bc5d2f431a3be02, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -2122,13 +2137,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 736924657}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.70658875, y: 0.02706362, z: -0.027063577, w: 0.7065887}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0.454, y: 0.006, z: 0.855}
   m_LocalScale: {x: 0.20000003, y: 0.19999999, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2530967549317367813}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!136 &736924661
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -3828,8 +3843,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2102198496}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.10192445, y: 0, z: 0, w: 0.99479216}
-  m_LocalPosition: {x: -527.8655, y: 6.37, z: 367.18018}
+  m_LocalRotation: {x: 0.10279254, y: 0, z: 0, w: 0.9947028}
+  m_LocalPosition: {x: -542.2, y: 11.32, z: 394.175}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3950,7 +3965,7 @@ MonoBehaviour:
   m_StreamingVersion: 20241001
   m_LegacyPriority: 0
   Target:
-    TrackingTarget: {fileID: 276926760}
+    TrackingTarget: {fileID: 1150211753}
     LookAtTarget: {fileID: 0}
     CustomLookAtTarget: 1
   Lens:
@@ -3981,8 +3996,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2129308864}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.10192445, y: 0, z: 0, w: 0.99479216}
-  m_LocalPosition: {x: -527.8655, y: 6.37, z: 367.18018}
+  m_LocalRotation: {x: 0.10279254, y: 0, z: 0, w: 0.9947028}
+  m_LocalPosition: {x: -542.2, y: 11.32, z: 394.175}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

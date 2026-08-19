@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 938c781695b4a6549af555c8557bd0fd
+guid: d02ddd2592b2d0343bc5d2f431a3be02
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -97,7 +97,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Guide-Sheet_0
+      name: Guide-Sheet 1_0
       rect:
         serializedVersion: 2
         x: 0
@@ -112,14 +112,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 75aca1599e581264eb40fda0c9fda5e6
-      internalID: -1746232888
+      spriteID: 69c0d543f8103f54fa0506be725b4e5e
+      internalID: -627362963
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_1
+      name: Guide-Sheet 1_1
       rect:
         serializedVersion: 2
         x: 64
@@ -134,14 +134,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: cf080f5b4ddc11a4297f52d894e4d471
-      internalID: 283828459
+      spriteID: 5ee84595cc25a6c409620eee264dfafd
+      internalID: -558134617
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_2
+      name: Guide-Sheet 1_2
       rect:
         serializedVersion: 2
         x: 128
@@ -156,14 +156,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 730d320cdf520294ca8a9e1f636dd1e8
-      internalID: 1989311068
+      spriteID: 4661fb3d650c38c4d913622957f80abe
+      internalID: 726116846
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_3
+      name: Guide-Sheet 1_3
       rect:
         serializedVersion: 2
         x: 192
@@ -178,14 +178,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a8140feeb57049c4a8bc8760f0016403
-      internalID: -1497465140
+      spriteID: dbca845450fd62e49bef44b9dea2d41d
+      internalID: 822904764
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_4
+      name: Guide-Sheet 1_4
       rect:
         serializedVersion: 2
         x: 256
@@ -200,14 +200,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 6874d9238789cdb4b8d938c8374909e0
-      internalID: -1161614910
+      spriteID: eca09f3827c56b34c85c22b385b66cea
+      internalID: -968891392
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_5
+      name: Guide-Sheet 1_5
       rect:
         serializedVersion: 2
         x: 320
@@ -222,14 +222,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 6be1dc60212c9424fb84e2c9b2dbca3e
-      internalID: -1858440180
+      spriteID: 39a4ecf2a64609740903d61d0f1d22ce
+      internalID: -1407596379
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_6
+      name: Guide-Sheet 1_6
       rect:
         serializedVersion: 2
         x: 384
@@ -244,14 +244,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9200195bd7e3ab24784ee89203de016e
-      internalID: 606119859
+      spriteID: 9e095af39a1a4ae468c1fac880e77b8c
+      internalID: -1879780662
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_7
+      name: Guide-Sheet 1_7
       rect:
         serializedVersion: 2
         x: 448
@@ -266,14 +266,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a19141a321e274a4b8f2e812e6c498c0
-      internalID: -457173087
+      spriteID: 1922c7de9db56b440bcc9a566258ab63
+      internalID: -1703880046
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Guide-Sheet_8
+      name: Guide-Sheet 1_8
       rect:
         serializedVersion: 2
         x: 512
@@ -288,8 +288,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a67b9800ed1f22d46b3d4f7fc47d0634
-      internalID: 1632230590
+      spriteID: bf239c4455ad29e4583a7479e23c3b27
+      internalID: 22677269
       vertices: []
       indices: 
       edges: []
@@ -298,7 +298,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 3f9f52df43a0177469c0a8f8601523d9
+    spriteID: b76911325ea69ae4081eee86f8ca902d
     internalID: 0
     vertices: []
     indices: 
@@ -310,15 +310,15 @@ TextureImporter:
       - key: SpriteEditor.SliceSettings
         value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      Guide-Sheet_0: -1746232888
-      Guide-Sheet_1: 283828459
-      Guide-Sheet_2: 1989311068
-      Guide-Sheet_3: -1497465140
-      Guide-Sheet_4: -1161614910
-      Guide-Sheet_5: -1858440180
-      Guide-Sheet_6: 606119859
-      Guide-Sheet_7: -457173087
-      Guide-Sheet_8: 1632230590
+      Guide-Sheet 1_0: -627362963
+      Guide-Sheet 1_1: -558134617
+      Guide-Sheet 1_2: 726116846
+      Guide-Sheet 1_3: 822904764
+      Guide-Sheet 1_4: -968891392
+      Guide-Sheet 1_5: -1407596379
+      Guide-Sheet 1_6: -1879780662
+      Guide-Sheet 1_7: -1703880046
+      Guide-Sheet 1_8: 22677269
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -14,52 +14,55 @@ public class CinematicTriggerZone : MonoBehaviour
 {
     [Header("Configuration Déclencheur")]
     [Tooltip("La cinématique ne se déclenche-t-elle qu'une seule fois ?")]
-    [SerializeField] private bool oneShot = true;
+    [SerializeField] protected bool oneShot = true;
 
     [Header("Configuration Caméra (Focus / Dezoom)")]
     [Tooltip("Cible sur laquelle la caméra fait la mise au point. Si vide, fait un dezoom centré sur le joueur.")]
-    [SerializeField] private Transform focusTarget;
+    [SerializeField] protected Transform focusTarget;
 
     [Tooltip("Distance de recul (Z) de la caméra par rapport à la cible pendant le focus.")]
-    [SerializeField] private float zoomOutDistance = 15f;
+    [SerializeField] protected float zoomOutDistance = 15f;
 
     [Tooltip("Hauteur (Y) de la caméra par rapport à la cible pendant le focus.")]
-    [SerializeField] private float zoomHeight = 6f;
+    [SerializeField] protected float zoomHeight = 6f;
 
     [Tooltip("Inclinaison verticale de la caméra (X Axis Rotation) en degrés pendant le focus.")]
     [Range(0f, 85f)]
-    [SerializeField] private float zoomPitch = 25f;
+    [SerializeField] protected float zoomPitch = 25f;
+
+    [Tooltip("Orientation horizontale de la caméra (Y Axis Rotation) en degrés pendant le focus. Mettre à -1 pour conserver la rotation actuelle.")]
+    [SerializeField] protected float zoomYaw = -1f;
 
     [Tooltip("Field Of View (FOV) pendant le focus.")]
     [Range(5f, 120f)]
-    [SerializeField] private float zoomFOV = 40f;
+    [SerializeField] protected float zoomFOV = 40f;
 
     [Tooltip("Temps d'attente en secondes après le déclenchement du trigger avant que la caméra ne commence à bouger.")]
-    [SerializeField] private float delayBeforeCameraMove = 0.0f;
+    [SerializeField] protected float delayBeforeCameraMove = 0.0f;
 
     [Tooltip("Durée de la transition de caméra à l'aller (en secondes).")]
-    [SerializeField] private float transitionInDuration = 2.0f;
+    [SerializeField] protected float transitionInDuration = 2.0f;
 
     [Tooltip("Durée de la transition de caméra au retour (en secondes).")]
-    [SerializeField] private float transitionOutDuration = 2.0f;
+    [SerializeField] protected float transitionOutDuration = 2.0f;
 
     [Tooltip("Courbe de transition pour le mouvement de caméra.")]
-    [SerializeField] private AnimationCurve transitionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    [SerializeField] protected AnimationCurve transitionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Actions & Dialogue")]
     [Tooltip("Temps d'attente en secondes après l'arrivée de la caméra et avant le déclenchement du dialogue.")]
-    [SerializeField] private float delayBeforeDialogue = 1.0f;
+    [SerializeField] protected float delayBeforeDialogue = 1.0f;
 
     [Tooltip("Dialogue optionnel à déclencher après le zoom/focus.")]
-    [SerializeField] private DialogueData dialogueData;
+    [SerializeField] protected DialogueData dialogueData;
 
     [Tooltip("Temps d'attente en secondes après la fin du dialogue et avant le retour de la caméra.")]
-    [SerializeField] private float delayAfterDialogue = 1.0f;
+    [SerializeField] protected float delayAfterDialogue = 1.0f;
 
-    private bool alreadyTriggered = false;
-    private CinemachineCamera virtualCamera;
-    private CinemachineHelper cameraHelper;
-    private PlayerMovement playerMovement;
+    protected bool alreadyTriggered = false;
+    protected CinemachineCamera virtualCamera;
+    protected CinemachineHelper cameraHelper;
+    protected PlayerMovement playerMovement;
 
     private void Awake()
     {
@@ -96,7 +99,7 @@ public class CinematicTriggerZone : MonoBehaviour
         }
     }
 
-    private IEnumerator ExecuteCinematicRoutine()
+    protected virtual IEnumerator ExecuteCinematicRoutine()
     {
         Debug.Log($"[CinematicTriggerZone] Déclenchement de la cinématique sur '{gameObject.name}'");
 
@@ -182,7 +185,7 @@ public class CinematicTriggerZone : MonoBehaviour
         Debug.Log($"[CinematicTriggerZone] Fin de la cinématique sur '{gameObject.name}'");
     }
 
-    private IEnumerator TransitionCameraToTarget(Transform target)
+    protected IEnumerator TransitionCameraToTarget(Transform target)
     {
         var follow = virtualCamera.GetComponent<CinemachineFollow>();
         if (follow == null)
@@ -197,12 +200,13 @@ public class CinematicTriggerZone : MonoBehaviour
         float startFOV = virtualCamera.Lens.FieldOfView;
 
         // Calcul des valeurs cibles
-        Vector3 targetOffset = new Vector3(0f, zoomHeight, -zoomOutDistance);
-        Vector3 targetPos = target.position + targetOffset;
+        float targetYaw = zoomYaw >= 0f ? zoomYaw : startRot.eulerAngles.y;
+        Quaternion targetRot = Quaternion.Euler(zoomPitch, targetYaw, 0f);
         
-        // Conserver l'orientation Yaw actuelle pour éviter les rotations brutales de pivotement
-        float startYaw = startRot.eulerAngles.y;
-        Quaternion targetRot = Quaternion.Euler(zoomPitch, startYaw, 0f);
+        // Tourner le décalage de la caméra selon la rotation Y ciblée
+        Vector3 localOffset = new Vector3(0f, zoomHeight, -zoomOutDistance);
+        Vector3 targetOffset = Quaternion.Euler(0f, targetYaw, 0f) * localOffset;
+        Vector3 targetPos = target.position + targetOffset;
 
         float elapsed = 0f;
         float duration = Mathf.Max(0.05f, transitionInDuration);
@@ -233,7 +237,7 @@ public class CinematicTriggerZone : MonoBehaviour
         // La caméra restera parfaitement figée sur place jusqu'au retour.
     }
 
-    private IEnumerator TransitionCameraBack()
+    protected IEnumerator TransitionCameraBack()
     {
         Vector3 startPos = virtualCamera.transform.position;
         Quaternion startRot = virtualCamera.transform.rotation;
@@ -274,5 +278,8 @@ public class CinematicTriggerZone : MonoBehaviour
             cameraHelper.enabled = true;
             cameraHelper.UpdateCameraSettings(false); // Pas de smoothTransition car on est déjà placé
         }
+
+        // Réinitialiser le cache d'amorti/historique pour le retour au joueur
+        virtualCamera.ForceCameraPosition(virtualCamera.transform.position, virtualCamera.transform.rotation);
     }
 }

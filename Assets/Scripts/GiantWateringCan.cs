@@ -265,4 +265,17 @@ public class GiantWateringCan : Interactable
             }
         }
     }
+
+    /// <summary>
+    /// Arrête l'arrosage, redresse l'arroseur et coupe les particules d'eau.
+    /// </summary>
+    public void StopWatering()
+    {
+        isWatering = false;
+        isTilted = false;
+        if (waterParticles != null)
+        {
+            waterParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        }
+    }
 }
