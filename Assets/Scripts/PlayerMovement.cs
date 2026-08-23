@@ -18,6 +18,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float jumpForce = 6f;
     [Tooltip("Temps de tolérance après avoir quitté une plateforme pour pouvoir sauter (Coyote Time).")]
     [SerializeField] private float coyoteTime = 0.15f;
+    [Tooltip("Temps pendant lequel l'appui sur saut est mémorisé avant de toucher le sol (Jump Buffer).")]
+    [SerializeField] private float jumpBufferTime = 0.15f;
+    [Tooltip("Multiplicateur de gravité appliqué lors de la descente (rend le saut moins flottant).")]
+    [SerializeField] private float fallMultiplier = 2.5f;
+    [Tooltip("Multiplicateur de gravité appliqué lorsque le bouton de saut est relâché tôt.")]
+    [SerializeField] private float lowJumpMultiplier = 2f;
 
     [Header("Orientation par rapport à la Caméra")]
     [Tooltip("Si coché, les directions Z/X s'alignent avec l'orientation de la caméra principale.")]
@@ -33,6 +39,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 moveDirection;
     private bool shouldJump = false;
     private float coyoteTimeCounter;
+    private float jumpBufferCounter;
 
     private void Start()
     {
@@ -117,10 +124,21 @@ public class PlayerMovement : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         }
 
-        // Détecter la demande de saut avec Coyote Time
-        if (jumpAction != null && jumpAction.WasPressedThisFrame() && coyoteTimeCounter > 0f)
+        // Gestion du Jump Buffer
+        if (jumpAction != null && jumpAction.WasPressedThisFrame())
+        {
+            jumpBufferCounter = jumpBufferTime;
+        }
+        else
+        {
+            jumpBufferCounter -= Time.deltaTime;
+        }
+
+        // Détecter la demande de saut avec Coyote Time et Jump Buffer
+        if (jumpBufferCounter > 0f && coyoteTimeCounter > 0f)
         {
             shouldJump = true;
+            jumpBufferCounter = 0f;
             coyoteTimeCounter = 0f; // Éviter le saut multiple en l'air
         }
 
@@ -161,6 +179,18 @@ public class PlayerMovement : MonoBehaviour
             {
                 targetYVelocity = jumpForce;
                 shouldJump = false;
+            }
+            else
+            {
+                // Appliquer les modificateurs de gravité personnalisés
+                if (targetYVelocity < 0f)
+                {
+                    targetYVelocity += Physics.gravity.y * (fallMultiplier - 1f) * Time.fixedDeltaTime;
+                }
+                else if (targetYVelocity > 0f && (jumpAction == null || !jumpAction.IsPressed()))
+                {
+                    targetYVelocity += Physics.gravity.y * (lowJumpMultiplier - 1f) * Time.fixedDeltaTime;
+                }
             }
 
             if (moveDirection.magnitude < 0.01f)

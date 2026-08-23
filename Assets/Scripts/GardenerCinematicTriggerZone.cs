@@ -55,6 +55,13 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
     [Tooltip("Vitesse de l'oscillation de lévitation.")]
     [SerializeField] private float gardenerLevitationSpeed = 8f;
 
+    [Header("Paramètres Post-Cinématique")]
+    [Tooltip("Le point où repositionner le jardinier à la fin de la cinématique. S'il est défini, le jardinier y sera téléporté au lieu d'être détruit.")]
+    [SerializeField] private Transform gardenerPostCinematicTarget;
+
+    [Tooltip("Le flag de l'histoire à définir à True dans StoryStateManager une fois cette cinématique terminée.")]
+    [SerializeField] private string flagToSetOnComplete = "gardener_intro_completed";
+
     protected override IEnumerator ExecuteCinematicRoutine()
     {
         Debug.Log($"[GardenerCinematicTriggerZone] Déclenchement de la cinématique sur '{gameObject.name}'");
@@ -275,10 +282,40 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
             playerMovement.enabled = true;
         }
 
-        // Nettoyage : Détruire le jardinier s'il s'est enfui pour éviter de le laisser traîner
+        // Nettoyage : Détruire ou repositionner le jardinier s'il s'est enfui
         if (gardenerTransform != null)
         {
-            Destroy(gardenerTransform.gameObject, 3f);
+            if (gardenerPostCinematicTarget != null)
+            {
+                // Attendre la fin de la course de fuite (durée de fuite = 15m / 4m/s = 3.75s)
+                // On a déjà attendu 1.0s de fuite + la transition de retour caméra (transitionOutDuration, 2.0s par défaut).
+                // On attend encore 2 secondes pour être sûr qu'il est hors écran et a fini sa course.
+                yield return new WaitForSeconds(2.0f);
+
+                if (gardenerTransform != null)
+                {
+                    gardenerTransform.position = gardenerPostCinematicTarget.position;
+                    gardenerTransform.rotation = gardenerPostCinematicTarget.rotation;
+
+                    if (gardenerAnimator != null)
+                    {
+                        gardenerAnimator.Play("idle");
+                    }
+                    if (gardenerSprite != null)
+                    {
+                        gardenerSprite.flipX = false; // Réinitialiser le regard vers la gauche par défaut
+                    }
+                }
+            }
+            else
+            {
+                Destroy(gardenerTransform.gameObject, 3f);
+            }
+        }
+
+        if (StoryStateManager.Instance != null && !string.IsNullOrEmpty(flagToSetOnComplete))
+        {
+            StoryStateManager.Instance.SetFlag(flagToSetOnComplete, true);
         }
 
         Debug.Log($"[GardenerCinematicTriggerZone] Fin de la cinématique sur '{gameObject.name}'");

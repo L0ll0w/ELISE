@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
+  m_Name: Gardener4
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  nodes:
+  - nodeID: 0
+    characterName: ???
+    portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    sentence: Cette Ame a commis un haut crime de vol a l'etalage, tu vas devoir
+      la juger d'une condamnation !
+    choices: []
+    nextNodeID: 1
+  - nodeID: 1
+    characterName: ???
+    portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    sentence: 'Montre moi de qu''elle bois tu te chauffe ! '
+    choices: []
+    nextNodeID: 
