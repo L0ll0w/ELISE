@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca0ef06f462ab35488ff8719d0aceb82, type: 3}
+  m_Name: Monstre
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatData
+  enemyName: Monstre
+  maxHP: 300
+  musicTrack: {fileID: 8300000, guid: 874d3cfbc65669846aa3c6dcb78986dc, type: 3}
+  bpm: 91
+  visualPrefab: {fileID: 0}
+  beatPattern: {fileID: 11400000, guid: 8201821f7fdeaf14d9b5f205664b6076, type: 2}
+  warningProjectilePrefab: {fileID: 6501371529139906249, guid: fdd39c12f360a674485185689b62e62d, type: 3}
+  impactVisualPrefab: {fileID: 1021912132912709733, guid: deb1f2abc7324e9429a4ff46e0cfda25, type: 3}

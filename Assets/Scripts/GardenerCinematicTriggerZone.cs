@@ -62,6 +62,106 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
     [Tooltip("Le flag de l'histoire à définir à True dans StoryStateManager une fois cette cinématique terminée.")]
     [SerializeField] private string flagToSetOnComplete = "gardener_intro_completed";
 
+    [Header("Option de Saut (Skip)")]
+    [Tooltip("Sauter cette première cinématique et téléporter le joueur directement à la suivante.")]
+    [SerializeField] private bool skipFirstCinematic = false;
+
+    [Tooltip("Le point de téléportation (Transform) devant la seconde rencontre avec le jardinier.")]
+    [SerializeField] private Transform secondCinematicTeleportTarget;
+
+    private void Start()
+    {
+        if (skipFirstCinematic && secondCinematicTeleportTarget != null)
+        {
+            StartCoroutine(SkipCinematicRoutine());
+        }
+    }
+
+    private IEnumerator SkipCinematicRoutine()
+    {
+        // Attendre une frame pour laisser les scripts s'initialiser
+        yield return null;
+
+        // 1. Téléporter le joueur vers le point cible si spécifié
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        if (pm != null && secondCinematicTeleportTarget != null)
+        {
+            Debug.Log($"[GardenerCinematicTriggerZone] skipFirstCinematic est actif. Téléportation du joueur vers {secondCinematicTeleportTarget.position}");
+            
+            Rigidbody playerRb = pm.GetComponent<Rigidbody>();
+            bool wasKinematic = playerRb != null ? playerRb.isKinematic : false;
+            if (playerRb != null) playerRb.isKinematic = true;
+
+            pm.transform.position = secondCinematicTeleportTarget.position;
+
+            if (playerRb != null) playerRb.isKinematic = wasKinematic;
+        }
+
+        // 2. Téléporter le Jardinier vers sa destination post-cinématique si spécifiée
+        if (wateringCan == null)
+        {
+            wateringCan = FindFirstObjectByType<GiantWateringCan>();
+        }
+
+        if (wateringCan != null)
+        {
+            if (gardenerTransform == null)
+            {
+                foreach (Transform child in wateringCan.transform)
+                {
+                    if (child.name != "SpoutPoint" && child.name != "WaterSpoutParticles" && child.GetComponent<SpriteRenderer>() != null)
+                    {
+                        gardenerTransform = child;
+                        break;
+                    }
+                }
+            }
+            // Désactiver l'arrosage et l'arrosoir (qui s'envole normalement)
+            wateringCan.StopWatering();
+            wateringCan.gameObject.SetActive(false);
+        }
+
+        if (gardenerTransform != null && gardenerPostCinematicTarget != null)
+        {
+            Debug.Log($"[GardenerCinematicTriggerZone] skipFirstCinematic est actif. Téléportation du jardinier vers {gardenerPostCinematicTarget.position}");
+            
+            // Détacher le jardinier de l'arrosoir
+            gardenerTransform.SetParent(null, true);
+
+            // Remettre la rotation Z à 0
+            Vector3 euler = gardenerTransform.eulerAngles;
+            euler.z = 0f;
+            gardenerTransform.eulerAngles = euler;
+
+            // Téléporter
+            gardenerTransform.position = gardenerPostCinematicTarget.position;
+            gardenerTransform.rotation = gardenerPostCinematicTarget.rotation;
+
+            // Jouer l'animation Idle/Levitate
+            Animator gardenerAnimator = gardenerTransform.GetComponent<Animator>();
+            if (gardenerAnimator == null) gardenerAnimator = gardenerTransform.GetComponentInChildren<Animator>();
+            if (gardenerAnimator != null)
+            {
+                gardenerAnimator.Play("idle");
+            }
+
+            SpriteRenderer gardenerSprite = gardenerTransform.GetComponent<SpriteRenderer>();
+            if (gardenerSprite != null)
+            {
+                gardenerSprite.flipX = false; // Regard vers la gauche par défaut
+            }
+        }
+
+        // Valider le flag de fin de première cinématique
+        if (StoryStateManager.Instance != null && !string.IsNullOrEmpty(flagToSetOnComplete))
+        {
+            StoryStateManager.Instance.SetFlag(flagToSetOnComplete, true);
+        }
+
+        // Désactiver le déclencheur pour éviter les doubles déclenchements
+        gameObject.SetActive(false);
+    }
+
     protected override IEnumerator ExecuteCinematicRoutine()
     {
         Debug.Log($"[GardenerCinematicTriggerZone] Déclenchement de la cinématique sur '{gameObject.name}'");

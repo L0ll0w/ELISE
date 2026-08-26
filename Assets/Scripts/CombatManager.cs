@@ -126,6 +126,13 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        // Si le système de combat rythmique est présent, on lui délègue le combat !
+        if (RhythmCombatManager.Instance != null)
+        {
+            RhythmCombatManager.Instance.StartCombat(enemy);
+            return;
+        }
+
         activeEnemy = enemy;
         StartCoroutine(StartCombatRoutine());
     }
