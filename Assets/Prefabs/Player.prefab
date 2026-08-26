@@ -18,6 +18,8 @@ GameObject:
   - component: {fileID: 5901810088128618423}
   - component: {fileID: 7876975004269521401}
   - component: {fileID: 2312799354640814545}
+  - component: {fileID: 8812799354640814545}
+  - component: {fileID: 6712014955664794177}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -157,6 +159,9 @@ MonoBehaviour:
   speed: 5
   jumpForce: 4.5
   coyoteTime: 0.15
+  jumpBufferTime: 0.15
+  fallMultiplier: 2.5
+  lowJumpMultiplier: 2
   moveRelativeToCamera: 0
 --- !u!114 &7824027508118829419
 MonoBehaviour:
@@ -254,3 +259,51 @@ CapsuleCollider:
   m_Height: 0.96954536
   m_Direction: 1
   m_Center: {x: 0.0046081543, y: 0.015227318, z: 0}
+--- !u!114 &8812799354640814545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3845768016215529046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfd0cde0a53b5c6f60ba84050ba87e2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterShadow
+  shadowSprite: {fileID: 0}
+  baseSize: {x: 2, y: 2}
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.8509804}
+  groundOffset: 0.02
+  maxRaycastDistance: 10
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 51
+  positionOffset: {x: 0, y: 0, z: -0.1}
+  alignWithGroundNormal: 1
+  fadeHeight: 3
+  minScaleMultiplier: 0.5
+  smoothSpeed: 15
+  updateMode: 0
+--- !u!95 &6712014955664794177
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3845768016215529046}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 539bc87a8689c6442927e7c064c758c3, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

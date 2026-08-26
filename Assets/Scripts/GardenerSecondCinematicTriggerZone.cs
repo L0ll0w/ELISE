@@ -298,5 +298,19 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             Debug.Log("[GardenerSecondCinematicTriggerZone] Appel de l'événement onCombatTriggered.");
             onCombatTriggered.Invoke();
         }
+
+        // Lancement automatique s'il y a un manager de combat dans la scène
+        if (CombatManager.Instance != null)
+        {
+            GameObject enemyToFight = spawnedMonster != null ? spawnedMonster : (monsterSceneObject != null ? monsterSceneObject : null);
+            if (enemyToFight != null)
+            {
+                CombatManager.Instance.StartCombat(enemyToFight);
+            }
+            else
+            {
+                Debug.LogWarning("[GardenerSecondCinematicTriggerZone] Impossible de lancer le combat car aucun monstre n'a été instancié ou activé.");
+            }
+        }
     }
 }

@@ -40,6 +40,7 @@ public class PlayerMovement : MonoBehaviour
     private bool shouldJump = false;
     private float coyoteTimeCounter;
     private float jumpBufferCounter;
+    private Animator animator;
 
     private void Start()
     {
@@ -47,6 +48,7 @@ public class PlayerMovement : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody>();
         playerCollider = GetComponent<Collider>();
+        animator = GetComponent<Animator>();
         
         // Récupération du PlayerInput et recherche des actions
         playerInput = GetComponent<PlayerInput>();
@@ -151,6 +153,13 @@ public class PlayerMovement : MonoBehaviour
         {
             spriteRenderer.flipX = false;
         }
+
+        // Mise à jour de l'Animator
+        if (animator != null)
+        {
+            bool isWalking = moveDirection.magnitude > 0.01f && IsGrounded();
+            animator.SetBool("isWalking", isWalking);
+        }
     }
 
     /// <summary>
@@ -224,6 +233,12 @@ public class PlayerMovement : MonoBehaviour
         }
         moveDirection = Vector3.zero;
         shouldJump = false;
+
+        // Forcer l'animation idle lors de la désactivation (cinématiques, dialogues, pause...)
+        if (animator != null)
+        {
+            animator.SetBool("isWalking", false);
+        }
     }
 }
 
