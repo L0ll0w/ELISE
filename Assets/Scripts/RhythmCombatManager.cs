@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using Unity.Cinemachine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Gestionnaire principal du système de combat rythmique radial.
@@ -54,6 +55,103 @@ public class RhythmCombatManager : MonoBehaviour
     [Tooltip("Inclinaison (Pitch) de la caméra.")]
     [SerializeField] private float cameraPitch = 30f;
 
+    [Header("Configuration Caméra Tour Joueur")]
+    [Tooltip("Distance de la caméra par rapport au joueur lors de son tour.")]
+    [SerializeField] private float playerTurnCameraDistance = 4f;
+    [Tooltip("Hauteur de la caméra lors du tour du joueur.")]
+    [SerializeField] private float playerTurnCameraHeight = 1.5f;
+    [Tooltip("Décalage latéral gauche (offset) de la caméra par rapport au joueur.")]
+    [SerializeField] private float playerTurnCameraLeftOffset = 0.8f;
+    [Tooltip("Angle d'inclinaison Z (Dutch angle) lors du tour du joueur.")]
+    [SerializeField] private float playerTurnCameraTiltZ = -4f;
+
+    [Header("Configuration Caméra Tour Dialogue")]
+    [Tooltip("Distance de la caméra par rapport au boss/ennemi lors du dialogue.")]
+    [SerializeField] private float talkPhaseCameraDistance = 3.5f;
+    [Tooltip("Hauteur de la caméra lors du dialogue.")]
+    [SerializeField] private float talkPhaseCameraHeight = 2.0f;
+    [Tooltip("Décalage latéral gauche de la caméra lors du dialogue.")]
+    [SerializeField] private float talkPhaseCameraLeftOffset = 0.5f;
+    [Tooltip("Angle d'inclinaison Z lors du dialogue.")]
+    [SerializeField] private float talkPhaseCameraTiltZ = 3.0f;
+
+    [Header("Positionnement 3D du Dialogue")]
+    [Tooltip("Rotation X/Y/Z pour l'effet 3D de la boîte de dialogue (en degrés).")]
+    [SerializeField] private Vector3 customDialogueRotation = Vector3.zero;
+    [Tooltip("Position offset X/Y/Z (décalage) de la boîte de dialogue.")]
+    [SerializeField] private Vector3 customDialoguePositionOffset = Vector3.zero;
+
+    [Header("Configuration de la Boîte de Dialogue Fallback")]
+    [Tooltip("Anchor Min X/Y de la boîte de dialogue de secours.")]
+    [SerializeField] private Vector2 fallbackDialogueAnchorMin = new Vector2(0.3f, 0.05f);
+    [Tooltip("Anchor Max X/Y de la boîte de dialogue de secours.")]
+    [SerializeField] private Vector2 fallbackDialogueAnchorMax = new Vector2(0.7f, 0.22f);
+
+    [Header("Polices d'écriture")]
+    [Tooltip("Police d'écriture personnalisée pour les textes de combat (TMP Font Asset).")]
+    [SerializeField] private TMP_FontAsset customCombatFont;
+
+    [Header("Positionnement 3D des PV Joueurs")]
+    [Tooltip("Rotation X/Y/Z pour l'effet 3D des barres de vie des joueurs (en degrés).")]
+    [SerializeField] private Vector3 customPlayerHPRotation = Vector3.zero;
+    [Tooltip("Position offset X/Y/Z (décalage) des barres de vie des joueurs.")]
+    [SerializeField] private Vector3 customPlayerHPPositionOffset = Vector3.zero;
+
+    [Header("Champs UI Personnalisés (GameObjects)")]
+    [Tooltip("Le canvas personnalisé contenant votre menu.")]
+    [SerializeField] private Canvas customCombatCanvas;
+    [Tooltip("Le panel (RectTransform) contenant vos boutons de combat à orienter en 3D.")]
+    [SerializeField] private RectTransform customMenuPanel;
+    [Tooltip("Bouton d'attaque personnalisé.")]
+    [SerializeField] private Button customFightButton;
+    [Tooltip("Bouton de dialogue (Parler) personnalisé.")]
+    [SerializeField] private Button customTalkButton;
+    [Tooltip("Bouton de compagnon personnalisé.")]
+    [SerializeField] private Button customCompanionButton;
+    [Tooltip("Bouton de fuite personnalisé.")]
+    [SerializeField] private Button customEscapeButton;
+
+    [Header("Rotation 3D du Menu Personnalisé")]
+    [Tooltip("Rotation X (inclinaison verticale) pour l'effet 3D.")]
+    [SerializeField] private float customMenuRotationX = 15f;
+    [Tooltip("Rotation Y (inclinaison horizontale) pour l'effet 3D.")]
+    [SerializeField] private float customMenuRotationY = -25f;
+    [Tooltip("Rotation Z (rotation à plat) pour l'effet 3D.")]
+    [SerializeField] private float customMenuRotationZ = -5f;
+    [Tooltip("Distance du plan (Canvas planeDistance) par rapport à la caméra.")]
+    [SerializeField] private float customMenuPlaneDistance = 3f;
+    [Tooltip("Position offset X/Y/Z (décalage de position) pour ajuster son placement en direct.")]
+    [SerializeField] private Vector3 customMenuPositionOffset = Vector3.zero;
+
+    [Header("Champs QTE Personnalisés (UI Attaque)")]
+    [Tooltip("Le panel (RectTransform) de QTE personnalisé.")]
+    [SerializeField] private RectTransform customQtePanel;
+    [Tooltip("Zone parfaite du QTE personnalisé.")]
+    [SerializeField] private RectTransform customQteTargetPerfect;
+    [Tooltip("Zone bonne du QTE personnalisé.")]
+    [SerializeField] private RectTransform customQteTargetGood;
+    [Tooltip("Indicateur de curseur du QTE personnalisé.")]
+    [SerializeField] private RectTransform customQteIndicator;
+    [Tooltip("Instruction textuelle du QTE personnalisé.")]
+    [SerializeField] private TextMeshProUGUI customQteInstructionText;
+    [Tooltip("Feedback textuel du QTE personnalisé.")]
+    [SerializeField] private TextMeshProUGUI customQteFeedbackText;
+
+    [Header("Rotation 3D de l'Attaque / QTE")]
+    [Tooltip("Rotation X (inclinaison verticale) pour l'effet 3D de la QTE.")]
+    [SerializeField] private float customQteRotationX = 15f;
+    [Tooltip("Rotation Y (inclinaison horizontale) pour l'effet 3D de la QTE.")]
+    [SerializeField] private float customQteRotationY = -25f;
+    [Tooltip("Rotation Z (rotation à plat) pour l'effet 3D de la QTE.")]
+    [SerializeField] private float customQteRotationZ = 5f;
+    [Tooltip("Position offset X/Y/Z pour ajuster le placement en direct du panel QTE.")]
+    [SerializeField] private Vector3 customQtePositionOffset = Vector3.zero;
+
+    [Header("Volume Audio")]
+    [Range(0f, 1f)]
+    [Tooltip("Volume de la musique de combat.")]
+    [SerializeField] private float combatMusicVolume = 0.5f;
+
     // État du combat
     private CombatState currentState = CombatState.Transitioning;
     private GameObject activeEnemy;
@@ -71,6 +169,7 @@ public class RhythmCombatManager : MonoBehaviour
     private int dodgeBeatsCount = 0;
 
     // Références UI supplémentaires pour le combat séquencé
+    private GameObject runtimeUIContainer;
     private GameObject rpgMenuPanel;
     private Button attackButton;
     private Button talkButton;
@@ -85,6 +184,7 @@ public class RhythmCombatManager : MonoBehaviour
     private TextMeshProUGUI qteFeedbackText;
     private float qteStartBeat = 0f;
     private bool qteResolved = false;
+    private int qteStartFrame = -1;
 
     private GameObject dialoguePanel;
     private TextMeshProUGUI dialogueText;
@@ -93,6 +193,8 @@ public class RhythmCombatManager : MonoBehaviour
 
     private GameObject companionsSubPanel;
     private List<GameObject> companionButtons = new List<GameObject>();
+    private string originalCompanionText = "COMPAGNONS";
+    private GameObject groupContainerObj;
 
     // Gestion du Groupe et PV (Tag-Team)
     private List<Transform> allies = new List<Transform>();
@@ -138,6 +240,7 @@ public class RhythmCombatManager : MonoBehaviour
 
     private void Start()
     {
+        EnsureEventSystem();
         CreateFadeCanvas();
     }
 
@@ -148,6 +251,81 @@ public class RhythmCombatManager : MonoBehaviour
         // Suivi de caméra fluide derrière le joueur et orientation du boss
         UpdateCameraView(false);
         OrientBossTowardsPlayer();
+
+        // Positionnement 3D en temps réel du menu choices
+        if (rpgMenuPanel != null && rpgMenuPanel.activeSelf)
+        {
+            RectTransform menuRect = rpgMenuPanel.GetComponent<RectTransform>();
+            if (menuRect != null && customMenuPanel != null)
+            {
+                menuRect.localRotation = Quaternion.Euler(customMenuRotationX, customMenuRotationY, customMenuRotationZ);
+                menuRect.anchoredPosition3D = customMenuPositionOffset;
+            }
+            if (combatCanvas != null && combatCanvas.renderMode == RenderMode.ScreenSpaceCamera)
+            {
+                combatCanvas.planeDistance = customMenuPlaneDistance;
+            }
+        }
+
+        // Positionnement 3D en temps réel du panel d'attaque (QTE)
+        if (qtePanel != null && qtePanel.activeSelf)
+        {
+            RectTransform qteRect = qtePanel.GetComponent<RectTransform>();
+            if (qteRect != null)
+            {
+                qteRect.localRotation = Quaternion.Euler(customQteRotationX, customQteRotationY, customQteRotationZ);
+                qteRect.anchoredPosition3D = customQtePositionOffset;
+            }
+        }
+
+        // Positionnement 3D en temps réel de la boîte de dialogue (locale ou globale)
+        if (currentPhase == CombatPhase.DialogueActive)
+        {
+            RectTransform activeDiaRect = null;
+            if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
+            {
+                activeDiaRect = DialogueManager.Instance.DialoguePanelRect;
+            }
+            else if (dialoguePanel != null && dialoguePanel.activeSelf)
+            {
+                activeDiaRect = dialoguePanel.GetComponent<RectTransform>();
+            }
+
+            if (activeDiaRect != null)
+            {
+                if (customDialogueRotation != Vector3.zero)
+                {
+                    activeDiaRect.localRotation = Quaternion.Euler(customDialogueRotation);
+                }
+                if (customDialoguePositionOffset != Vector3.zero)
+                {
+                    activeDiaRect.anchoredPosition3D = customDialoguePositionOffset;
+                }
+            }
+        }
+
+        // Mise à jour du volume de la musique en direct depuis l'inspecteur
+        if (BeatManager.Instance != null)
+        {
+            BeatManager.Instance.Volume = combatMusicVolume;
+        }
+
+        // Positionnement 3D en temps réel des barres de vie des joueurs
+        if (groupContainerObj != null && groupContainerObj.activeSelf)
+        {
+            RectTransform hpRect = groupContainerObj.GetComponent<RectTransform>();
+            if (hpRect != null)
+            {
+                if (customPlayerHPRotation != Vector3.zero)
+                {
+                    hpRect.localRotation = Quaternion.Euler(customPlayerHPRotation);
+                }
+                if (customPlayerHPPositionOffset != Vector3.zero)
+                {
+                    hpRect.anchoredPosition3D = customPlayerHPPositionOffset;
+                }
+            }
+        }
 
         switch (currentPhase)
         {
@@ -191,6 +369,7 @@ public class RhythmCombatManager : MonoBehaviour
 
     private IEnumerator StartCombatRoutine()
     {
+        EnsureEventSystem();
         currentState = CombatState.Transitioning;
         currentPhase = CombatPhase.DodgePhase;
         dodgeBeatsCount = 0;
@@ -365,6 +544,7 @@ public class RhythmCombatManager : MonoBehaviour
         }
         
         BeatManager.Instance.SetTrack(musicClip, musicBPM);
+        BeatManager.Instance.Volume = combatMusicVolume;
         BeatManager.Instance.StartMusic();
 
         // S'abonner aux battements
@@ -630,6 +810,10 @@ public class RhythmCombatManager : MonoBehaviour
             comboFeedbackText.transform.localScale = Vector3.Lerp(Vector3.one * 1.5f, Vector3.one, elapsed / 0.2f);
             yield return null;
         }
+
+        // Attendre un peu puis vider le texte pour le faire disparaître
+        yield return new WaitForSeconds(0.8f);
+        comboFeedbackText.text = "";
     }
 
     #endregion
@@ -775,9 +959,26 @@ public class RhythmCombatManager : MonoBehaviour
         radialGrid.SetGridActive(false);
 
         // 2. Nettoyer l'UI et les visuels de combat
+        if (runtimeUIContainer != null)
+        {
+            Destroy(runtimeUIContainer);
+            runtimeUIContainer = null;
+        }
+
         if (combatCanvas != null)
         {
-            Destroy(combatCanvas.gameObject);
+            if (customCombatCanvas != null)
+            {
+                // Si c'est un canvas de scène personnalisé, on désactive juste le panel au lieu de détruire le canvas
+                if (customMenuPanel != null)
+                {
+                    customMenuPanel.gameObject.SetActive(false);
+                }
+            }
+            else
+            {
+                Destroy(combatCanvas.gameObject);
+            }
         }
         allyHPImages.Clear();
         allyHPTexts.Clear();
@@ -895,9 +1096,43 @@ public class RhythmCombatManager : MonoBehaviour
         dirToCenter.y = 0f;
         dirToCenter.Normalize();
 
-        // Placer la caméra derrière le joueur et surélevée
-        Vector3 targetCamPos = playerPos - dirToCenter * cameraDistance + Vector3.up * cameraHeight;
-        Quaternion targetCamRot = Quaternion.LookRotation((center + Vector3.up * 1f) - targetCamPos);
+        Vector3 targetCamPos;
+        Quaternion targetCamRot;
+
+        if (currentPhase == CombatPhase.PlayerTurn)
+        {
+            // 1. Zoom Tour du Joueur : Plan héroïque en contre-plongée et décalé sur l'épaule gauche
+            Vector3 leftShoulderDir = Vector3.Cross(Vector3.up, dirToCenter).normalized;
+            targetCamPos = playerPos - dirToCenter * cameraDistance - leftShoulderDir * playerTurnCameraLeftOffset + Vector3.up * cameraHeight;
+            targetCamRot = Quaternion.LookRotation((center + Vector3.up * 1.5f) - targetCamPos);
+            // Angle néerlandais (Z-tilt) stylisé et paramétré
+            targetCamRot = targetCamRot * Quaternion.Euler(0f, 0f, playerTurnCameraTiltZ);
+        }
+        else if (currentPhase == CombatPhase.QTEActive)
+        {
+            // 2. QTE Actif (Attaque) : Vue de profil cinématique (midpoint face-à-face)
+            Vector3 profileDir = Vector3.Cross(Vector3.up, dirToCenter).normalized;
+            Vector3 midPoint = (playerPos + center) * 0.5f;
+            targetCamPos = midPoint + profileDir * 6f + Vector3.up * 1.8f;
+            targetCamRot = Quaternion.LookRotation(midPoint - targetCamPos);
+            // Z-tilt de 2 degrés
+            targetCamRot = targetCamRot * Quaternion.Euler(0f, 0f, 2f);
+        }
+        else if (currentPhase == CombatPhase.DialogueActive)
+        {
+            // 3. Dialogue Actif (Parler) : Gros plan dramatique face au boss
+            Vector3 leftShoulderDir = Vector3.Cross(Vector3.up, dirToCenter).normalized;
+            targetCamPos = center + dirToCenter * talkPhaseCameraDistance - leftShoulderDir * talkPhaseCameraLeftOffset + Vector3.up * talkPhaseCameraHeight;
+            targetCamRot = Quaternion.LookRotation((center + Vector3.up * 0.8f) - targetCamPos);
+            // Z-tilt stylisé et paramétré
+            targetCamRot = targetCamRot * Quaternion.Euler(0f, 0f, talkPhaseCameraTiltZ);
+        }
+        else
+        {
+            // 4. Phase d'Esquive neutre : Caméra classique centrée derrière le joueur
+            targetCamPos = playerPos - dirToCenter * cameraDistance + Vector3.up * cameraHeight;
+            targetCamRot = Quaternion.LookRotation((center + Vector3.up * 1f) - targetCamPos);
+        }
 
         if (instant)
         {
@@ -906,6 +1141,7 @@ public class RhythmCombatManager : MonoBehaviour
         }
         else
         {
+            // Interpolation fluide pour des balayages dynamiques
             Camera.main.transform.position = Vector3.Lerp(Camera.main.transform.position, targetCamPos, Time.deltaTime * 6f);
             Camera.main.transform.rotation = Quaternion.Slerp(Camera.main.transform.rotation, targetCamRot, Time.deltaTime * 6f);
         }
@@ -1001,6 +1237,24 @@ public class RhythmCombatManager : MonoBehaviour
 
     #region Génération de l'UI Dynamique
 
+    private void EnsureEventSystem()
+    {
+        if (EventSystem.current == null)
+        {
+            GameObject es = new GameObject("EventSystem (Spawned)");
+            es.AddComponent<EventSystem>();
+
+            #if ENABLE_INPUT_SYSTEM
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            #else
+            es.AddComponent<StandaloneInputModule>();
+            #endif
+
+            DontDestroyOnLoad(es);
+            Debug.Log("EventSystem recréé automatiquement par RhythmCombatManager.");
+        }
+    }
+
     private void CreateFadeCanvas()
     {
         if (fadeCanvasGroup != null) return;
@@ -1054,22 +1308,57 @@ public class RhythmCombatManager : MonoBehaviour
             uiFillSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
         }
 
-        GameObject canvasObj = new GameObject("RhythmCombatUI_Canvas");
-        combatCanvas = canvasObj.AddComponent<Canvas>();
-        combatCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        combatCanvas.sortingOrder = 1000;
+        GameObject canvasObj;
+        Transform parentTransform;
 
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
+        if (customCombatCanvas != null)
+        {
+            canvasObj = customCombatCanvas.gameObject;
+            combatCanvas = customCombatCanvas;
+            if (Camera.main != null)
+            {
+                combatCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+                combatCanvas.worldCamera = Camera.main;
+                combatCanvas.planeDistance = customMenuPlaneDistance;
+            }
 
-        canvasObj.AddComponent<GraphicRaycaster>();
+            // S'assurer de la présence d'un GraphicRaycaster pour la détection des clics
+            if (combatCanvas.GetComponent<GraphicRaycaster>() == null)
+            {
+                combatCanvas.gameObject.AddComponent<GraphicRaycaster>();
+            }
+            
+            // Créer le conteneur runtime temporaire sous forme de RectTransform étiré
+            runtimeUIContainer = new GameObject("RhythmCombatRuntimeUI_Container");
+            RectTransform containerRect = runtimeUIContainer.AddComponent<RectTransform>();
+            runtimeUIContainer.transform.SetParent(combatCanvas.transform, false);
+            containerRect.anchorMin = Vector2.zero;
+            containerRect.anchorMax = Vector2.one;
+            containerRect.sizeDelta = Vector2.zero;
+            containerRect.anchoredPosition = Vector2.zero;
+            parentTransform = containerRect;
+        }
+        else
+        {
+            canvasObj = new GameObject("RhythmCombatUI_Canvas");
+            combatCanvas = canvasObj.AddComponent<Canvas>();
+            combatCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            combatCanvas.sortingOrder = 1000;
+
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+
+            canvasObj.AddComponent<GraphicRaycaster>();
+            parentTransform = canvasObj.transform;
+        }
 
         // 1. Conteneur Principal (Complètement transparent pour laisser place aux graphismes)
         GameObject mainPanel = new GameObject("MainPanel");
-        mainPanel.transform.SetParent(canvasObj.transform, false);
+        mainPanel.transform.SetParent(parentTransform, false);
         Image panelImage = mainPanel.AddComponent<Image>();
         panelImage.color = new Color(0f, 0f, 0f, 0f);
+        panelImage.raycastTarget = false; // Permettre aux clics de traverser ce panneau invisible
 
         RectTransform panelRect = panelImage.rectTransform;
         panelRect.anchorMin = Vector2.zero;
@@ -1092,7 +1381,7 @@ public class RhythmCombatManager : MonoBehaviour
 
         // 3. Pop-up de retour de combo (Centre de l'écran)
         GameObject comboObj = new GameObject("ComboFeedbackText");
-        comboObj.transform.SetParent(canvasObj.transform, false);
+        comboObj.transform.SetParent(parentTransform, false);
         comboFeedbackText = comboObj.AddComponent<TextMeshProUGUI>();
         comboFeedbackText.fontSize = 55f;
         comboFeedbackText.fontStyle = FontStyles.Bold;
@@ -1118,51 +1407,11 @@ public class RhythmCombatManager : MonoBehaviour
         tagPromptRect.anchorMax = new Vector2(0.28f, 0.04f);
         tagPromptRect.sizeDelta = Vector2.zero;
 
-        // 5. Barre de vie Boss (Haut de l'écran - ultra fine et épurée)
-        GameObject bossPanel = new GameObject("BossHPPanel");
-        bossPanel.transform.SetParent(canvasObj.transform, false);
-        Image bossBg = bossPanel.AddComponent<Image>();
-        bossBg.sprite = uiFillSprite;
-        bossBg.color = new Color(0.02f, 0.02f, 0.05f, 0.6f);
-
-        RectTransform bossRect = bossBg.rectTransform;
-        bossRect.anchorMin = new Vector2(0.3f, 0.94f);
-        bossRect.anchorMax = new Vector2(0.7f, 0.955f);
-        bossRect.sizeDelta = Vector2.zero;
-
-        GameObject bossFillObj = new GameObject("BossFill");
-        bossFillObj.transform.SetParent(bossPanel.transform, false);
-        bossHPImage = bossFillObj.AddComponent<Image>();
-        bossHPImage.sprite = uiFillSprite;
-        bossHPImage.color = new Color(0.9f, 0.1f, 0.15f, 0.9f);
-        bossHPImage.type = Image.Type.Filled;
-        bossHPImage.fillMethod = Image.FillMethod.Horizontal;
-        bossHPImage.fillOrigin = (int)Image.OriginHorizontal.Left;
-
-        RectTransform bossFillRect = bossHPImage.rectTransform;
-        bossFillRect.anchorMin = Vector2.zero;
-        bossFillRect.anchorMax = Vector2.one;
-        bossFillRect.sizeDelta = Vector2.zero;
-
-        GameObject bossNameObj = new GameObject("BossName");
-        bossNameObj.transform.SetParent(bossPanel.transform, false);
-        bossNameText = bossNameObj.AddComponent<TextMeshProUGUI>();
-        bossNameText.text = activeEnemy.name.ToUpper();
-        bossNameText.fontSize = 16f;
-        bossNameText.fontStyle = FontStyles.Bold;
-        bossNameText.color = Color.white;
-        bossNameText.alignment = TextAlignmentOptions.Center;
-
-        RectTransform bossNameRect = bossNameText.rectTransform;
-        bossNameRect.anchorMin = new Vector2(0f, 1.2f);
-        bossNameRect.anchorMax = new Vector2(1f, 2.5f);
-        bossNameRect.sizeDelta = Vector2.zero;
-
         // 6. Barres de PV des Alliés (Empilées verticalement en bas à gauche)
         PopulateAlliesUI(mainPanel.transform);
 
         // 7. Initialisation des UIs de Combat Séquencé
-        CreateSequencedCombatUI(mainPanel.transform);
+        CreateSequencedCombatUI(parentTransform);
     }
 
     private void PopulateAlliesUI(Transform parent)
@@ -1170,40 +1419,71 @@ public class RhythmCombatManager : MonoBehaviour
         allyHPImages.Clear();
         allyHPTexts.Clear();
 
-        // Conteneur vertical en bas à gauche pour les héros
-        GameObject groupContainer = new GameObject("AlliesGroupContainer");
-        groupContainer.transform.SetParent(parent, false);
-        RectTransform groupRect = groupContainer.AddComponent<RectTransform>();
-        groupRect.anchorMin = new Vector2(0.04f, 0.05f);
-        groupRect.anchorMax = new Vector2(0.26f, 0.28f);
+        // Conteneur vertical en bas à gauche pour les héros (positionnable)
+        groupContainerObj = new GameObject("AlliesGroupContainer");
+        groupContainerObj.transform.SetParent(parent, false);
+        RectTransform groupRect = groupContainerObj.AddComponent<RectTransform>();
+        
+        // Valeur d'ancrage par défaut en bas à gauche (compact)
+        groupRect.anchorMin = new Vector2(0.01f, 0.01f);
+        groupRect.anchorMax = new Vector2(0.18f, 0.054f);
         groupRect.sizeDelta = Vector2.zero;
+        
+        // Inclinaison oblique par défaut (style papier posé de travers)
+        groupRect.localRotation = Quaternion.Euler(0f, 0f, 1.5f);
+        
+        // Masqué par défaut — visible uniquement lors du tour du joueur
+        groupContainerObj.SetActive(false);
 
         float cardHeightPct = 1f / allies.Count;
-        float spacing = 0.05f;
+        float spacing = 0.04f; // Espacement serré
 
         for (int i = 0; i < allies.Count; i++)
         {
             float minY = 1f - (i + 1) * cardHeightPct + spacing / 2f;
             float maxY = 1f - i * cardHeightPct - spacing / 2f;
 
-            // Carte individuelle d'allié
+            // 1. Plaque d'ombre (papier découpé gris)
+            GameObject shadowObj = new GameObject($"AllyShadow_{i}");
+            shadowObj.transform.SetParent(groupContainerObj.transform, false);
+            RectTransform shadowRect = shadowObj.AddComponent<RectTransform>();
+            shadowRect.anchorMin = new Vector2(0f, minY);
+            shadowRect.anchorMax = new Vector2(1f, maxY);
+            shadowRect.sizeDelta = Vector2.zero;
+            shadowRect.anchoredPosition = new Vector2(6f, -6f);
+            Image shadowImg = shadowObj.AddComponent<Image>();
+            shadowImg.sprite = uiFillSprite;
+            shadowImg.color = new Color(0.9f, 0.9f, 0.92f, 0.6f);
+
+            // 2. Bordure de carte (Charbon foncé)
+            GameObject borderObj = new GameObject($"AllyBorder_{i}");
+            borderObj.transform.SetParent(groupContainerObj.transform, false);
+            RectTransform borderRect = borderObj.AddComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0f, minY);
+            borderRect.anchorMax = new Vector2(1f, maxY);
+            borderRect.sizeDelta = Vector2.zero;
+            Image borderImg = borderObj.AddComponent<Image>();
+            borderImg.sprite = uiFillSprite;
+            borderImg.color = new Color(0.1f, 0.1f, 0.12f, 0.95f);
+
+            // 3. Fond interne de carte (Blanc papier)
             GameObject allyPanel = new GameObject($"AllyPanel_{i}");
-            allyPanel.transform.SetParent(groupContainer.transform, false);
+            allyPanel.transform.SetParent(borderObj.transform, false);
+            RectTransform allyRect = allyPanel.AddComponent<RectTransform>();
+            allyRect.anchorMin = Vector2.zero;
+            allyRect.anchorMax = Vector2.one;
+            allyRect.offsetMin = new Vector2(2, 3);
+            allyRect.offsetMax = new Vector2(-2, -1);
             Image allyBg = allyPanel.AddComponent<Image>();
             allyBg.sprite = uiFillSprite;
-            allyBg.color = new Color(0.02f, 0.02f, 0.05f, 0.6f);
+            allyBg.color = new Color(0.95f, 0.95f, 0.95f, 1f);
 
-            RectTransform allyRect = allyBg.rectTransform;
-            allyRect.anchorMin = new Vector2(0f, minY);
-            allyRect.anchorMax = new Vector2(1f, maxY);
-            allyRect.sizeDelta = Vector2.zero;
-
-            // Remplissage PV
+            // 4. Remplissage PV (Crayon de couleur rouge ou gris)
             GameObject fillObj = new GameObject("Fill");
             fillObj.transform.SetParent(allyPanel.transform, false);
             Image fillImg = fillObj.AddComponent<Image>();
             fillImg.sprite = uiFillSprite;
-            fillImg.color = i == activeAllyIndex ? new Color(0.1f, 0.9f, 0.4f, 0.8f) : new Color(0.3f, 0.4f, 0.3f, 0.4f);
+            fillImg.color = i == activeAllyIndex ? new Color(0.85f, 0.08f, 0.14f, 0.9f) : new Color(0.5f, 0.5f, 0.52f, 0.4f);
             fillImg.type = Image.Type.Filled;
             fillImg.fillMethod = Image.FillMethod.Horizontal;
             fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
@@ -1214,13 +1494,15 @@ public class RhythmCombatManager : MonoBehaviour
             fillRect.sizeDelta = Vector2.zero;
             allyHPImages.Add(fillImg);
 
-            // Texte PV épuré
+            // 5. Texte PV crayonné (Nom + PV)
             GameObject textObj = new GameObject("Text");
             textObj.transform.SetParent(allyPanel.transform, false);
             TextMeshProUGUI txt = textObj.AddComponent<TextMeshProUGUI>();
-            txt.text = $"  {allies[i].name.ToUpper()}  |  100/100 PV";
-            txt.fontSize = 14f;
-            txt.color = Color.white;
+            if (customCombatFont != null) txt.font = customCombatFont;
+            txt.text = $"  {allies[i].name.ToUpper()}  |  {allyHP[i]}/{allyMaxHP[i]} PV";
+            txt.fontSize = 11f;
+            txt.fontStyle = FontStyles.Bold;
+            txt.color = Color.black; // Texte noir sur papier blanc
             txt.alignment = TextAlignmentOptions.MidlineLeft;
 
             RectTransform txtRect = txt.rectTransform;
@@ -1243,14 +1525,14 @@ public class RhythmCombatManager : MonoBehaviour
             if (i < allyHPImages.Count && allyHPImages[i] != null)
             {
                 allyHPImages[i].fillAmount = (float)allyHP[i] / allyMaxHP[i];
-                // Mettre en surbrillance l'allié actif
+                // Mettre en surbrillance l'allié actif (Rouge marqueur vs Gris estompé)
                 if (i == activeAllyIndex)
                 {
-                    allyHPImages[i].color = new Color(0.1f, 0.9f, 0.4f, 0.8f); // Vert vif
+                    allyHPImages[i].color = new Color(0.85f, 0.08f, 0.14f, 0.9f);
                 }
                 else
                 {
-                    allyHPImages[i].color = new Color(0.3f, 0.4f, 0.3f, 0.4f); // Vert terne
+                    allyHPImages[i].color = new Color(0.5f, 0.5f, 0.52f, 0.4f);
                 }
             }
 
@@ -1279,150 +1561,359 @@ public class RhythmCombatManager : MonoBehaviour
     private void CreateSequencedCombatUI(Transform parent)
     {
         // --- MENU RPG ---
-        GameObject rpgMenuBorder = new GameObject("RPGMenuBorder");
-        rpgMenuBorder.transform.SetParent(parent, false);
-        RectTransform borderRect = rpgMenuBorder.AddComponent<RectTransform>();
-        borderRect.anchorMin = new Vector2(0.34f, 0.14f);
-        borderRect.anchorMax = new Vector2(0.66f, 0.28f);
-        borderRect.sizeDelta = Vector2.zero;
-        Image borderImg = rpgMenuBorder.AddComponent<Image>();
-        borderImg.sprite = uiFillSprite;
-        borderImg.color = new Color(1f, 1f, 1f, 0.2f);
+        if (customMenuPanel != null)
+        {
+            // Auto-détection de sécurité des boutons s'ils ne sont pas assignés dans l'inspecteur
+            if (customFightButton == null)
+            {
+                foreach (Button b in customMenuPanel.GetComponentsInChildren<Button>(true))
+                {
+                    string n = b.name.ToLower();
+                    if (n.Contains("fight") || n.Contains("attack") || n.Contains("attaquer") || n.Contains("combat"))
+                    {
+                        customFightButton = b;
+                        break;
+                    }
+                }
+            }
+            if (customTalkButton == null)
+            {
+                foreach (Button b in customMenuPanel.GetComponentsInChildren<Button>(true))
+                {
+                    string n = b.name.ToLower();
+                    if (n.Contains("talk") || n.Contains("parler") || n.Contains("dialogue"))
+                    {
+                        customTalkButton = b;
+                        break;
+                    }
+                }
+            }
+            if (customCompanionButton == null)
+            {
+                foreach (Button b in customMenuPanel.GetComponentsInChildren<Button>(true))
+                {
+                    string n = b.name.ToLower();
+                    if (n.Contains("companion") || n.Contains("compagnon") || n.Contains("allie"))
+                    {
+                        customCompanionButton = b;
+                        break;
+                    }
+                }
+            }
+            if (customEscapeButton == null)
+            {
+                foreach (Button b in customMenuPanel.GetComponentsInChildren<Button>(true))
+                {
+                    string n = b.name.ToLower();
+                    if (n.Contains("escape") || n.Contains("flee") || n.Contains("fuir") || n.Contains("esquive"))
+                    {
+                        customEscapeButton = b;
+                        break;
+                    }
+                }
+            }
 
-        rpgMenuPanel = new GameObject("RPGMenuPanel");
-        rpgMenuPanel.transform.SetParent(rpgMenuBorder.transform, false);
-        RectTransform menuRect = rpgMenuPanel.AddComponent<RectTransform>();
-        menuRect.anchorMin = Vector2.zero;
-        menuRect.anchorMax = Vector2.one;
-        menuRect.offsetMin = new Vector2(2, 2);
-        menuRect.offsetMax = new Vector2(-2, -2);
-        Image menuImg = rpgMenuPanel.AddComponent<Image>();
-        menuImg.sprite = uiFillSprite;
-        menuImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
+            Debug.Log($"[RhythmCombatManager] Boutons personnalisés détectés - Fight: {customFightButton?.name}, Talk: {customTalkButton?.name}, Companion: {customCompanionButton?.name}, Escape: {customEscapeButton?.name}");
 
-        attackButton = CreateRPGButton("AttackBtn", "ATTAQUER", rpgMenuPanel.transform, new Vector2(0.02f, 0.15f), new Vector2(0.24f, 0.85f), StartQTE);
-        talkButton = CreateRPGButton("TalkBtn", "PARLER", rpgMenuPanel.transform, new Vector2(0.26f, 0.15f), new Vector2(0.48f, 0.85f), StartDialogue);
-        companionsButton = CreateRPGButton("CompanionsBtn", "COMPAGNONS", rpgMenuPanel.transform, new Vector2(0.50f, 0.15f), new Vector2(0.72f, 0.85f), ShowCompanionsSubMenu);
-        fleeButton = CreateRPGButton("FleeBtn", "FUIR", rpgMenuPanel.transform, new Vector2(0.74f, 0.15f), new Vector2(0.96f, 0.85f), FleeCombat);
+            rpgMenuPanel = customMenuPanel.gameObject;
+            // Configurer la rotation 3D sur le panel personnalisé
+            customMenuPanel.localRotation = Quaternion.Euler(customMenuRotationX, customMenuRotationY, customMenuRotationZ);
 
-        rpgMenuBorder.SetActive(false); // Masqué au début
-        // Sauvegarder la référence du bord dans rpgMenuPanel pour activer/désactiver le tout facilement
-        rpgMenuPanel = rpgMenuBorder;
+            // Attacher les callbacks et l'animateur aux boutons personnalisés
+            if (customFightButton != null)
+            {
+                customFightButton.onClick.RemoveAllListeners();
+                customFightButton.onClick.AddListener(StartQTE);
+                attackButton = customFightButton;
+
+                RhythmUIButtonAnimator anim = customFightButton.GetComponent<RhythmUIButtonAnimator>();
+                if (anim == null) anim = customFightButton.gameObject.AddComponent<RhythmUIButtonAnimator>();
+                anim.Setup(customFightButton.GetComponent<Image>(), null, customFightButton.GetComponentInChildren<TextMeshProUGUI>(), customFightButton.transform.localRotation.eulerAngles.z);
+            }
+            if (customTalkButton != null)
+            {
+                customTalkButton.onClick.RemoveAllListeners();
+                customTalkButton.onClick.AddListener(StartDialogue);
+                talkButton = customTalkButton;
+
+                RhythmUIButtonAnimator anim = customTalkButton.GetComponent<RhythmUIButtonAnimator>();
+                if (anim == null) anim = customTalkButton.gameObject.AddComponent<RhythmUIButtonAnimator>();
+                anim.Setup(customTalkButton.GetComponent<Image>(), null, customTalkButton.GetComponentInChildren<TextMeshProUGUI>(), customTalkButton.transform.localRotation.eulerAngles.z);
+            }
+            if (customCompanionButton != null)
+            {
+                customCompanionButton.onClick.RemoveAllListeners();
+                customCompanionButton.onClick.AddListener(ShowCompanionsSubMenu);
+                companionsButton = customCompanionButton;
+
+                TextMeshProUGUI txt = companionsButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null)
+                {
+                    originalCompanionText = txt.text;
+                }
+
+                RhythmUIButtonAnimator anim = customCompanionButton.GetComponent<RhythmUIButtonAnimator>();
+                if (anim == null) anim = customCompanionButton.gameObject.AddComponent<RhythmUIButtonAnimator>();
+                anim.Setup(customCompanionButton.GetComponent<Image>(), null, customCompanionButton.GetComponentInChildren<TextMeshProUGUI>(), customCompanionButton.transform.localRotation.eulerAngles.z);
+            }
+            if (customEscapeButton != null)
+            {
+                customEscapeButton.onClick.RemoveAllListeners();
+                customEscapeButton.onClick.AddListener(FleeCombat);
+                fleeButton = customEscapeButton;
+
+                RhythmUIButtonAnimator anim = customEscapeButton.GetComponent<RhythmUIButtonAnimator>();
+                if (anim == null) anim = customEscapeButton.gameObject.AddComponent<RhythmUIButtonAnimator>();
+                anim.Setup(customEscapeButton.GetComponent<Image>(), null, customEscapeButton.GetComponentInChildren<TextMeshProUGUI>(), customEscapeButton.transform.localRotation.eulerAngles.z);
+            }
+            
+            customMenuPanel.gameObject.SetActive(false); // Masqué au début
+        }
+        else
+        {
+            GameObject rpgMenuBorder = new GameObject("RPGMenuBorder");
+            rpgMenuBorder.transform.SetParent(parent, false);
+            RectTransform borderRect = rpgMenuBorder.AddComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0.32f, 0.12f);
+            borderRect.anchorMax = new Vector2(0.68f, 0.28f);
+            borderRect.sizeDelta = Vector2.zero;
+            // Angle oblique asymétrique
+            borderRect.localRotation = Quaternion.Euler(0f, 0f, -5f);
+
+            Image borderImg = rpgMenuBorder.AddComponent<Image>();
+            borderImg.sprite = uiFillSprite;
+            // Fond blanc crayonné asymétrique pour le contour
+            borderImg.color = new Color(0.9f, 0.9f, 0.9f, 0.95f);
+
+            rpgMenuPanel = new GameObject("RPGMenuPanel");
+            rpgMenuPanel.transform.SetParent(rpgMenuBorder.transform, false);
+            RectTransform menuRect = rpgMenuPanel.AddComponent<RectTransform>();
+            menuRect.anchorMin = Vector2.zero;
+            menuRect.anchorMax = Vector2.one;
+            // Légère asymétrie de bordure
+            menuRect.offsetMin = new Vector2(4, 3);
+            menuRect.offsetMax = new Vector2(-4, -5);
+            Image menuImg = rpgMenuPanel.AddComponent<Image>();
+            menuImg.sprite = uiFillSprite;
+            menuImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f); // Noir profond
+
+            // Boutons décalés (Staggered Y et rotations alternées)
+            attackButton = CreateRPGButton("AttackBtn", "ATTAQUER", rpgMenuPanel.transform, new Vector2(0.02f, 0.15f), new Vector2(0.24f, 0.85f), StartQTE, -2f, -8f);
+            talkButton = CreateRPGButton("TalkBtn", "PARLER", rpgMenuPanel.transform, new Vector2(0.26f, 0.15f), new Vector2(0.48f, 0.85f), StartDialogue, 2f, 6f);
+            companionsButton = CreateRPGButton("CompanionsBtn", "COMPAGNONS", rpgMenuPanel.transform, new Vector2(0.50f, 0.15f), new Vector2(0.72f, 0.85f), ShowCompanionsSubMenu, -1f, -2f);
+            originalCompanionText = "COMPAGNONS";
+            fleeButton = CreateRPGButton("FleeBtn", "FUIR", rpgMenuPanel.transform, new Vector2(0.74f, 0.15f), new Vector2(0.96f, 0.85f), FleeCombat, 3f, 8f);
+
+            rpgMenuBorder.SetActive(false); // Masqué au début
+            // Sauvegarder la référence du bord dans rpgMenuPanel pour activer/désactiver le tout facilement
+            rpgMenuPanel = rpgMenuBorder;
+        }
 
         // --- QTE PANEL ---
-        GameObject qteBorder = new GameObject("QteBorder");
-        qteBorder.transform.SetParent(parent, false);
-        RectTransform qteBRect = qteBorder.AddComponent<RectTransform>();
-        qteBRect.anchorMin = new Vector2(0.3f, 0.18f);
-        qteBRect.anchorMax = new Vector2(0.7f, 0.38f);
-        qteBRect.sizeDelta = Vector2.zero;
-        Image qteBImg = qteBorder.AddComponent<Image>();
-        qteBImg.sprite = uiFillSprite;
-        qteBImg.color = new Color(1f, 1f, 1f, 0.2f);
+        if (customQtePanel != null)
+        {
+            qtePanel = customQtePanel.gameObject;
+            if (customQteIndicator == null)
+            {
+                foreach (RectTransform r in customQtePanel.GetComponentsInChildren<RectTransform>(true))
+                {
+                    if (r.name.ToLower().Contains("indicator") || r.name.ToLower().Contains("cursor") || r.name.ToLower().Contains("curseur"))
+                    {
+                        customQteIndicator = r;
+                        break;
+                    }
+                }
+            }
+            if (customQteTargetPerfect == null)
+            {
+                foreach (RectTransform r in customQtePanel.GetComponentsInChildren<RectTransform>(true))
+                {
+                    if (r.name.ToLower().Contains("perfect") || r.name.ToLower().Contains("parfait"))
+                    {
+                        customQteTargetPerfect = r;
+                        break;
+                    }
+                }
+            }
+            if (customQteTargetGood == null)
+            {
+                foreach (RectTransform r in customQtePanel.GetComponentsInChildren<RectTransform>(true))
+                {
+                    if (r.name.ToLower().Contains("good") || r.name.ToLower().Contains("bien"))
+                    {
+                        customQteTargetGood = r;
+                        break;
+                    }
+                }
+            }
+            if (customQteInstructionText == null)
+            {
+                customQteInstructionText = customQtePanel.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+            if (customQteFeedbackText == null)
+            {
+                foreach (TextMeshProUGUI t in customQtePanel.GetComponentsInChildren<TextMeshProUGUI>(true))
+                {
+                    if (t.name.ToLower().Contains("feedback") || t.name.ToLower().Contains("result"))
+                    {
+                        customQteFeedbackText = t;
+                        break;
+                    }
+                }
+            }
 
-        GameObject qtePanelInner = new GameObject("QtePanelInner");
-        qtePanelInner.transform.SetParent(qteBorder.transform, false);
-        RectTransform qteIRect = qtePanelInner.AddComponent<RectTransform>();
-        qteIRect.anchorMin = Vector2.zero;
-        qteIRect.anchorMax = Vector2.one;
-        qteIRect.offsetMin = new Vector2(2, 2);
-        qteIRect.offsetMax = new Vector2(-2, -2);
-        Image qteIImg = qtePanelInner.AddComponent<Image>();
-        qteIImg.sprite = uiFillSprite;
-        qteIImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
+            if (customQteIndicator != null) qteIndicator = customQteIndicator;
+            if (customQteTargetPerfect != null) qteTargetPerfect = customQteTargetPerfect;
+            if (customQteTargetGood != null) qteTargetGood = customQteTargetGood;
+            if (customQteInstructionText != null) qteInstructionText = customQteInstructionText;
+            if (customQteFeedbackText != null) qteFeedbackText = customQteFeedbackText;
 
-        // Instruction
-        GameObject qteInstObj = new GameObject("QteInstruction");
-        qteInstObj.transform.SetParent(qtePanelInner.transform, false);
-        qteInstructionText = qteInstObj.AddComponent<TextMeshProUGUI>();
-        qteInstructionText.text = "APPUYEZ SUR ESPACE OU CLIQUEZ GAUCHE !";
-        qteInstructionText.fontSize = 16f;
-        qteInstructionText.fontStyle = FontStyles.Bold;
-        qteInstructionText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
-        qteInstructionText.alignment = TextAlignmentOptions.Center;
-        RectTransform qteInstRect = qteInstructionText.rectTransform;
-        qteInstRect.anchorMin = new Vector2(0.05f, 0.72f);
-        qteInstRect.anchorMax = new Vector2(0.95f, 0.95f);
-        qteInstRect.sizeDelta = Vector2.zero;
+            customQtePanel.gameObject.SetActive(false); // Masqué au début
+        }
+        else
+        {
+            // Plaque d'ombre (crayonné papier)
+            GameObject qteShadow = new GameObject("QteShadow");
+            qteShadow.transform.SetParent(parent, false);
+            RectTransform shadowRect = qteShadow.AddComponent<RectTransform>();
+            shadowRect.anchorMin = new Vector2(0.3f, 0.18f);
+            shadowRect.anchorMax = new Vector2(0.7f, 0.38f);
+            shadowRect.sizeDelta = Vector2.zero;
+            shadowRect.anchoredPosition = new Vector2(10f, -10f); // Décalage ombre
+            shadowRect.localRotation = Quaternion.Euler(0f, 0f, 3f);
+            Image shadowImg = qteShadow.AddComponent<Image>();
+            shadowImg.sprite = uiFillSprite;
+            shadowImg.color = new Color(0.9f, 0.9f, 0.92f, 0.6f); // Gris crayonné transparent
 
-        // Rail de QTE
-        GameObject qteRailObj = new GameObject("QteRail");
-        qteRailObj.transform.SetParent(qtePanelInner.transform, false);
-        Image railImg = qteRailObj.AddComponent<Image>();
-        railImg.sprite = uiFillSprite;
-        railImg.color = new Color(0.12f, 0.12f, 0.15f, 1.0f);
-        RectTransform railRect = railImg.rectTransform;
-        railRect.anchorMin = new Vector2(0.08f, 0.22f);
-        railRect.anchorMax = new Vector2(0.92f, 0.42f);
-        railRect.sizeDelta = Vector2.zero;
+            GameObject qteBorder = new GameObject("QteBorder");
+            qteBorder.transform.SetParent(parent, false);
+            RectTransform qteBRect = qteBorder.AddComponent<RectTransform>();
+            qteBRect.anchorMin = new Vector2(0.3f, 0.18f);
+            qteBRect.anchorMax = new Vector2(0.7f, 0.38f);
+            qteBRect.sizeDelta = Vector2.zero;
+            // Contre-angle dynamique par rapport au menu principal
+            qteBRect.localRotation = Quaternion.Euler(0f, 0f, 3f);
 
-        // Zone Jaune (BIEN)
-        GameObject yellowZoneObj = new GameObject("YellowZone");
-        yellowZoneObj.transform.SetParent(qteRailObj.transform, false);
-        Image yellowImg = yellowZoneObj.AddComponent<Image>();
-        yellowImg.sprite = uiFillSprite;
-        yellowImg.color = new Color(0.9f, 0.75f, 0.15f, 0.7f);
-        RectTransform yellowRect = yellowImg.rectTransform;
-        yellowRect.anchorMin = new Vector2(0.35f, 0f);
-        yellowRect.anchorMax = new Vector2(0.65f, 1f);
-        yellowRect.sizeDelta = Vector2.zero;
+            Image qteBImg = qteBorder.AddComponent<Image>();
+            qteBImg.sprite = uiFillSprite;
+            qteBImg.color = new Color(0.1f, 0.1f, 0.12f, 0.95f); // Bordure charbon foncée
 
-        // Zone Verte (PARFAIT)
-        GameObject greenZoneObj = new GameObject("GreenZone");
-        greenZoneObj.transform.SetParent(qteRailObj.transform, false);
-        Image greenImg = greenZoneObj.AddComponent<Image>();
-        greenImg.sprite = uiFillSprite;
-        greenImg.color = new Color(0.1f, 0.8f, 0.3f, 0.85f);
-        RectTransform greenRect = greenImg.rectTransform;
-        greenRect.anchorMin = new Vector2(0.45f, 0f);
-        greenRect.anchorMax = new Vector2(0.55f, 1f);
-        greenRect.sizeDelta = Vector2.zero;
+            GameObject qtePanelInner = new GameObject("QtePanelInner");
+            qtePanelInner.transform.SetParent(qteBorder.transform, false);
+            RectTransform qteIRect = qtePanelInner.AddComponent<RectTransform>();
+            qteIRect.anchorMin = Vector2.zero;
+            qteIRect.anchorMax = Vector2.one;
+            qteIRect.offsetMin = new Vector2(3, 4);
+            qteIRect.offsetMax = new Vector2(-3, -2);
+            Image qteIImg = qtePanelInner.AddComponent<Image>();
+            qteIImg.sprite = uiFillSprite;
+            qteIImg.color = new Color(0.95f, 0.95f, 0.95f, 1.0f); // Fond blanc papier sketch!
 
-        // Indicateur (Curseur)
-        GameObject indicatorObj = new GameObject("Indicator");
-        indicatorObj.transform.SetParent(qteRailObj.transform, false);
-        Image indImg = indicatorObj.AddComponent<Image>();
-        indImg.sprite = uiFillSprite;
-        indImg.color = Color.white;
-        qteIndicator = indImg.rectTransform;
-        qteIndicator.anchorMin = new Vector2(0f, -0.2f);
-        qteIndicator.anchorMax = new Vector2(0.015f, 1.2f);
-        qteIndicator.sizeDelta = Vector2.zero;
+            // Instruction
+            GameObject qteInstObj = new GameObject("QteInstruction");
+            qteInstObj.transform.SetParent(qtePanelInner.transform, false);
+            qteInstructionText = qteInstObj.AddComponent<TextMeshProUGUI>();
+            if (customCombatFont != null) qteInstructionText.font = customCombatFont;
+            qteInstructionText.text = "APPUYEZ SUR ESPACE AU BON MOMENT !";
+            qteInstructionText.fontSize = 18f;
+            qteInstructionText.fontStyle = FontStyles.Bold | FontStyles.Italic;
+            qteInstructionText.color = Color.black; // Texte noir sur papier blanc!
+            qteInstructionText.alignment = TextAlignmentOptions.Center;
+            RectTransform qteInstRect = qteInstructionText.rectTransform;
+            qteInstRect.anchorMin = new Vector2(0.05f, 0.72f);
+            qteInstRect.anchorMax = new Vector2(0.95f, 0.95f);
+            qteInstRect.sizeDelta = Vector2.zero;
 
-        // Feedback Text
-        GameObject qteFeedObj = new GameObject("QteFeedbackText");
-        qteFeedObj.transform.SetParent(qtePanelInner.transform, false);
-        qteFeedbackText = qteFeedObj.AddComponent<TextMeshProUGUI>();
-        qteFeedbackText.text = "";
-        qteFeedbackText.fontSize = 24f;
-        qteFeedbackText.fontStyle = FontStyles.Bold;
-        qteFeedbackText.alignment = TextAlignmentOptions.Center;
-        RectTransform feedRect = qteFeedbackText.rectTransform;
-        feedRect.anchorMin = new Vector2(0.1f, 0.48f);
-        feedRect.anchorMax = new Vector2(0.9f, 0.68f);
-        feedRect.sizeDelta = Vector2.zero;
+            // Rail de QTE
+            GameObject qteRailObj = new GameObject("QteRail");
+            qteRailObj.transform.SetParent(qtePanelInner.transform, false);
+            Image railImg = qteRailObj.AddComponent<Image>();
+            railImg.sprite = uiFillSprite;
+            railImg.color = new Color(0.06f, 0.06f, 0.08f, 0.95f); // Noir charbon pour le rail
+            RectTransform railRect = railImg.rectTransform;
+            railRect.anchorMin = new Vector2(0.08f, 0.22f);
+            railRect.anchorMax = new Vector2(0.92f, 0.42f);
+            railRect.sizeDelta = Vector2.zero;
 
-        qteBorder.SetActive(false); // Masqué au début
-        qtePanel = qteBorder;
+            // Zone Jaune (BIEN)
+            GameObject yellowZoneObj = new GameObject("YellowZone");
+            yellowZoneObj.transform.SetParent(qteRailObj.transform, false);
+            Image yellowImg = yellowZoneObj.AddComponent<Image>();
+            yellowImg.sprite = uiFillSprite;
+            yellowImg.color = new Color(0.6f, 0.6f, 0.6f, 0.8f); // Gris crayonné (Bien)
+            RectTransform yellowRect = yellowImg.rectTransform;
+            yellowRect.anchorMin = new Vector2(0.35f, 0f);
+            yellowRect.anchorMax = new Vector2(0.65f, 1f);
+            yellowRect.sizeDelta = Vector2.zero;
+            qteTargetGood = yellowRect;
+
+            // Zone Verte (PARFAIT)
+            GameObject greenZoneObj = new GameObject("GreenZone");
+            greenZoneObj.transform.SetParent(qteRailObj.transform, false);
+            Image greenImg = greenZoneObj.AddComponent<Image>();
+            greenImg.sprite = uiFillSprite;
+            greenImg.color = Color.white; // Blanc pur (Parfait)
+            RectTransform greenRect = greenImg.rectTransform;
+            greenRect.anchorMin = new Vector2(0.45f, 0f);
+            greenRect.anchorMax = new Vector2(0.55f, 1f);
+            greenRect.sizeDelta = Vector2.zero;
+            qteTargetPerfect = greenRect;
+
+            // Indicateur (Curseur)
+            GameObject indicatorObj = new GameObject("Indicator");
+            indicatorObj.transform.SetParent(qteRailObj.transform, false);
+            Image indImg = indicatorObj.AddComponent<Image>();
+            indImg.sprite = uiFillSprite;
+            indImg.color = new Color(0.85f, 0.08f, 0.14f, 1f); // Crayon de couleur rouge pour l'indicateur!
+            qteIndicator = indImg.rectTransform;
+            qteIndicator.anchorMin = new Vector2(0f, -0.2f);
+            qteIndicator.anchorMax = new Vector2(0.015f, 1.2f);
+            qteIndicator.sizeDelta = Vector2.zero;
+
+            // Feedback Text
+            GameObject qteFeedObj = new GameObject("QteFeedbackText");
+            qteFeedObj.transform.SetParent(qtePanelInner.transform, false);
+            qteFeedbackText = qteFeedObj.AddComponent<TextMeshProUGUI>();
+            if (customCombatFont != null) qteFeedbackText.font = customCombatFont;
+            qteFeedbackText.text = "";
+            qteFeedbackText.fontSize = 24f;
+            qteFeedbackText.fontStyle = FontStyles.Bold | FontStyles.Italic;
+            qteFeedbackText.alignment = TextAlignmentOptions.Center;
+            qteFeedbackText.color = Color.black;
+            RectTransform feedRect = qteFeedbackText.rectTransform;
+            feedRect.anchorMin = new Vector2(0.1f, 0.48f);
+            feedRect.anchorMax = new Vector2(0.9f, 0.68f);
+            feedRect.sizeDelta = Vector2.zero;
+
+            qteBorder.SetActive(false); // Masqué au début
+            qtePanel = qteBorder;
+
+            // Lier l'ombre comme enfant de la bordure pour simplifier l'activation
+            qteShadow.transform.SetParent(qteBorder.transform, true);
+            qteShadow.transform.SetAsFirstSibling(); // A l'arrière
+        }
 
         // --- DIALOGUE PANEL ---
         GameObject diaBorder = new GameObject("DialogueBorder");
         diaBorder.transform.SetParent(parent, false);
         RectTransform diaBRect = diaBorder.AddComponent<RectTransform>();
-        diaBRect.anchorMin = new Vector2(0.2f, 0.05f);
-        diaBRect.anchorMax = new Vector2(0.8f, 0.22f);
+        diaBRect.anchorMin = fallbackDialogueAnchorMin;
+        diaBRect.anchorMax = fallbackDialogueAnchorMax;
         diaBRect.sizeDelta = Vector2.zero;
+        // Légère inclinaison oblique assortie
+        diaBRect.localRotation = Quaternion.Euler(0f, 0f, -2f);
+
         Image diaBImg = diaBorder.AddComponent<Image>();
         diaBImg.sprite = uiFillSprite;
-        diaBImg.color = new Color(1f, 1f, 1f, 0.2f);
+        diaBImg.color = new Color(0.9f, 0.9f, 0.9f, 0.95f); // Bordure blanc crayonné
 
         GameObject diaPanelInner = new GameObject("DialoguePanelInner");
         diaPanelInner.transform.SetParent(diaBorder.transform, false);
         RectTransform diaIRect = diaPanelInner.AddComponent<RectTransform>();
         diaIRect.anchorMin = Vector2.zero;
         diaIRect.anchorMax = Vector2.one;
-        diaIRect.offsetMin = new Vector2(2, 2);
-        diaIRect.offsetMax = new Vector2(-2, -2);
+        diaIRect.offsetMin = new Vector2(3, 4);
+        diaIRect.offsetMax = new Vector2(-3, -2);
         Image diaIImg = diaPanelInner.AddComponent<Image>();
         diaIImg.sprite = uiFillSprite;
         diaIImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
@@ -1430,6 +1921,7 @@ public class RhythmCombatManager : MonoBehaviour
         GameObject diaTextObj = new GameObject("DialogueText");
         diaTextObj.transform.SetParent(diaPanelInner.transform, false);
         dialogueText = diaTextObj.AddComponent<TextMeshProUGUI>();
+        if (customCombatFont != null) dialogueText.font = customCombatFont;
         dialogueText.text = "...";
         dialogueText.fontSize = 20f;
         dialogueText.color = Color.white;
@@ -1444,6 +1936,7 @@ public class RhythmCombatManager : MonoBehaviour
         GameObject promptObj = new GameObject("DialoguePrompt");
         promptObj.transform.SetParent(diaPanelInner.transform, false);
         TextMeshProUGUI promptText = promptObj.AddComponent<TextMeshProUGUI>();
+        if (customCombatFont != null) promptText.font = customCombatFont;
         promptText.text = "[ESPACE / CLIC] Suivant";
         promptText.fontSize = 12f;
         promptText.color = new Color(0.6f, 0.6f, 0.6f, 1f);
@@ -1463,6 +1956,7 @@ public class RhythmCombatManager : MonoBehaviour
         compBRect.anchorMin = new Vector2(0.35f, 0.32f);
         compBRect.anchorMax = new Vector2(0.65f, 0.58f);
         compBRect.sizeDelta = Vector2.zero;
+        compBRect.localRotation = Quaternion.Euler(0f, 0f, -3f);
         Image compBImg = compBorder.AddComponent<Image>();
         compBImg.sprite = uiFillSprite;
         compBImg.color = new Color(1f, 1f, 1f, 0.2f);
@@ -1496,33 +1990,46 @@ public class RhythmCombatManager : MonoBehaviour
         companionsSubPanel = compBorder;
     }
 
-    private Button CreateRPGButton(string name, string label, Transform parent, Vector2 anchorMin, Vector2 anchorMax, System.Action onClickAction)
+    private Button CreateRPGButton(string name, string label, Transform parent, Vector2 anchorMin, Vector2 anchorMax, System.Action onClickAction, float baseRotation = -4f, float staggerY = 0f)
     {
+        // 1. Plaque d'ombre (découpée rouge cramoisi)
+        GameObject shadowObj = new GameObject(name + "_Shadow");
+        shadowObj.transform.SetParent(parent, false);
+        RectTransform shadowRect = shadowObj.AddComponent<RectTransform>();
+        shadowRect.anchorMin = anchorMin;
+        shadowRect.anchorMax = anchorMax;
+        shadowRect.sizeDelta = Vector2.zero;
+        shadowRect.anchoredPosition = new Vector2(8f, -8f + staggerY); // Décalage de l'ombre + décalage vertical
+        shadowRect.localRotation = Quaternion.Euler(0f, 0f, baseRotation);
+        Image shadowImg = shadowObj.AddComponent<Image>();
+        shadowImg.sprite = uiFillSprite;
+        shadowImg.color = new Color(0.9f, 0.9f, 0.92f, 0.6f); // Blanc crayonné transparent
+
+        // 2. Bouton principal (Noir charbon)
         GameObject btnObj = new GameObject(name);
         btnObj.transform.SetParent(parent, false);
         RectTransform rect = btnObj.AddComponent<RectTransform>();
         rect.anchorMin = anchorMin;
         rect.anchorMax = anchorMax;
         rect.sizeDelta = Vector2.zero;
+        rect.anchoredPosition = new Vector2(0f, staggerY); // Décalage vertical pour l'effet en escalier
+        rect.localRotation = Quaternion.Euler(0f, 0f, baseRotation);
 
         Image img = btnObj.AddComponent<Image>();
         img.sprite = uiFillSprite;
+        img.color = new Color(0.06f, 0.06f, 0.08f, 0.95f); // Noir profond
 
         Button btn = btnObj.AddComponent<Button>();
-        ColorBlock cb = btn.colors;
-        cb.normalColor = new Color(0.12f, 0.12f, 0.18f, 0.8f);
-        cb.highlightedColor = new Color(0.2f, 0.6f, 1.0f, 0.9f);
-        cb.pressedColor = new Color(0.1f, 0.4f, 0.8f, 1f);
-        cb.selectedColor = new Color(0.2f, 0.6f, 1.0f, 0.9f);
-        cb.disabledColor = new Color(0.08f, 0.08f, 0.1f, 0.4f);
-        btn.colors = cb;
+        btn.transition = Selectable.Transition.None; // Désactiver les transitions par défaut (notre script gère)
 
+        // 3. Texte (oblique)
         GameObject txtObj = new GameObject("Text");
         txtObj.transform.SetParent(btnObj.transform, false);
         TextMeshProUGUI txt = txtObj.AddComponent<TextMeshProUGUI>();
+        if (customCombatFont != null) txt.font = customCombatFont;
         txt.text = label;
-        txt.fontSize = 18f;
-        txt.fontStyle = FontStyles.Bold;
+        txt.fontSize = 20f;
+        txt.fontStyle = FontStyles.Bold | FontStyles.Italic; // Texte penché + gras
         txt.color = Color.white;
         txt.alignment = TextAlignmentOptions.Center;
 
@@ -1531,8 +2038,44 @@ public class RhythmCombatManager : MonoBehaviour
         txtRect.anchorMax = Vector2.one;
         txtRect.sizeDelta = Vector2.zero;
 
+        // Ajouter l'animateur personnalisé
+        RhythmUIButtonAnimator animator = btnObj.AddComponent<RhythmUIButtonAnimator>();
+        animator.Setup(img, shadowImg, txt, baseRotation);
+
         btn.onClick.AddListener(() => onClickAction?.Invoke());
         return btn;
+    }
+
+    private void RepositionRPGButton(Button button, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        if (button == null) return;
+        RectTransform rect = button.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            float currentY = rect.anchoredPosition.y;
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.sizeDelta = Vector2.zero;
+            rect.anchoredPosition = new Vector2(0f, currentY);
+        }
+
+        // Trouver et repositionner l'ombre correspondante
+        if (button.transform.parent != null)
+        {
+            Transform shadowTrans = button.transform.parent.Find(button.name + "_Shadow");
+            if (shadowTrans != null)
+            {
+                RectTransform shadowRect = shadowTrans.GetComponent<RectTransform>();
+                if (shadowRect != null)
+                {
+                    float currentShadowY = shadowRect.anchoredPosition.y;
+                    shadowRect.anchorMin = anchorMin;
+                    shadowRect.anchorMax = anchorMax;
+                    shadowRect.sizeDelta = Vector2.zero;
+                    shadowRect.anchoredPosition = new Vector2(8f, currentShadowY);
+                }
+            }
+        }
     }
 
     private void ShowCompanionsSubMenu()
@@ -1557,6 +2100,8 @@ public class RhythmCombatManager : MonoBehaviour
         float startY = 0.65f;
         float spacing = 0.15f;
 
+        GameObject firstCompanionBtn = null;
+
         for (int i = 0; i < allies.Count; i++)
         {
             if (i == activeAllyIndex) continue; // Pas le héros actif
@@ -1574,6 +2119,12 @@ public class RhythmCombatManager : MonoBehaviour
                     TransitionToDodgePhase();
                 }
             );
+
+            if (firstCompanionBtn == null)
+            {
+                firstCompanionBtn = btn.gameObject;
+            }
+
             companionButtons.Add(btn.gameObject);
             buttonIndex++;
         }
@@ -1586,9 +2137,29 @@ public class RhythmCombatManager : MonoBehaviour
             () => {
                 companionsSubPanel.SetActive(false);
                 rpgMenuPanel.SetActive(true);
+                if (groupContainerObj != null) groupContainerObj.SetActive(true);
+                
+                // Rétablir le focus sur le bouton Compagnons
+                if (EventSystem.current != null && companionsButton != null)
+                {
+                    EventSystem.current.SetSelectedGameObject(companionsButton.gameObject);
+                }
             }
         );
         companionButtons.Add(backBtn.gameObject);
+
+        // Mettre le focus de navigation sur le premier compagnon ou le bouton retour
+        if (EventSystem.current != null)
+        {
+            if (firstCompanionBtn != null)
+            {
+                EventSystem.current.SetSelectedGameObject(firstCompanionBtn);
+            }
+            else
+            {
+                EventSystem.current.SetSelectedGameObject(backBtn.gameObject);
+            }
+        }
     }
 
     private void TransitionToPlayerTurn()
@@ -1605,12 +2176,17 @@ public class RhythmCombatManager : MonoBehaviour
         ClearAllTelegraphs();
 
         // Zoom caméra : ajuster la distance et la hauteur pour un plan serré
-        cameraDistance = 4f;
-        cameraHeight = 1.5f;
+        cameraDistance = playerTurnCameraDistance;
+        cameraHeight = playerTurnCameraHeight;
 
-        // Afficher l'UI du menu RPG
+        // Afficher l'UI du menu RPG et la barre de vie (les animations sont gérées par PlayerTurnEntranceAnimation)
         if (rpgMenuPanel != null)
         {
+            // alpha=0 avant SetActive pour éviter le flash — le slide est géré dans le coroutine
+            CanvasGroup cg = rpgMenuPanel.GetComponent<CanvasGroup>();
+            if (cg == null) cg = rpgMenuPanel.AddComponent<CanvasGroup>();
+            cg.alpha = 0f;
+
             rpgMenuPanel.SetActive(true);
 
             // Vérifier s'il reste d'autres compagnons en vie
@@ -1623,14 +2199,142 @@ public class RhythmCombatManager : MonoBehaviour
                     break;
                 }
             }
-            // Mettre à jour l'affichage du bouton Compagnons
+            // Mettre à jour l'affichage du bouton Compagnons en style gribouillé/grésillé (barré) au lieu de le désactiver
             if (companionsButton != null)
             {
-                companionsButton.gameObject.SetActive(otherAlive);
+                companionsButton.gameObject.SetActive(true); // Conserver le bouton actif pour ne pas casser le layout
+                companionsButton.interactable = otherAlive;
+
+                TextMeshProUGUI txt = companionsButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (txt != null)
+                {
+                    if (otherAlive)
+                    {
+                        txt.text = originalCompanionText;
+                        txt.color = Color.white;
+                    }
+                    else
+                    {
+                        txt.text = $"<s>{originalCompanionText}</s>"; // Texte barré / crayonné
+                        txt.color = new Color(0.4f, 0.4f, 0.4f, 0.6f); // Gris atténué crayonné
+                    }
+                }
+
+                // Désactiver le comportement d'animation de survol s'il n'est pas interactif
+                RhythmUIButtonAnimator anim = companionsButton.GetComponent<RhythmUIButtonAnimator>();
+                if (anim != null)
+                {
+                    if (!otherAlive)
+                    {
+                        anim.DeselectButton(); // S'assurer qu'il ne reste pas surélevé ou blanc
+                    }
+                }
+
+                // Assombrir le bouton compagnon pour accentuer l'effet barré
+                Image img = companionsButton.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.color = otherAlive ? new Color(0.06f, 0.06f, 0.08f, 0.95f) : new Color(0.02f, 0.02f, 0.02f, 0.3f);
+                }
+
+                // Masquer ou atténuer l'ombre crayonné correspondante
+                if (companionsButton.transform.parent != null)
+                {
+                    Transform shadowTrans = companionsButton.transform.parent.Find(companionsButton.name + "_Shadow");
+                    if (shadowTrans != null)
+                    {
+                        Image shadowImg = shadowTrans.GetComponent<Image>();
+                        if (shadowImg != null)
+                        {
+                            shadowImg.color = otherAlive ? new Color(0.9f, 0.9f, 0.92f, 0.6f) : new Color(0f, 0f, 0f, 0f);
+                        }
+                    }
+                }
+
+                Debug.Log($"[RhythmCombatManager] Bouton compagnon mis à jour (Interactable: {otherAlive})");
+            }
+            else
+            {
+                Debug.LogWarning("[RhythmCombatManager] Impossible de mettre à jour le bouton compagnon car companionsButton est NULL.");
+            }
+
+            // Forcer le recalcul immédiate du layout (notamment pour les GridLayoutGroup)
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rpgMenuPanel.GetComponent<RectTransform>());
+
+            // Si on utilise le menu généré dynamiquement, s'assurer de leur positionnement standard (4 boutons)
+            if (customMenuPanel == null)
+            {
+                RepositionRPGButton(attackButton, new Vector2(0.02f, 0.15f), new Vector2(0.24f, 0.85f));
+                RepositionRPGButton(talkButton, new Vector2(0.26f, 0.15f), new Vector2(0.48f, 0.85f));
+                RepositionRPGButton(companionsButton, new Vector2(0.50f, 0.15f), new Vector2(0.72f, 0.85f));
+                RepositionRPGButton(fleeButton, new Vector2(0.74f, 0.15f), new Vector2(0.96f, 0.85f));
+            }
+
+            // Sélectionner le bouton d'attaque par défaut pour la navigation manette/clavier
+            if (EventSystem.current != null && attackButton != null)
+            {
+                EventSystem.current.SetSelectedGameObject(attackButton.gameObject);
             }
         }
 
         logText.text = "À votre tour ! Choisissez une action.";
+
+        // Lancer l'animation d'entrée des boutons et de la barre de vie
+        StartCoroutine(PlayerTurnEntranceAnimation());
+    }
+
+    private IEnumerator PlayerTurnEntranceAnimation()
+    {
+        // === 1. Barre de vie : pop-scale élastique ===
+        if (groupContainerObj != null)
+        {
+            groupContainerObj.SetActive(true);
+            groupContainerObj.transform.localScale = Vector3.zero;
+
+            float t = 0f, dur = 0.3f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / dur);
+                // 0→1.12 en 70% du temps, puis 1.12→1.0 en 30%
+                float s = p < 0.7f
+                    ? Mathf.Lerp(0f, 1.12f, p / 0.7f)
+                    : Mathf.Lerp(1.12f, 1f, (p - 0.7f) / 0.3f);
+                groupContainerObj.transform.localScale = Vector3.one * s;
+                yield return null;
+            }
+            groupContainerObj.transform.localScale = Vector3.one;
+        }
+
+        // === 2. Menu boutons : slide entier depuis la gauche via localPosition ===
+        if (rpgMenuPanel != null && rpgMenuPanel.activeSelf)
+        {
+            // S'assurer qu'un CanvasGroup existe pour le fade
+            CanvasGroup cg = rpgMenuPanel.GetComponent<CanvasGroup>();
+            if (cg == null) cg = rpgMenuPanel.AddComponent<CanvasGroup>();
+
+            // La position courante est propre (ForceRebuildLayout peut l'avoir réinitialisée)
+            // On applique l'offset maintenant pendant que alpha=0 (invisible)
+            Vector3 origPos  = rpgMenuPanel.transform.localPosition;
+            Vector3 startPos = origPos + new Vector3(-1400f, 0f, 0f);
+            rpgMenuPanel.transform.localPosition = startPos;
+
+            float t = 0f, dur = 0.38f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / dur);
+                // Ease-out cubique
+                float ease = 1f - Mathf.Pow(1f - p, 3f);
+                rpgMenuPanel.transform.localPosition = Vector3.Lerp(startPos, origPos, ease);
+                cg.alpha = ease;
+                yield return null;
+            }
+
+            rpgMenuPanel.transform.localPosition = origPos;
+            cg.alpha = 1f;
+        }
     }
 
     private void TransitionToDodgePhase()
@@ -1650,6 +2354,7 @@ public class RhythmCombatManager : MonoBehaviour
 
         // Masquer tous les menus et panneaux
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
         if (qtePanel != null) qtePanel.SetActive(false);
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         if (companionsSubPanel != null) companionsSubPanel.SetActive(false);
@@ -1679,10 +2384,12 @@ public class RhythmCombatManager : MonoBehaviour
     private void StartQTE()
     {
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
         if (qtePanel != null) qtePanel.SetActive(true);
 
         qteResolved = false;
         qteStartBeat = BeatManager.Instance.GetCurrentBeatDecimal();
+        qteStartFrame = Time.frameCount; // Enregistrer la frame de départ
         currentPhase = CombatPhase.QTEActive;
 
         if (qteFeedbackText != null) qteFeedbackText.text = "";
@@ -1713,6 +2420,9 @@ public class RhythmCombatManager : MonoBehaviour
             StartCoroutine(ResolveQTERoutine(1.05f));
             return;
         }
+
+        // Empêcher de consommer l'input de validation du menu RPG (cooldown)
+        if (Time.frameCount == qteStartFrame || elapsedBeats < 0.15f) return;
 
         // Détection d'inputs
         bool inputPressed = false;
@@ -1802,27 +2512,69 @@ public class RhythmCombatManager : MonoBehaviour
     private void StartDialogue()
     {
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
-        if (dialoguePanel != null) dialoguePanel.SetActive(true);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
 
-        currentPhase = CombatPhase.DialogueActive;
-        dialogueEnterTime = Time.time;
-
-        if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
+        if (DialogueManager.Instance != null && activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
         {
-            currentDialogueIndex = 0;
-            dialogueText.text = activeCombatData.TalkDialogues[0];
+            currentPhase = CombatPhase.DialogueActive;
+
+            // Créer un DialogueData temporaire à la volée
+            DialogueData tempDialogue = ScriptableObject.CreateInstance<DialogueData>();
+            List<string> lines = activeCombatData.TalkDialogues;
+            DialogueNode[] nodes = new DialogueNode[lines.Count];
+            for (int i = 0; i < lines.Count; i++)
+            {
+                nodes[i] = new DialogueNode();
+                nodes[i].nodeID = i.ToString();
+                nodes[i].characterName = activeCombatData.EnemyName;
+                nodes[i].portrait = null; // Pas de portrait !
+                nodes[i].sentence = lines[i];
+                nodes[i].nextNodeID = (i + 1 < lines.Count) ? (i + 1).ToString() : null;
+                nodes[i].choices = null;
+            }
+            tempDialogue.nodes = nodes;
+
+            // Masquer notre propre panel de combat de dialogue s'il y en a un
+            if (dialoguePanel != null) dialoguePanel.SetActive(false);
+
             logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
+
+            DialogueManager.Instance.StartDialogue(tempDialogue, () =>
+            {
+                TransitionToDodgePhase();
+            });
         }
         else
         {
-            currentDialogueIndex = 9999;
-            dialogueText.text = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
-            logText.text = "Aucun dialogue disponible.";
+            // Fallback si DialogueManager n'est pas présent dans la scène
+            if (dialoguePanel != null) dialoguePanel.SetActive(true);
+
+            currentPhase = CombatPhase.DialogueActive;
+            dialogueEnterTime = Time.time;
+
+            if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
+            {
+                currentDialogueIndex = 0;
+                dialogueText.text = activeCombatData.TalkDialogues[0];
+                logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
+            }
+            else
+            {
+                currentDialogueIndex = 9999;
+                dialogueText.text = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
+                logText.text = "Aucun dialogue disponible.";
+            }
         }
     }
 
     private void UpdateDialogue()
     {
+        // Si le gestionnaire de dialogue global est actif, il gère les inputs de son côté
+        if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
+        {
+            return;
+        }
+
         if (Time.time - dialogueEnterTime < 0.2f) return;
 
         bool advancePressed = false;
@@ -1857,6 +2609,7 @@ public class RhythmCombatManager : MonoBehaviour
     private void FleeCombat()
     {
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
         logText.text = "Vous fuyez le combat !";
         StartCoroutine(FleeRoutine());
     }
@@ -1874,6 +2627,140 @@ public class RhythmCombatManager : MonoBehaviour
         if (BeatManager.Instance != null)
         {
             BeatManager.Instance.OnBeat -= ProcessEnemyAttackBeat;
+        }
+    }
+}
+
+/// <summary>
+/// Composant d'animation de survol et sélection pour le menu de combat stylisé.
+/// </summary>
+public class RhythmUIButtonAnimator : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
+{
+    private RectTransform rectTransform;
+    private Image buttonImage;
+    private TextMeshProUGUI buttonText;
+    private Image shadowImage;
+    private Button parentButton;
+
+    private Vector3 targetScale = Vector3.one;
+    private Vector2 originalPosition;
+    private Vector2 targetPositionOffset = Vector2.zero;
+
+    private float originalRotationZ = 0f;
+    private float targetRotationZ = 0f;
+
+    private Color originalBgColor;
+    private Color targetBgColor;
+
+    private Color originalTextColor;
+    private Color targetTextColor;
+
+    private float animationSpeed = 10f;
+    private Vector2 currentOffset = Vector2.zero;
+    private float currentRotationZ = 0f;
+
+    public void Setup(Image mainImg, Image shadowImg, TextMeshProUGUI text, float baseRotation)
+    {
+        rectTransform = GetComponent<RectTransform>();
+        buttonImage = mainImg;
+        shadowImage = shadowImg;
+        buttonText = text;
+        parentButton = GetComponent<Button>();
+
+        originalRotationZ = baseRotation;
+        targetRotationZ = baseRotation;
+        currentRotationZ = baseRotation;
+
+        if (rectTransform != null)
+        {
+            originalPosition = rectTransform.anchoredPosition;
+        }
+
+        if (buttonImage != null)
+        {
+            originalBgColor = buttonImage.color;
+            targetBgColor = originalBgColor;
+        }
+        else
+        {
+            originalBgColor = new Color(0.06f, 0.06f, 0.08f, 0.95f);
+            targetBgColor = originalBgColor;
+        }
+
+        if (buttonText != null)
+        {
+            originalTextColor = buttonText.color;
+            targetTextColor = originalTextColor;
+        }
+        else
+        {
+            originalTextColor = Color.white;
+            targetTextColor = originalTextColor;
+        }
+    }
+
+    private void Update()
+    {
+        if (rectTransform == null) return;
+
+        // Interpolation d'échelle
+        rectTransform.localScale = Vector3.Lerp(rectTransform.localScale, targetScale, Time.deltaTime * animationSpeed);
+
+        // Interpolation du décalage de position
+        currentOffset = Vector2.Lerp(currentOffset, targetPositionOffset, Time.deltaTime * animationSpeed);
+        rectTransform.anchoredPosition = originalPosition + currentOffset;
+
+        // Interpolation de la rotation Z
+        currentRotationZ = Mathf.Lerp(currentRotationZ, targetRotationZ, Time.deltaTime * animationSpeed);
+        rectTransform.localRotation = Quaternion.Euler(0f, 0f, currentRotationZ);
+
+        // Interpolation des couleurs
+        if (buttonImage != null)
+        {
+            buttonImage.color = Color.Lerp(buttonImage.color, targetBgColor, Time.deltaTime * animationSpeed);
+        }
+        if (buttonText != null)
+        {
+            buttonText.color = Color.Lerp(buttonText.color, targetTextColor, Time.deltaTime * animationSpeed);
+        }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData) => SelectButton();
+    public void OnPointerExit(PointerEventData eventData) => DeselectButton();
+    public void OnSelect(BaseEventData eventData) => SelectButton();
+    public void OnDeselect(BaseEventData eventData) => DeselectButton();
+
+    public void SelectButton()
+    {
+        if (parentButton != null && !parentButton.interactable) return;
+
+        targetScale = Vector3.one * 1.15f;
+        targetPositionOffset = new Vector2(15f, 10f); // Décalage vers le haut/droite (effet 3D "papier découpé")
+        targetRotationZ = originalRotationZ - 4f;     // Rotation dynamique additionnelle
+
+        // Inversion de couleur stylisée (Fond blanc éclatant, texte noir)
+        targetBgColor = Color.white; 
+        targetTextColor = Color.black;
+
+        // Ombre foncée contrastée pour faire ressortir le relief crayonné
+        if (shadowImage != null)
+        {
+            shadowImage.color = new Color(0.1f, 0.1f, 0.12f, 0.9f);
+        }
+    }
+
+    public void DeselectButton()
+    {
+        targetScale = Vector3.one;
+        targetPositionOffset = Vector2.zero;
+        targetRotationZ = originalRotationZ;
+
+        targetBgColor = originalBgColor;
+        targetTextColor = originalTextColor;
+
+        if (shadowImage != null)
+        {
+            shadowImage.color = new Color(0.9f, 0.9f, 0.92f, 0.6f);
         }
     }
 }

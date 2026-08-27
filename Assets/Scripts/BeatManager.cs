@@ -136,6 +136,23 @@ public class BeatManager : MonoBehaviour
         bpm = trackBpm;
     }
 
+    public float Volume
+    {
+        get { return audioSource != null ? audioSource.volume : 1f; }
+        set 
+        { 
+            if (audioSource == null)
+            {
+                audioSource = GetComponent<AudioSource>();
+                if (audioSource == null)
+                {
+                    audioSource = gameObject.AddComponent<AudioSource>();
+                }
+            }
+            audioSource.volume = value; 
+        }
+    }
+
     public float Bpm => bpm;
     public bool IsPlaying => isPlaying;
 }

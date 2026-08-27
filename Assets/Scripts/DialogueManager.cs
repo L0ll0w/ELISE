@@ -59,6 +59,7 @@ public class DialogueManager : MonoBehaviour
 
     public bool IsDialogueActive => isDialogueActive;
     public bool CanStartDialogue => !isDialogueActive && Time.frameCount != dialogueEndFrame;
+    public RectTransform DialoguePanelRect => dialoguePanel != null ? dialoguePanel.GetComponent<RectTransform>() : null;
 
     private void Awake()
     {

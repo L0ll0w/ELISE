@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatData
   enemyName: Monstre
   maxHP: 300
-  musicTrack: {fileID: 8300000, guid: 874d3cfbc65669846aa3c6dcb78986dc, type: 3}
-  bpm: 91
+  musicTrack: {fileID: 8300000, guid: 74dada6d00f7c0e41876250349a8c98e, type: 3}
+  bpm: 90
   visualPrefab: {fileID: 0}
   beatPattern: {fileID: 11400000, guid: 8201821f7fdeaf14d9b5f205664b6076, type: 2}
   warningProjectilePrefab: {fileID: 6501371529139906249, guid: fdd39c12f360a674485185689b62e62d, type: 3}
   impactVisualPrefab: {fileID: 1021912132912709733, guid: deb1f2abc7324e9429a4ff46e0cfda25, type: 3}
+  dodgePhaseDuration: 16
+  talkDialogues: []
