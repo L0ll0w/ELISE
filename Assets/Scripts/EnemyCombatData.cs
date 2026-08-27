@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "NewEnemyCombatData", menuName = "2.5D RPG/Rhythm/Enemy Combat Data", order = 1)]
 public class EnemyCombatData : ScriptableObject

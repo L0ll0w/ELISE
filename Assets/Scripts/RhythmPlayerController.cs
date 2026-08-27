@@ -22,9 +22,9 @@ public class RhythmPlayerController : MonoBehaviour
 
     [Header("Saut d'Esquive")]
     [Tooltip("Hauteur maximale du saut visuel (offset Y).")]
-    [SerializeField] private float jumpHeight = 0.5f;
+    [SerializeField] private float jumpHeight = 0.3f;
     [Tooltip("Durée en secondes du saut.")]
-    [SerializeField] private float jumpDuration = 0.3f;
+    [SerializeField] private float jumpDuration = 0.25f;
 
     private RadialCombatGrid grid;
     private int currentRing = 0;
@@ -33,6 +33,7 @@ public class RhythmPlayerController : MonoBehaviour
     // État du Saut
     private bool isJumping = false;
     private float jumpTimer = 0f;
+    private float landingSquashTimer = 0f;
     private Vector3 jumpVisualOffset = Vector3.zero;
 
     public bool IsJumping => isJumping;
@@ -157,12 +158,11 @@ public class RhythmPlayerController : MonoBehaviour
     {
         if (grid == null) return;
 
-        // Gérer le saut visuel (offset vertical)
+        // Gérer le saut visuel (offset Y) avec une trajectoire parabolique (physique du saut de déplacement)
         if (isJumping)
         {
             jumpTimer += Time.deltaTime;
             float progress = jumpTimer / jumpDuration;
-            
             if (progress >= 1f)
             {
                 isJumping = false;
@@ -170,8 +170,8 @@ public class RhythmPlayerController : MonoBehaviour
             }
             else
             {
-                // Trajectoire en parabole (sinus)
-                float heightOffset = Mathf.Sin(progress * Mathf.PI) * jumpHeight;
+                // Trajectoire parabolique snappie (y = 4 * x * (1 - x) * height)
+                float heightOffset = 4f * progress * (1f - progress) * jumpHeight;
                 jumpVisualOffset = Vector3.up * heightOffset;
             }
         }
@@ -212,17 +212,9 @@ public class RhythmPlayerController : MonoBehaviour
         {
             isJumping = true;
             jumpTimer = 0f;
-            if (animator != null && animator.runtimeAnimatorController != null)
+            if (animator != null)
             {
-                // Vérifier si le paramètre "jump" de type Trigger existe pour éviter le warning Unity
-                foreach (var param in animator.parameters)
-                {
-                    if (param.name == "jump" && param.type == AnimatorControllerParameterType.Trigger)
-                    {
-                        animator.SetTrigger("jump");
-                        break;
-                    }
-                }
+                animator.SetTrigger("Spawn"); // Même animation de saut court que pour les déplacements
             }
         }
     }

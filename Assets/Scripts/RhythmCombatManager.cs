@@ -16,6 +16,11 @@ public class RhythmCombatManager : MonoBehaviour
 {
     public static RhythmCombatManager Instance { get; private set; }
 
+    /// <summary>
+    /// Indique si le combat rythmique est actuellement actif.
+    /// </summary>
+    public bool IsCombatActive => activeEnemy != null;
+
     public enum CombatState { Transitioning, Active, Victory, Defeat }
 
     [Header("Configuration Rythmique")]
@@ -56,6 +61,38 @@ public class RhythmCombatManager : MonoBehaviour
     private EnemyCombatData activeCombatData;
     private GameObject activeVisualPrefab;
     private CinemachineBrain brain;
+
+    // Machine à états de phase & variables additionnelles (Combat Séquencé)
+    public enum CombatPhase { DodgePhase, PlayerTurn, QTEActive, DialogueActive }
+    private CombatPhase currentPhase = CombatPhase.DodgePhase;
+
+    private float originalCameraDistance;
+    private float originalCameraHeight;
+    private int dodgeBeatsCount = 0;
+
+    // Références UI supplémentaires pour le combat séquencé
+    private GameObject rpgMenuPanel;
+    private Button attackButton;
+    private Button talkButton;
+    private Button companionsButton;
+    private Button fleeButton;
+
+    private GameObject qtePanel;
+    private RectTransform qteIndicator;
+    private RectTransform qteTargetPerfect;
+    private RectTransform qteTargetGood;
+    private TextMeshProUGUI qteInstructionText;
+    private TextMeshProUGUI qteFeedbackText;
+    private float qteStartBeat = 0f;
+    private bool qteResolved = false;
+
+    private GameObject dialoguePanel;
+    private TextMeshProUGUI dialogueText;
+    private int currentDialogueIndex = 0;
+    private float dialogueEnterTime = 0f;
+
+    private GameObject companionsSubPanel;
+    private List<GameObject> companionButtons = new List<GameObject>();
 
     // Gestion du Groupe et PV (Tag-Team)
     private List<Transform> allies = new List<Transform>();
@@ -112,35 +149,24 @@ public class RhythmCombatManager : MonoBehaviour
         UpdateCameraView(false);
         OrientBossTowardsPlayer();
 
-        bool attackPressed = false;
-        bool tagPressed = false;
-
-        // Lecture des entrées clavier via Input System
-        if (Keyboard.current != null)
+        switch (currentPhase)
         {
-            // Clic gauche pour attaquer (Espace étant utilisé pour sauter)
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) attackPressed = true;
-            if (Keyboard.current.tabKey.wasPressedThisFrame || Keyboard.current.leftShiftKey.wasPressedThisFrame) tagPressed = true;
-        }
+            case CombatPhase.DodgePhase:
+                // Dans la phase d'esquive, le joueur contrôle son personnage (géré par RhythmPlayerController)
+                // et attend la fin du compte de battements.
+                break;
 
-        // Lecture des entrées manette (Optionnel)
-        if (Gamepad.current != null)
-        {
-            // Bouton Ouest (touche X sur Xbox) pour attaquer (bouton A/Sud étant utilisé pour sauter)
-            if (Gamepad.current.buttonWest.wasPressedThisFrame) attackPressed = true;
-            if (Gamepad.current.buttonNorth.wasPressedThisFrame) tagPressed = true;
-        }
+            case CombatPhase.PlayerTurn:
+                // Le joueur choisit une option dans le menu RPG.
+                break;
 
-        // Détecter l'attaque du joueur sur le Beat (Touche Espace ou bouton Sud)
-        if (attackPressed)
-        {
-            EvaluatePlayerAttack();
-        }
+            case CombatPhase.QTEActive:
+                UpdateQTE();
+                break;
 
-        // Détecter le changement de personnage (Touche Tab / Shift ou bouton Nord)
-        if (tagPressed)
-        {
-            TagNextCharacter();
+            case CombatPhase.DialogueActive:
+                UpdateDialogue();
+                break;
         }
     }
 
@@ -166,6 +192,10 @@ public class RhythmCombatManager : MonoBehaviour
     private IEnumerator StartCombatRoutine()
     {
         currentState = CombatState.Transitioning;
+        currentPhase = CombatPhase.DodgePhase;
+        dodgeBeatsCount = 0;
+        originalCameraDistance = cameraDistance;
+        originalCameraHeight = cameraHeight;
         Debug.Log("[RhythmCombatManager] Initialisation du combat rythmique radial...");
 
         // 1. Fondu au noir
@@ -347,7 +377,7 @@ public class RhythmCombatManager : MonoBehaviour
         yield return StartCoroutine(Fade(0f));
 
         currentState = CombatState.Active;
-        logText.text = "ESQUIVEZ EN RYTHME ! Appuyez sur ESPACE sur le Beat pour attaquer !";
+        logText.text = "ESQUIVEZ EN RYTHME ! Évitez les attaques de l'ennemi !";
     }
 
     #endregion
@@ -358,10 +388,21 @@ public class RhythmCombatManager : MonoBehaviour
     {
         if (currentState != CombatState.Active) return;
 
+        if (currentPhase != CombatPhase.DodgePhase) return;
+
         // A. Évaluer et appliquer les dégâts des alertes qui devaient frapper à ce beat
         ApplyTelegraphDamage(beatIndex);
 
-        // B. Générer de nouveaux patterns d'attaque en déléguant au ScriptableObject du boss
+        // B. Gérer la durée de la phase d'esquive
+        dodgeBeatsCount++;
+        int duration = activeCombatData != null ? activeCombatData.DodgePhaseDuration : 16;
+        if (dodgeBeatsCount >= duration)
+        {
+            TransitionToPlayerTurn();
+            return;
+        }
+
+        // C. Générer de nouveaux patterns d'attaque en déléguant au ScriptableObject du boss
         if (activeCombatData != null && activeCombatData.BeatPattern != null)
         {
             activeCombatData.BeatPattern.ProcessBeat(beatIndex, this, radialGrid, playerController);
@@ -740,6 +781,9 @@ public class RhythmCombatManager : MonoBehaviour
         }
         allyHPImages.Clear();
         allyHPTexts.Clear();
+        companionButtons.Clear();
+        currentPhase = CombatPhase.DodgePhase;
+        dodgeBeatsCount = 0;
 
         if (activeVisualPrefab != null)
         {
@@ -831,6 +875,7 @@ public class RhythmCombatManager : MonoBehaviour
         yield return StartCoroutine(Fade(0f));
 
         currentState = CombatState.Transitioning;
+        activeEnemy = null;
         Debug.Log("[RhythmCombatManager] Combat terminé !");
     }
 
@@ -1115,6 +1160,9 @@ public class RhythmCombatManager : MonoBehaviour
 
         // 6. Barres de PV des Alliés (Empilées verticalement en bas à gauche)
         PopulateAlliesUI(mainPanel.transform);
+
+        // 7. Initialisation des UIs de Combat Séquencé
+        CreateSequencedCombatUI(mainPanel.transform);
     }
 
     private void PopulateAlliesUI(Transform parent)
@@ -1222,6 +1270,601 @@ public class RhythmCombatManager : MonoBehaviour
             }
             tagPromptPanel.SetActive(aliveCount > 1);
         }
+    }
+
+    #endregion
+
+    #region Combat Séquencé (Style Undertale / Juge d'Âmes)
+
+    private void CreateSequencedCombatUI(Transform parent)
+    {
+        // --- MENU RPG ---
+        GameObject rpgMenuBorder = new GameObject("RPGMenuBorder");
+        rpgMenuBorder.transform.SetParent(parent, false);
+        RectTransform borderRect = rpgMenuBorder.AddComponent<RectTransform>();
+        borderRect.anchorMin = new Vector2(0.34f, 0.14f);
+        borderRect.anchorMax = new Vector2(0.66f, 0.28f);
+        borderRect.sizeDelta = Vector2.zero;
+        Image borderImg = rpgMenuBorder.AddComponent<Image>();
+        borderImg.sprite = uiFillSprite;
+        borderImg.color = new Color(1f, 1f, 1f, 0.2f);
+
+        rpgMenuPanel = new GameObject("RPGMenuPanel");
+        rpgMenuPanel.transform.SetParent(rpgMenuBorder.transform, false);
+        RectTransform menuRect = rpgMenuPanel.AddComponent<RectTransform>();
+        menuRect.anchorMin = Vector2.zero;
+        menuRect.anchorMax = Vector2.one;
+        menuRect.offsetMin = new Vector2(2, 2);
+        menuRect.offsetMax = new Vector2(-2, -2);
+        Image menuImg = rpgMenuPanel.AddComponent<Image>();
+        menuImg.sprite = uiFillSprite;
+        menuImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
+
+        attackButton = CreateRPGButton("AttackBtn", "ATTAQUER", rpgMenuPanel.transform, new Vector2(0.02f, 0.15f), new Vector2(0.24f, 0.85f), StartQTE);
+        talkButton = CreateRPGButton("TalkBtn", "PARLER", rpgMenuPanel.transform, new Vector2(0.26f, 0.15f), new Vector2(0.48f, 0.85f), StartDialogue);
+        companionsButton = CreateRPGButton("CompanionsBtn", "COMPAGNONS", rpgMenuPanel.transform, new Vector2(0.50f, 0.15f), new Vector2(0.72f, 0.85f), ShowCompanionsSubMenu);
+        fleeButton = CreateRPGButton("FleeBtn", "FUIR", rpgMenuPanel.transform, new Vector2(0.74f, 0.15f), new Vector2(0.96f, 0.85f), FleeCombat);
+
+        rpgMenuBorder.SetActive(false); // Masqué au début
+        // Sauvegarder la référence du bord dans rpgMenuPanel pour activer/désactiver le tout facilement
+        rpgMenuPanel = rpgMenuBorder;
+
+        // --- QTE PANEL ---
+        GameObject qteBorder = new GameObject("QteBorder");
+        qteBorder.transform.SetParent(parent, false);
+        RectTransform qteBRect = qteBorder.AddComponent<RectTransform>();
+        qteBRect.anchorMin = new Vector2(0.3f, 0.18f);
+        qteBRect.anchorMax = new Vector2(0.7f, 0.38f);
+        qteBRect.sizeDelta = Vector2.zero;
+        Image qteBImg = qteBorder.AddComponent<Image>();
+        qteBImg.sprite = uiFillSprite;
+        qteBImg.color = new Color(1f, 1f, 1f, 0.2f);
+
+        GameObject qtePanelInner = new GameObject("QtePanelInner");
+        qtePanelInner.transform.SetParent(qteBorder.transform, false);
+        RectTransform qteIRect = qtePanelInner.AddComponent<RectTransform>();
+        qteIRect.anchorMin = Vector2.zero;
+        qteIRect.anchorMax = Vector2.one;
+        qteIRect.offsetMin = new Vector2(2, 2);
+        qteIRect.offsetMax = new Vector2(-2, -2);
+        Image qteIImg = qtePanelInner.AddComponent<Image>();
+        qteIImg.sprite = uiFillSprite;
+        qteIImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
+
+        // Instruction
+        GameObject qteInstObj = new GameObject("QteInstruction");
+        qteInstObj.transform.SetParent(qtePanelInner.transform, false);
+        qteInstructionText = qteInstObj.AddComponent<TextMeshProUGUI>();
+        qteInstructionText.text = "APPUYEZ SUR ESPACE OU CLIQUEZ GAUCHE !";
+        qteInstructionText.fontSize = 16f;
+        qteInstructionText.fontStyle = FontStyles.Bold;
+        qteInstructionText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+        qteInstructionText.alignment = TextAlignmentOptions.Center;
+        RectTransform qteInstRect = qteInstructionText.rectTransform;
+        qteInstRect.anchorMin = new Vector2(0.05f, 0.72f);
+        qteInstRect.anchorMax = new Vector2(0.95f, 0.95f);
+        qteInstRect.sizeDelta = Vector2.zero;
+
+        // Rail de QTE
+        GameObject qteRailObj = new GameObject("QteRail");
+        qteRailObj.transform.SetParent(qtePanelInner.transform, false);
+        Image railImg = qteRailObj.AddComponent<Image>();
+        railImg.sprite = uiFillSprite;
+        railImg.color = new Color(0.12f, 0.12f, 0.15f, 1.0f);
+        RectTransform railRect = railImg.rectTransform;
+        railRect.anchorMin = new Vector2(0.08f, 0.22f);
+        railRect.anchorMax = new Vector2(0.92f, 0.42f);
+        railRect.sizeDelta = Vector2.zero;
+
+        // Zone Jaune (BIEN)
+        GameObject yellowZoneObj = new GameObject("YellowZone");
+        yellowZoneObj.transform.SetParent(qteRailObj.transform, false);
+        Image yellowImg = yellowZoneObj.AddComponent<Image>();
+        yellowImg.sprite = uiFillSprite;
+        yellowImg.color = new Color(0.9f, 0.75f, 0.15f, 0.7f);
+        RectTransform yellowRect = yellowImg.rectTransform;
+        yellowRect.anchorMin = new Vector2(0.35f, 0f);
+        yellowRect.anchorMax = new Vector2(0.65f, 1f);
+        yellowRect.sizeDelta = Vector2.zero;
+
+        // Zone Verte (PARFAIT)
+        GameObject greenZoneObj = new GameObject("GreenZone");
+        greenZoneObj.transform.SetParent(qteRailObj.transform, false);
+        Image greenImg = greenZoneObj.AddComponent<Image>();
+        greenImg.sprite = uiFillSprite;
+        greenImg.color = new Color(0.1f, 0.8f, 0.3f, 0.85f);
+        RectTransform greenRect = greenImg.rectTransform;
+        greenRect.anchorMin = new Vector2(0.45f, 0f);
+        greenRect.anchorMax = new Vector2(0.55f, 1f);
+        greenRect.sizeDelta = Vector2.zero;
+
+        // Indicateur (Curseur)
+        GameObject indicatorObj = new GameObject("Indicator");
+        indicatorObj.transform.SetParent(qteRailObj.transform, false);
+        Image indImg = indicatorObj.AddComponent<Image>();
+        indImg.sprite = uiFillSprite;
+        indImg.color = Color.white;
+        qteIndicator = indImg.rectTransform;
+        qteIndicator.anchorMin = new Vector2(0f, -0.2f);
+        qteIndicator.anchorMax = new Vector2(0.015f, 1.2f);
+        qteIndicator.sizeDelta = Vector2.zero;
+
+        // Feedback Text
+        GameObject qteFeedObj = new GameObject("QteFeedbackText");
+        qteFeedObj.transform.SetParent(qtePanelInner.transform, false);
+        qteFeedbackText = qteFeedObj.AddComponent<TextMeshProUGUI>();
+        qteFeedbackText.text = "";
+        qteFeedbackText.fontSize = 24f;
+        qteFeedbackText.fontStyle = FontStyles.Bold;
+        qteFeedbackText.alignment = TextAlignmentOptions.Center;
+        RectTransform feedRect = qteFeedbackText.rectTransform;
+        feedRect.anchorMin = new Vector2(0.1f, 0.48f);
+        feedRect.anchorMax = new Vector2(0.9f, 0.68f);
+        feedRect.sizeDelta = Vector2.zero;
+
+        qteBorder.SetActive(false); // Masqué au début
+        qtePanel = qteBorder;
+
+        // --- DIALOGUE PANEL ---
+        GameObject diaBorder = new GameObject("DialogueBorder");
+        diaBorder.transform.SetParent(parent, false);
+        RectTransform diaBRect = diaBorder.AddComponent<RectTransform>();
+        diaBRect.anchorMin = new Vector2(0.2f, 0.05f);
+        diaBRect.anchorMax = new Vector2(0.8f, 0.22f);
+        diaBRect.sizeDelta = Vector2.zero;
+        Image diaBImg = diaBorder.AddComponent<Image>();
+        diaBImg.sprite = uiFillSprite;
+        diaBImg.color = new Color(1f, 1f, 1f, 0.2f);
+
+        GameObject diaPanelInner = new GameObject("DialoguePanelInner");
+        diaPanelInner.transform.SetParent(diaBorder.transform, false);
+        RectTransform diaIRect = diaPanelInner.AddComponent<RectTransform>();
+        diaIRect.anchorMin = Vector2.zero;
+        diaIRect.anchorMax = Vector2.one;
+        diaIRect.offsetMin = new Vector2(2, 2);
+        diaIRect.offsetMax = new Vector2(-2, -2);
+        Image diaIImg = diaPanelInner.AddComponent<Image>();
+        diaIImg.sprite = uiFillSprite;
+        diaIImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
+
+        GameObject diaTextObj = new GameObject("DialogueText");
+        diaTextObj.transform.SetParent(diaPanelInner.transform, false);
+        dialogueText = diaTextObj.AddComponent<TextMeshProUGUI>();
+        dialogueText.text = "...";
+        dialogueText.fontSize = 20f;
+        dialogueText.color = Color.white;
+        dialogueText.alignment = TextAlignmentOptions.TopLeft;
+        dialogueText.enableWordWrapping = true;
+        RectTransform diaTextRect = dialogueText.rectTransform;
+        diaTextRect.anchorMin = new Vector2(0.05f, 0.15f);
+        diaTextRect.anchorMax = new Vector2(0.95f, 0.85f);
+        diaTextRect.sizeDelta = Vector2.zero;
+
+        // Prompt Suivant
+        GameObject promptObj = new GameObject("DialoguePrompt");
+        promptObj.transform.SetParent(diaPanelInner.transform, false);
+        TextMeshProUGUI promptText = promptObj.AddComponent<TextMeshProUGUI>();
+        promptText.text = "[ESPACE / CLIC] Suivant";
+        promptText.fontSize = 12f;
+        promptText.color = new Color(0.6f, 0.6f, 0.6f, 1f);
+        promptText.alignment = TextAlignmentOptions.BottomRight;
+        RectTransform promptRect = promptText.rectTransform;
+        promptRect.anchorMin = new Vector2(0.7f, 0.02f);
+        promptRect.anchorMax = new Vector2(0.98f, 0.15f);
+        promptRect.sizeDelta = Vector2.zero;
+
+        diaBorder.SetActive(false); // Masqué au début
+        dialoguePanel = diaBorder;
+
+        // --- COMPANIONS SUB-PANEL ---
+        GameObject compBorder = new GameObject("CompanionsBorder");
+        compBorder.transform.SetParent(parent, false);
+        RectTransform compBRect = compBorder.AddComponent<RectTransform>();
+        compBRect.anchorMin = new Vector2(0.35f, 0.32f);
+        compBRect.anchorMax = new Vector2(0.65f, 0.58f);
+        compBRect.sizeDelta = Vector2.zero;
+        Image compBImg = compBorder.AddComponent<Image>();
+        compBImg.sprite = uiFillSprite;
+        compBImg.color = new Color(1f, 1f, 1f, 0.2f);
+
+        companionsSubPanel = new GameObject("CompanionsPanelInner");
+        companionsSubPanel.transform.SetParent(compBorder.transform, false);
+        RectTransform compIRect = companionsSubPanel.AddComponent<RectTransform>();
+        compIRect.anchorMin = Vector2.zero;
+        compIRect.anchorMax = Vector2.one;
+        compIRect.offsetMin = new Vector2(2, 2);
+        compIRect.offsetMax = new Vector2(-2, -2);
+        Image compIImg = companionsSubPanel.AddComponent<Image>();
+        compIImg.sprite = uiFillSprite;
+        compIImg.color = new Color(0.04f, 0.04f, 0.06f, 0.95f);
+
+        GameObject compTitleObj = new GameObject("Title");
+        compTitleObj.transform.SetParent(companionsSubPanel.transform, false);
+        TextMeshProUGUI compTitle = compTitleObj.AddComponent<TextMeshProUGUI>();
+        compTitle.text = "CHOISISSEZ UN COMPAGNON";
+        compTitle.fontSize = 16f;
+        compTitle.fontStyle = FontStyles.Bold;
+        compTitle.color = Color.white;
+        compTitle.alignment = TextAlignmentOptions.Center;
+        RectTransform compTitleRect = compTitle.rectTransform;
+        compTitleRect.anchorMin = new Vector2(0.05f, 0.82f);
+        compTitleRect.anchorMax = new Vector2(0.95f, 0.98f);
+        compTitleRect.sizeDelta = Vector2.zero;
+
+        compBorder.SetActive(false); // Masqué au début
+        // Conserver le border comme référence générale pour SetActive
+        companionsSubPanel = compBorder;
+    }
+
+    private Button CreateRPGButton(string name, string label, Transform parent, Vector2 anchorMin, Vector2 anchorMax, System.Action onClickAction)
+    {
+        GameObject btnObj = new GameObject(name);
+        btnObj.transform.SetParent(parent, false);
+        RectTransform rect = btnObj.AddComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.sizeDelta = Vector2.zero;
+
+        Image img = btnObj.AddComponent<Image>();
+        img.sprite = uiFillSprite;
+
+        Button btn = btnObj.AddComponent<Button>();
+        ColorBlock cb = btn.colors;
+        cb.normalColor = new Color(0.12f, 0.12f, 0.18f, 0.8f);
+        cb.highlightedColor = new Color(0.2f, 0.6f, 1.0f, 0.9f);
+        cb.pressedColor = new Color(0.1f, 0.4f, 0.8f, 1f);
+        cb.selectedColor = new Color(0.2f, 0.6f, 1.0f, 0.9f);
+        cb.disabledColor = new Color(0.08f, 0.08f, 0.1f, 0.4f);
+        btn.colors = cb;
+
+        GameObject txtObj = new GameObject("Text");
+        txtObj.transform.SetParent(btnObj.transform, false);
+        TextMeshProUGUI txt = txtObj.AddComponent<TextMeshProUGUI>();
+        txt.text = label;
+        txt.fontSize = 18f;
+        txt.fontStyle = FontStyles.Bold;
+        txt.color = Color.white;
+        txt.alignment = TextAlignmentOptions.Center;
+
+        RectTransform txtRect = txt.rectTransform;
+        txtRect.anchorMin = Vector2.zero;
+        txtRect.anchorMax = Vector2.one;
+        txtRect.sizeDelta = Vector2.zero;
+
+        btn.onClick.AddListener(() => onClickAction?.Invoke());
+        return btn;
+    }
+
+    private void ShowCompanionsSubMenu()
+    {
+        // Masquer le menu principal
+        rpgMenuPanel.SetActive(false);
+        companionsSubPanel.SetActive(true);
+
+        // Nettoyer les anciens boutons
+        foreach (var btn in companionButtons)
+        {
+            if (btn != null) Destroy(btn);
+        }
+        companionButtons.Clear();
+
+        // Récupérer le conteneur interne pour ajouter les boutons
+        Transform container = companionsSubPanel.transform.Find("CompanionsPanelInner");
+        if (container == null) container = companionsSubPanel.transform;
+
+        // Trouver les compagnons et créer des boutons verticalement
+        int buttonIndex = 0;
+        float startY = 0.65f;
+        float spacing = 0.15f;
+
+        for (int i = 0; i < allies.Count; i++)
+        {
+            if (i == activeAllyIndex) continue; // Pas le héros actif
+            if (allyHP[i] <= 0) continue;       // Seulement s'il est en vie
+
+            int indexToSwap = i;
+            float topY = startY - buttonIndex * spacing;
+            float bottomY = topY - 0.12f;
+
+            Button btn = CreateRPGButton($"CompBtn_{i}", $"{allies[i].name.ToUpper()} ({allyHP[i]}/{allyMaxHP[i]} PV)", container, 
+                new Vector2(0.1f, bottomY), new Vector2(0.9f, topY), 
+                () => {
+                    SwapActiveCharacter(indexToSwap);
+                    companionsSubPanel.SetActive(false);
+                    TransitionToDodgePhase();
+                }
+            );
+            companionButtons.Add(btn.gameObject);
+            buttonIndex++;
+        }
+
+        // Ajouter un bouton de Retour tout en bas
+        float backTopY = 0.12f;
+        float backBottomY = 0.02f;
+        Button backBtn = CreateRPGButton("BackBtn", "RETOUR", container,
+            new Vector2(0.2f, backBottomY), new Vector2(0.8f, backTopY),
+            () => {
+                companionsSubPanel.SetActive(false);
+                rpgMenuPanel.SetActive(true);
+            }
+        );
+        companionButtons.Add(backBtn.gameObject);
+    }
+
+    private void TransitionToPlayerTurn()
+    {
+        currentPhase = CombatPhase.PlayerTurn;
+
+        // Désactiver les contrôles du joueur sur la grille
+        if (playerController != null)
+        {
+            playerController.SetInputEnabled(false);
+        }
+
+        // Nettoyer tous les telegraphs / alertes sur la grille
+        ClearAllTelegraphs();
+
+        // Zoom caméra : ajuster la distance et la hauteur pour un plan serré
+        cameraDistance = 4f;
+        cameraHeight = 1.5f;
+
+        // Afficher l'UI du menu RPG
+        if (rpgMenuPanel != null)
+        {
+            rpgMenuPanel.SetActive(true);
+
+            // Vérifier s'il reste d'autres compagnons en vie
+            bool otherAlive = false;
+            for (int i = 0; i < allies.Count; i++)
+            {
+                if (i != activeAllyIndex && allyHP[i] > 0)
+                {
+                    otherAlive = true;
+                    break;
+                }
+            }
+            // Mettre à jour l'affichage du bouton Compagnons
+            if (companionsButton != null)
+            {
+                companionsButton.gameObject.SetActive(otherAlive);
+            }
+        }
+
+        logText.text = "À votre tour ! Choisissez une action.";
+    }
+
+    private void TransitionToDodgePhase()
+    {
+        currentPhase = CombatPhase.DodgePhase;
+        dodgeBeatsCount = 0;
+
+        // Restaurer la caméra aux distances initiales de combat
+        cameraDistance = originalCameraDistance;
+        cameraHeight = originalCameraHeight;
+
+        // Réactiver les contrôles du joueur sur la grille
+        if (playerController != null)
+        {
+            playerController.SetInputEnabled(true);
+        }
+
+        // Masquer tous les menus et panneaux
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (qtePanel != null) qtePanel.SetActive(false);
+        if (dialoguePanel != null) dialoguePanel.SetActive(false);
+        if (companionsSubPanel != null) companionsSubPanel.SetActive(false);
+
+        logText.text = "ESQUIVEZ EN RYTHME !";
+    }
+
+    private void ClearAllTelegraphs()
+    {
+        if (radialGrid != null)
+        {
+            foreach (var key in new List<string>(activeTelegraphs.Keys))
+            {
+                string[] parts = key.Split('_');
+                if (parts.Length == 2)
+                {
+                    int ring = int.Parse(parts[0]);
+                    int sector = int.Parse(parts[1]);
+                    radialGrid.SetCellWarning(ring, sector, false);
+                }
+            }
+        }
+        activeTelegraphs.Clear();
+        groundOnlyTelegraphs.Clear();
+    }
+
+    private void StartQTE()
+    {
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (qtePanel != null) qtePanel.SetActive(true);
+
+        qteResolved = false;
+        qteStartBeat = BeatManager.Instance.GetCurrentBeatDecimal();
+        currentPhase = CombatPhase.QTEActive;
+
+        if (qteFeedbackText != null) qteFeedbackText.text = "";
+        if (qteIndicator != null)
+        {
+            qteIndicator.anchorMin = new Vector2(0f, -0.2f);
+            qteIndicator.anchorMax = new Vector2(0.015f, 1.2f);
+        }
+    }
+
+    private void UpdateQTE()
+    {
+        if (qteResolved) return;
+
+        float elapsedBeats = BeatManager.Instance.GetCurrentBeatDecimal() - qteStartBeat;
+        float progress = elapsedBeats / 2.0f; // Le QTE dure 2 battements
+
+        // Mettre à jour la position de l'indicateur (curseur)
+        if (qteIndicator != null)
+        {
+            qteIndicator.anchorMin = new Vector2(Mathf.Clamp01(progress), -0.2f);
+            qteIndicator.anchorMax = new Vector2(Mathf.Clamp01(progress + 0.015f), 1.2f);
+        }
+
+        // Si le temps est dépassé
+        if (progress >= 1.05f)
+        {
+            StartCoroutine(ResolveQTERoutine(1.05f));
+            return;
+        }
+
+        // Détection d'inputs
+        bool inputPressed = false;
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) inputPressed = true;
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) inputPressed = true;
+        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame) inputPressed = true;
+
+        if (inputPressed)
+        {
+            StartCoroutine(ResolveQTERoutine(progress));
+        }
+    }
+
+    private IEnumerator ResolveQTERoutine(float progress)
+    {
+        qteResolved = true;
+
+        float distance = Mathf.Abs(progress - 0.5f);
+        string feedback = "";
+        Color color = Color.white;
+        int damage = 0;
+
+        if (distance <= 0.05f) // Zone Verte (Parfait)
+        {
+            feedback = "PARFAIT !";
+            color = Color.green;
+            damage = 50;
+        }
+        else if (distance <= 0.15f) // Zone Jaune (Bien)
+        {
+            feedback = "BIEN !";
+            color = Color.yellow;
+            damage = 25;
+        }
+        else // Hors zone (Raté)
+        {
+            feedback = "RATE !";
+            color = Color.red;
+            damage = 0;
+        }
+
+        if (qteFeedbackText != null)
+        {
+            qteFeedbackText.text = feedback;
+            qteFeedbackText.color = color;
+        }
+
+        // Utiliser aussi le combo feedback text au milieu de l'écran
+        if (comboFeedbackText != null)
+        {
+            comboFeedbackText.text = feedback;
+            comboFeedbackText.color = color;
+            StartCoroutine(AnimateComboText());
+        }
+
+        if (damage > 0)
+        {
+            enemyHP = Mathf.Max(0, enemyHP - damage);
+            UpdateUI();
+
+            // Particules de succès
+            if (attackSuccessParticles != null && activeEnemy != null)
+            {
+                ParticleSystem ps = Instantiate(attackSuccessParticles, activeEnemy.transform.position, Quaternion.identity);
+                Destroy(ps.gameObject, 1.0f);
+            }
+
+            logText.text = $"Vous touchez le boss en rythme ! Dégâts : {damage}";
+        }
+        else
+        {
+            logText.text = "Trop tard ou trop tôt ! Suivez le tempo.";
+        }
+
+        yield return new WaitForSeconds(1.2f);
+
+        if (enemyHP <= 0)
+        {
+            StartCoroutine(VictoryRoutine());
+        }
+        else
+        {
+            TransitionToDodgePhase();
+        }
+    }
+
+    private void StartDialogue()
+    {
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (dialoguePanel != null) dialoguePanel.SetActive(true);
+
+        currentPhase = CombatPhase.DialogueActive;
+        dialogueEnterTime = Time.time;
+
+        if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
+        {
+            currentDialogueIndex = 0;
+            dialogueText.text = activeCombatData.TalkDialogues[0];
+            logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
+        }
+        else
+        {
+            currentDialogueIndex = 9999;
+            dialogueText.text = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
+            logText.text = "Aucun dialogue disponible.";
+        }
+    }
+
+    private void UpdateDialogue()
+    {
+        if (Time.time - dialogueEnterTime < 0.2f) return;
+
+        bool advancePressed = false;
+        if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame)) advancePressed = true;
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) advancePressed = true;
+        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame) advancePressed = true;
+
+        if (advancePressed)
+        {
+            if (currentDialogueIndex == 9999) // Mode fallback
+            {
+                dialoguePanel.SetActive(false);
+                TransitionToDodgePhase();
+            }
+            else
+            {
+                currentDialogueIndex++;
+                if (activeCombatData != null && currentDialogueIndex < activeCombatData.TalkDialogues.Count)
+                {
+                    dialogueText.text = activeCombatData.TalkDialogues[currentDialogueIndex];
+                    dialogueEnterTime = Time.time; // réinitialiser le cooldown
+                }
+                else
+                {
+                    dialoguePanel.SetActive(false);
+                    TransitionToDodgePhase();
+                }
+            }
+        }
+    }
+
+    private void FleeCombat()
+    {
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        logText.text = "Vous fuyez le combat !";
+        StartCoroutine(FleeRoutine());
+    }
+
+    private IEnumerator FleeRoutine()
+    {
+        yield return new WaitForSeconds(1.0f);
+        StartCoroutine(EndCombatRoutine(false));
     }
 
     #endregion

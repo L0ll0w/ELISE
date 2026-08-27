@@ -137,6 +137,9 @@ public class MenuManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // Auto-remplissage des slots non assignés au lancement du jeu
+        AutoAssignUISlots();
     }
 
     private void Start()
@@ -241,6 +244,14 @@ public class MenuManager : MonoBehaviour
                 return;
             }
 
+            // Vérification si un combat est en cours (CombatManager ou RhythmCombatManager)
+            if ((CombatManager.Instance != null && CombatManager.Instance.IsCombatActive) ||
+                (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive))
+            {
+                Debug.Log("Impossible d'ouvrir le menu : un combat est en cours.");
+                return;
+            }
+
             ToggleMenu();
         }
 
@@ -302,6 +313,14 @@ public class MenuManager : MonoBehaviour
     public void OpenMenu()
     {
         if (isMenuOpen) return;
+
+        // Bloquer l'ouverture si un combat est actif
+        if ((CombatManager.Instance != null && CombatManager.Instance.IsCombatActive) ||
+            (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive))
+        {
+            Debug.Log("Ouverture du menu bloquée car un combat est actif.");
+            return;
+        }
 
         isMenuOpen = true;
         if (menuRoot != null)
@@ -1152,9 +1171,285 @@ public class MenuManager : MonoBehaviour
         }
         previousSelectedObject = null;
         hasOriginalColorStored = false;
+     }
+ 
+     #endregion
+ 
+     #endregion
+
+    #region Auto-Remplissage des Slots UI (OnValidate & Runtime)
+
+    private void OnValidate()
+    {
+        // Remplissage automatique dans l'éditeur de Unity quand le script est modifié/chargé
+        AutoAssignUISlots();
     }
 
-    #endregion
+    [ContextMenu("Auto Assign UI Slots")]
+    public void AutoAssignUISlots()
+    {
+        // Récupérer la scène active de manière sécurisée
+        UnityEngine.SceneManagement.Scene activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        
+        // Récupérer TOUS les GameObjects chargés (y compris les inactifs dans la scène)
+        GameObject[] allGameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+        List<GameObject> sceneObjects = new List<GameObject>();
+        
+        foreach (GameObject go in allGameObjects)
+        {
+            if (go != null && go.hideFlags == HideFlags.None && go.scene == activeScene)
+            {
+                sceneObjects.Add(go);
+            }
+        }
+
+        GameObject[] sceneObjectsArray = sceneObjects.ToArray();
+
+        // 1. Panneaux UI
+        if (menuRoot == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "MenuRoot", "Menu Root", "Menu" });
+            if (found != null) menuRoot = found;
+            else
+            {
+                // Fallback: cherche n'importe quel Canvas de la scène
+                Canvas canvas = FindFirstObjectByType<Canvas>();
+                if (canvas != null) menuRoot = canvas.gameObject;
+                else menuRoot = this.gameObject;
+            }
+        }
+
+        if (inventoryPanel == null)
+        {
+            inventoryPanel = FindGameObjectByName(sceneObjectsArray, new string[] { "InventoryPanel", "Inventory Panel", "Inventory" });
+        }
+        if (groupPanel == null)
+        {
+            groupPanel = FindGameObjectByName(sceneObjectsArray, new string[] { "GroupPanel", "Group Panel", "Group" });
+        }
+        if (settingsPanel == null)
+        {
+            settingsPanel = FindGameObjectByName(sceneObjectsArray, new string[] { "SettingsPanel", "Settings Panel", "Settings" });
+        }
+        if (equipPanel == null)
+        {
+            equipPanel = FindGameObjectByName(sceneObjectsArray, new string[] { "EquipPanel", "Equip Panel", "Equip" });
+        }
+
+        // 2. Configuration Inventaire UI
+        if (equipmentContainer == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "EquipmentContainer", "Equipment Container", "EquipContainer", "EquipmentContent", "EquipContent" });
+            if (found != null) equipmentContainer = found.transform;
+        }
+        if (itemsContainer == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "ItemsContainer", "Items Container", "ItemContainer", "ItemsContent", "ItemContent" });
+            if (found != null) itemsContainer = found.transform;
+        }
+        if (keysContainer == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "KeysContainer", "Keys Container", "KeyContainer", "KeysContent", "KeyContent" });
+            if (found != null) keysContainer = found.transform;
+        }
+
+        if (inventoryDescriptionText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "InventoryDescriptionText", "Inventory Description Text", "DescriptionText", "Description Text", "ItemDescription" });
+            if (found != null) inventoryDescriptionText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (inventoryItemNameText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "InventoryItemNameText", "Inventory Item Name Text", "ItemNameText", "Item Name Text", "ItemName" });
+            if (found != null) inventoryItemNameText = found.GetComponent<TextMeshProUGUI>();
+        }
+
+        // Scroll Views de l'Inventaire
+        if (scrollViewItems == null)
+        {
+            scrollViewItems = FindGameObjectByName(sceneObjectsArray, new string[] { "ScrollViewItems", "Scroll View Items", "ItemsScrollView", "Items Scroll View" });
+        }
+        if (scrollViewEquip == null)
+        {
+            scrollViewEquip = FindGameObjectByName(sceneObjectsArray, new string[] { "ScrollViewEquip", "Scroll View Equip", "EquipScrollView", "Equip Scroll View" });
+        }
+        if (scrollViewKeys == null)
+        {
+            scrollViewKeys = FindGameObjectByName(sceneObjectsArray, new string[] { "ScrollViewKeys", "Scroll View Keys", "KeysScrollView", "Keys Scroll View" });
+        }
+
+        // Configuration Groupe UI
+        if (groupMembersContainer == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "GroupMembersContainer", "Group Members Container", "GroupMembersContent", "MembersContainer", "MembersContent" });
+            if (found != null) groupMembersContainer = found.transform;
+        }
+        if (groupListContainer == null)
+        {
+            groupListContainer = FindGameObjectByName(sceneObjectsArray, new string[] { "GroupListContainer", "Group List Container", "GroupList", "Group List" });
+        }
+        if (notePanel == null)
+        {
+            notePanel = FindGameObjectByName(sceneObjectsArray, new string[] { "NotePanel", "Note Panel", "Notes" });
+        }
+        if (charProfilePanel == null)
+        {
+            charProfilePanel = FindGameObjectByName(sceneObjectsArray, new string[] { "CharProfilePanel", "Char Profile Panel", "CharProfile", "ProfilePanel" });
+        }
+        if (statPanel == null)
+        {
+            statPanel = FindGameObjectByName(sceneObjectsArray, new string[] { "StatPanel", "Stat Panel", "Stats", "StatPanel" });
+        }
+
+        // UI Fiche Personnage Details
+        if (detailNameText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "DetailNameText", "Detail Name Text", "CharacterName", "CharNameText" });
+            if (found != null) detailNameText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (detailPortraitImage == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "DetailPortraitImage", "Detail Portrait Image", "PortraitImage", "Portrait" });
+            if (found != null) detailPortraitImage = found.GetComponent<Image>();
+        }
+        if (levelText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "LevelText", "Level Text", "LvlText" });
+            if (found != null) levelText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (hpText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "HpText", "Hp Text" });
+            if (found != null) hpText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (mpText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "MpText", "Mp Text", "PcText", "Pc Text" });
+            if (found != null) mpText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (strengthText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "StrengthText", "Strength Text", "ForceText", "Force Text" });
+            if (found != null) strengthText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (defenseText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "DefenseText", "Defense Text", "DefText" });
+            if (found != null) defenseText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (speedText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "SpeedText", "Speed Text", "VitesseText", "Vitesse Text" });
+            if (found != null) speedText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (offensiveEquipText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "OffensiveEquipText", "Offensive Equip Text", "WeaponText", "ArmeText" });
+            if (found != null) offensiveEquipText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (defensiveEquipText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "DefensiveEquipText", "Defensive Equip Text", "ArmorText", "ArmureText" });
+            if (found != null) defensiveEquipText = found.GetComponent<TextMeshProUGUI>();
+        }
+        if (bonusEquipText == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "BonusEquipText", "Bonus Equip Text", "AccessoryText", "AccessoireText" });
+            if (found != null) bonusEquipText = found.GetComponent<TextMeshProUGUI>();
+        }
+
+        // UI Equipement boutons
+        if (offensiveEquipButton == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "OffensiveEquipButton", "Offensive Equip Button", "WeaponButton", "ArmeButton" });
+            if (found != null) offensiveEquipButton = found.GetComponent<Button>();
+        }
+        if (defensiveEquipButton == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "DefensiveEquipButton", "Defensive Equip Button", "ArmorButton", "ArmureButton" });
+            if (found != null) defensiveEquipButton = found.GetComponent<Button>();
+        }
+        if (bonusEquipButton == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "BonusEquipButton", "Bonus Equip Button", "AccessoryButton", "AccessoireButton" });
+            if (found != null) bonusEquipButton = found.GetComponent<Button>();
+        }
+
+        // Configuration Equip Panel
+        if (equipItemsContainer == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "EquipItemsContainer", "Equip Items Container", "EquipItemsContent", "EquipContent" });
+            if (found != null) equipItemsContainer = found.transform;
+        }
+
+        // Controller Navigation Configuration (Tabs)
+        if (inventoryTabButton == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "InventoryTabButton", "Inventory Tab Button", "InventoryTab", "Inventory Tab" });
+            if (found != null) inventoryTabButton = found.GetComponent<Button>();
+        }
+        if (groupTabButton == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "GroupTabButton", "Group Tab Button", "GroupTab", "Group Tab" });
+            if (found != null) groupTabButton = found.GetComponent<Button>();
+        }
+        if (settingsTabButton == null)
+        {
+            GameObject found = FindGameObjectByName(sceneObjectsArray, new string[] { "SettingsTabButton", "Settings Tab Button", "SettingsTab", "Settings Tab" });
+            if (found != null) settingsTabButton = found.GetComponent<Button>();
+        }
+
+        // Prefabs / Templates
+        if (inventorySlotPrefab == null)
+        {
+            inventorySlotPrefab = FindPrefabOrTemplate(sceneObjectsArray, new string[] { "InventorySlotPrefab", "InventorySlot", "Inventory Slot" });
+        }
+        if (groupMemberUIItemPrefab == null)
+        {
+            groupMemberUIItemPrefab = FindPrefabOrTemplate(sceneObjectsArray, new string[] { "GroupMemberUIItemPrefab", "GroupMemberUIItem", "Group Member UI Item", "CharEntry" });
+        }
+        if (equipItemButtonPrefab == null)
+        {
+            equipItemButtonPrefab = FindPrefabOrTemplate(sceneObjectsArray, new string[] { "EquipItemButtonPrefab", "EquipItemButton", "Equip Item Button" });
+        }
+    }
+
+    private GameObject FindGameObjectByName(GameObject[] array, string[] possibleNames)
+    {
+        foreach (GameObject go in array)
+        {
+            if (go == null) continue;
+            string goNameNormalized = go.name.Replace(" ", "").Replace("_", "").ToLower();
+            foreach (string pName in possibleNames)
+            {
+                string pNameNormalized = pName.Replace(" ", "").Replace("_", "").ToLower();
+                if (goNameNormalized == pNameNormalized)
+                {
+                    return go;
+                }
+            }
+        }
+        return null;
+    }
+
+    private GameObject FindPrefabOrTemplate(GameObject[] sceneObjects, string[] possibleNames)
+    {
+        // 1. Recherche dans la scène
+        GameObject found = FindGameObjectByName(sceneObjects, possibleNames);
+        if (found != null) return found;
+
+        // 2. Recherche dans Resources comme fallback
+        foreach (string name in possibleNames)
+        {
+            GameObject res = Resources.Load<GameObject>(name);
+            if (res != null) return res;
+
+            res = Resources.Load<GameObject>("Prefabs/" + name);
+            if (res != null) return res;
+        }
+
+        return null;
+    }
 
     #endregion
 }

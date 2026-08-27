@@ -14,6 +14,11 @@ public class CombatManager : MonoBehaviour
 {
     public static CombatManager Instance { get; private set; }
 
+    /// <summary>
+    /// Indique si le combat est actuellement actif.
+    /// </summary>
+    public bool IsCombatActive => activeEnemy != null;
+
     public enum CombatState { Transitioning, PlayerTurn, EnemyTurn, Victory, Defeat }
 
     [Header("Configuration de l'Arène")]
@@ -354,6 +359,7 @@ public class CombatManager : MonoBehaviour
         yield return StartCoroutine(Fade(0f));
 
         currentState = CombatState.Transitioning; // Arrêt complet
+        activeEnemy = null;
         Debug.Log("[CombatManager] Combat terminé !");
     }
 
