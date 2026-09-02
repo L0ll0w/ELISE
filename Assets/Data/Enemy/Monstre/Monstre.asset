@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ca0ef06f462ab35488ff8719d0aceb82, type: 3}
   m_Name: Monstre
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatData
-  enemyName: Monstre
-  maxHP: 300
+  enemyName: Ame  Voleuse
+  maxHP: 150
   musicTrack: {fileID: 8300000, guid: 74dada6d00f7c0e41876250349a8c98e, type: 3}
   bpm: 90
   visualPrefab: {fileID: 0}

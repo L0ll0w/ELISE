@@ -7,6 +7,8 @@ using Unity.Cinemachine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 
+public enum ArrowDirection { Up, Down, Left, Right }
+
 /// <summary>
 /// Gestionnaire principal du système de combat rythmique radial.
 /// Gère la boucle de combat, la génération des attaques ennemies en rythme,
@@ -65,6 +67,14 @@ public class RhythmCombatManager : MonoBehaviour
     [Tooltip("Angle d'inclinaison Z (Dutch angle) lors du tour du joueur.")]
     [SerializeField] private float playerTurnCameraTiltZ = -4f;
 
+    [Header("Configuration Caméra Attaque / QTE")]
+    [Tooltip("Distance de la caméra lors de la phase d'attaque QTE.")]
+    [SerializeField] private float attackCameraDistance = 6f;
+    [Tooltip("Hauteur de la caméra lors de la phase d'attaque QTE.")]
+    [SerializeField] private float attackCameraHeight = 1.8f;
+    [Tooltip("Angle d'inclinaison Z (tilt) de la caméra lors de la phase d'attaque QTE.")]
+    [SerializeField] private float attackCameraTiltZ = 2f;
+
     [Header("Configuration Caméra Tour Dialogue")]
     [Tooltip("Distance de la caméra par rapport au boss/ennemi lors du dialogue.")]
     [SerializeField] private float talkPhaseCameraDistance = 3.5f;
@@ -91,7 +101,15 @@ public class RhythmCombatManager : MonoBehaviour
     [Tooltip("Police d'écriture personnalisée pour les textes de combat (TMP Font Asset).")]
     [SerializeField] private TMP_FontAsset customCombatFont;
 
-    [Header("Positionnement 3D des PV Joueurs")]
+    [Header("Positionnement et Matériaux des PV Joueurs")]
+    [Tooltip("Anchor Min X/Y des barres de PV Joueur (Middle Center compact : 0.37, 0.47).")]
+    [SerializeField] private Vector2 playerHPAnchorMin = new Vector2(0.37f, 0.47f);
+    [Tooltip("Anchor Max X/Y des barres de PV Joueur (Middle Center compact : 0.63, 0.55).")]
+    [SerializeField] private Vector2 playerHPAnchorMax = new Vector2(0.63f, 0.55f);
+    [Tooltip("Matériau personnalisé pour le fond de la barre de vie des joueurs.")]
+    [SerializeField] private Material playerHPBackgroundMaterial;
+    [Tooltip("Matériau personnalisé pour le remplissage (Fill) de la barre de vie des joueurs.")]
+    [SerializeField] private Material playerHPFillMaterial;
     [Tooltip("Rotation X/Y/Z pour l'effet 3D des barres de vie des joueurs (en degrés).")]
     [SerializeField] private Vector3 customPlayerHPRotation = Vector3.zero;
     [Tooltip("Position offset X/Y/Z (décalage) des barres de vie des joueurs.")]
@@ -123,15 +141,56 @@ public class RhythmCombatManager : MonoBehaviour
     [Tooltip("Position offset X/Y/Z (décalage de position) pour ajuster son placement en direct.")]
     [SerializeField] private Vector3 customMenuPositionOffset = Vector3.zero;
 
+    [Header("Helldivers 2 QTE Attaque")]
+    [Tooltip("Délai de sécurité (en secondes) à l'apparition du menu de combat pendant lequel les clics / validations sont ignorés (évite l'attaque accidentelle).")]
+    [SerializeField] private float menuInputSecurityDelay = 0.40f;
+    private float menuEnableTime = 0f;
+    [Tooltip("Nom de l'état d'animation de préparation de tir sur l'Animator du joueur.")]
+    [SerializeField] private string shootAnimationStateName = "shoot";
+
+    [Tooltip("Nom de l'état d'animation de tir joué à la réussite du QTE avant le départ du projectile (ex: shoot 2).")]
+    [SerializeField] private string qteSuccessShootAnimationStateName = "shoot 2";
+
+    [Tooltip("Délai (en secondes) de l'animation shoot 2 avant que le projectile ne parte.")]
+    [SerializeField] private float qteSuccessShootDelay = 0.5f;
+
+    [Tooltip("Nom de l'état d'animation de danse/repos sur l'Animator du joueur après l'attaque.")]
+    [SerializeField] private string danceAnimationStateName = "dance";
+
+    [Tooltip("Nom de l'état d'animation de célébration/victoire et de discussion du joueur (ex: facedance).")]
+    [SerializeField] private string faceDanceAnimationStateName = "facedance";
+
+    [Tooltip("Nom de l'état ou du Trigger d'animation de coup reçu (Hit) sur l'ennemi.")]
+    [SerializeField] private string enemyHitAnimationName = "hit";
+
+    [Tooltip("Délai (en secondes) de l'animation de tir avant l'apparition du QTE.")]
+    [SerializeField] private float shootAnimationDelay = 0.45f;
+
+    [Tooltip("Inverser horizontalement le sprite (Flip X) pendant l'animation de tir (cocher si le sprite tire vers la gauche par défaut).")]
+    [SerializeField] private bool flipPlayerDuringShoot = false;
+
+    [Tooltip("Temps limite (en secondes) pour réaliser la combinaison directionnelle.")]
+    [SerializeField] private float qteTimeLimit = 4.0f;
+
+    [Tooltip("Séquence de flèches pour réaliser l'attaque.")]
+    [SerializeField] private List<ArrowDirection> qteComboSequence = new List<ArrowDirection>()
+    {
+        ArrowDirection.Right,
+        ArrowDirection.Down,
+        ArrowDirection.Left,
+        ArrowDirection.Right,
+        ArrowDirection.Right
+    };
+
+    [Tooltip("Prefab optionnel du projectile d'encre.")]
+    [SerializeField] private GameObject inkProjectilePrefab;
+
+    [Tooltip("Point d'origine du tir (bout du doigt du joueur). Si non renseigné, sera calculé automatiquement.")]
+    [SerializeField] private Transform playerFingerTip;
+
     [Header("Champs QTE Personnalisés (UI Attaque)")]
     [Tooltip("Le panel (RectTransform) de QTE personnalisé.")]
     [SerializeField] private RectTransform customQtePanel;
-    [Tooltip("Zone parfaite du QTE personnalisé.")]
-    [SerializeField] private RectTransform customQteTargetPerfect;
-    [Tooltip("Zone bonne du QTE personnalisé.")]
-    [SerializeField] private RectTransform customQteTargetGood;
-    [Tooltip("Indicateur de curseur du QTE personnalisé.")]
-    [SerializeField] private RectTransform customQteIndicator;
     [Tooltip("Instruction textuelle du QTE personnalisé.")]
     [SerializeField] private TextMeshProUGUI customQteInstructionText;
     [Tooltip("Feedback textuel du QTE personnalisé.")]
@@ -166,7 +225,16 @@ public class RhythmCombatManager : MonoBehaviour
 
     private float originalCameraDistance;
     private float originalCameraHeight;
+    private Vector3 originalMainCamPos;
+    private Quaternion originalMainCamRot = Quaternion.identity;
+    private float originalMainCamFOV = 40f;
     private int dodgeBeatsCount = 0;
+
+    // Références pour la sauvegarde et restauration de la musique de fond d'origine
+    private AudioSource previousAudioSource;
+    private AudioClip previousMusicClip;
+    private float previousMusicTime;
+    private float previousMusicVolume;
 
     // Références UI supplémentaires pour le combat séquencé
     private GameObject runtimeUIContainer;
@@ -223,9 +291,16 @@ public class RhythmCombatManager : MonoBehaviour
     private GameObject tagPromptPanel;
     private Sprite uiFillSprite;
 
+    // Helldivers 2 Arrow Combo QTE
+    private int qteCurrentIndex = 0;
+    private float qteStartTime = 0f;
+    private bool qteUIWaitingForAnim = false;
+    private List<Image> qteArrowCardFills = new List<Image>();
+    private List<TextMeshProUGUI> qteArrowTexts = new List<TextMeshProUGUI>();
+
     // Système d'Attaque Ennemie (Telegraphs)
-    private Dictionary<string, int> activeTelegraphs = new Dictionary<string, int>(); // Clé: ring_sector, Valeur: beat à laquelle l'attaque frappe
-    private HashSet<string> groundOnlyTelegraphs = new HashSet<string>(); // Clés des attaques au sol esquivables par le saut
+    private Dictionary<GridCell, int> activeTelegraphs = new Dictionary<GridCell, int>(); // Clé: GridCell(ring, sector), Valeur: beat à laquelle l'attaque frappe
+    private HashSet<GridCell> groundOnlyTelegraphs = new HashSet<GridCell>(); // Clés des attaques au sol esquivables par le saut
 
     private void Awake()
     {
@@ -241,7 +316,6 @@ public class RhythmCombatManager : MonoBehaviour
     private void Start()
     {
         EnsureEventSystem();
-        CreateFadeCanvas();
     }
 
     private void Update()
@@ -375,32 +449,46 @@ public class RhythmCombatManager : MonoBehaviour
         dodgeBeatsCount = 0;
         originalCameraDistance = cameraDistance;
         originalCameraHeight = cameraHeight;
+
+        if (Camera.main != null)
+        {
+            originalMainCamPos = Camera.main.transform.position;
+            originalMainCamRot = Camera.main.transform.rotation;
+            originalMainCamFOV = Camera.main.fieldOfView;
+        }
+
+        // 0. Détecter et effectuer un fondu de sortie sur la musique de fond actuelle
+        previousAudioSource = null;
+        previousMusicClip = null;
+        AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
+        AudioSource beatManagerSource = BeatManager.Instance != null ? BeatManager.Instance.GetComponent<AudioSource>() : null;
+
+        foreach (var source in allAudioSources)
+        {
+            if (source != null && source.isPlaying && source.clip != null && source != beatManagerSource)
+            {
+                previousAudioSource = source;
+                previousMusicClip = source.clip;
+                previousMusicTime = source.time;
+                previousMusicVolume = source.volume;
+                StartCoroutine(FadeOutAudioSource(source, 0.8f));
+                break;
+            }
+        }
+
         Debug.Log("[RhythmCombatManager] Initialisation du combat rythmique radial...");
 
         // 1. Fondu au noir
-        yield return StartCoroutine(Fade(1f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f));
 
         // 2. Geler le joueur et désactiver le suivi de groupe
-        Transform leader = null;
-        if (GroupManager.Instance != null)
-        {
-            leader = GroupManager.Instance.Leader;
-            GroupManager.Instance.enabled = false;
-            foreach (var follower in GroupManager.Instance.ActiveFollowers)
-            {
-                if (follower != null) follower.gameObject.SetActive(false); // Cacher les compagnons
-            }
-        }
-        else
+        PlayerLockManager.SetPlayerLocked(true, hideFollowers: true);
+
+        Transform leader = GroupManager.Instance != null ? GroupManager.Instance.Leader : null;
+        if (leader == null)
         {
             PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
             if (pm != null) leader = pm.transform;
-        }
-
-        if (leader != null)
-        {
-            PlayerMovement pm = leader.GetComponent<PlayerMovement>();
-            if (pm != null) pm.enabled = false;
         }
 
         // Désactiver Cinemachine (Cerveau de la caméra principale + Caméra virtuelle)
@@ -413,13 +501,13 @@ public class RhythmCombatManager : MonoBehaviour
         virtualCamera = FindFirstObjectByType<CinemachineCamera>();
         if (virtualCamera != null)
         {
-            virtualCamera.enabled = false;
             cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
+            if (cameraHelper == null) cameraHelper = virtualCamera.GetComponentInChildren<CinemachineHelper>();
             if (cameraHelper != null)
             {
                 cameraHelper.SaveOriginalSettings();
-                cameraHelper.enabled = false;
             }
+            virtualCamera.enabled = false;
         }
 
         // 3. Configurer le Groupe (PV et Sauvegarde des Visuels originaux)
@@ -485,10 +573,13 @@ public class RhythmCombatManager : MonoBehaviour
             activeVisualPrefab.transform.localRotation = Quaternion.identity;
         }
 
-        // 4. Positionner la grille sous l'ennemi
-        Vector3 combatCenter = activeEnemy.transform.position;
-        // Aligner l'ennemi au sol au centre
-        activeEnemy.transform.position = SnapToGround(combatCenter);
+        // 4. Recherche de Zone Libre et Repositionnement synchrone Ennemi + Grille + Joueur
+        Vector3 initialCenter = activeEnemy.transform.position;
+        Vector3 combatCenter = FindSafeCombatCenter(initialCenter, 4.5f);
+        combatCenter = SnapToGround(combatCenter);
+
+        // Déplacer l'ennemi au centre de la zone sécurisée
+        activeEnemy.transform.position = combatCenter;
 
         if (radialGrid == null)
         {
@@ -500,11 +591,14 @@ public class RhythmCombatManager : MonoBehaviour
             GameObject gridObj = new GameObject("RadialCombatGrid");
             radialGrid = gridObj.AddComponent<RadialCombatGrid>();
         }
-        radialGrid.transform.position = activeEnemy.transform.position;
+
+        // Déplacer la grille au centre de la zone sécurisée
+        radialGrid.transform.position = combatCenter;
         radialGrid.SetGridActive(true);
 
-        // 5. Calculer le secteur de départ le plus proche de la position actuelle du joueur face au boss
-        Vector3 dirToPlayer = (leader.position - activeEnemy.transform.position).normalized;
+        // 5. Calculer le secteur de départ du joueur et le placer directement sur la nouvelle grille
+        Vector3 dirToPlayer = (leader.position - initialCenter).normalized;
+        if (dirToPlayer.sqrMagnitude < 0.001f) dirToPlayer = Vector3.forward;
         float angleRad = Mathf.Atan2(dirToPlayer.z, dirToPlayer.x);
         float angleDeg = angleRad * Mathf.Rad2Deg;
         if (angleDeg < 0f) angleDeg += 360f;
@@ -517,6 +611,11 @@ public class RhythmCombatManager : MonoBehaviour
             playerController = leader.gameObject.AddComponent<RhythmPlayerController>();
         }
         playerController.Initialize(radialGrid, 0, startSector);
+
+        // Repositionner physiquement le joueur sur sa case de départ sur la grille réalignée
+        Vector3 playerCellPos = radialGrid.GetCellPosition(0, startSector);
+        leader.position = SnapToGround(playerCellPos);
+
         playerController.SetInputEnabled(true);
 
         // Jouer l'animation de combat (danse) sur l'Animator du joueur
@@ -544,8 +643,8 @@ public class RhythmCombatManager : MonoBehaviour
         }
         
         BeatManager.Instance.SetTrack(musicClip, musicBPM);
-        BeatManager.Instance.Volume = combatMusicVolume;
         BeatManager.Instance.StartMusic();
+        StartCoroutine(FadeInBeatManager(combatMusicVolume, 0.8f));
 
         // S'abonner aux battements
         BeatManager.Instance.OnBeat += ProcessEnemyAttackBeat;
@@ -554,7 +653,7 @@ public class RhythmCombatManager : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
 
         // 8. Fondu de retour (Fade In)
-        yield return StartCoroutine(Fade(0f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f));
 
         currentState = CombatState.Active;
         logText.text = "ESQUIVEZ EN RYTHME ! Évitez les attaques de l'ennemi !";
@@ -595,7 +694,7 @@ public class RhythmCombatManager : MonoBehaviour
 
     private void ApplyTelegraphDamage(int currentBeat)
     {
-        List<string> resolvedKeys = new List<string>();
+        List<GridCell> resolvedKeys = new List<GridCell>();
 
         foreach (var pair in activeTelegraphs)
         {
@@ -603,10 +702,8 @@ public class RhythmCombatManager : MonoBehaviour
             {
                 resolvedKeys.Add(pair.Key);
                 
-                // Extraire ring et sector
-                string[] parts = pair.Key.Split('_');
-                int ring = int.Parse(parts[0]);
-                int sector = int.Parse(parts[1]);
+                int ring = pair.Key.Ring;
+                int sector = pair.Key.Sector;
 
                 // Effacer l'alerte visuelle sur la grille
                 radialGrid.SetCellWarning(ring, sector, false);
@@ -682,16 +779,21 @@ public class RhythmCombatManager : MonoBehaviour
         }
     }
 
+    public void TelegraphCell(GridCell cell, int impactBeat, bool isGroundOnly = false)
+    {
+        TelegraphCell(cell.Ring, cell.Sector, impactBeat, isGroundOnly);
+    }
+
     public void TelegraphCell(int ring, int sector, int impactBeat, bool isGroundOnly = false)
     {
-        string key = $"{ring}_{sector}";
-        if (!activeTelegraphs.ContainsKey(key))
+        GridCell cell = new GridCell(ring, sector);
+        if (!activeTelegraphs.ContainsKey(cell))
         {
-            activeTelegraphs.Add(key, impactBeat);
+            activeTelegraphs.Add(cell, impactBeat);
             
             if (isGroundOnly)
             {
-                groundOnlyTelegraphs.Add(key);
+                groundOnlyTelegraphs.Add(cell);
                 // Couleur d'alerte Orange pour les attaques au sol esquivables en sautant
                 Color warningOrange = new Color(1.0f, 0.5f, 0.0f, 0.6f);
                 radialGrid.SetCellWarning(ring, sector, true, warningOrange);
@@ -779,6 +881,12 @@ public class RhythmCombatManager : MonoBehaviour
         {
             enemyHP = Mathf.Max(0, enemyHP - damage);
             UpdateUI();
+
+            // Pop-up de dégâts gribouillé sur l'ennemi (police custom du jeu)
+            if (activeEnemy != null)
+            {
+                DamageNumberPopup.Create(activeEnemy.transform.position + Vector3.up * 1.2f, damage, isPlayerDamage: false, fontAsset: customCombatFont);
+            }
 
             // Particules de succès
             if (attackSuccessParticles != null && playerController != null)
@@ -887,6 +995,12 @@ public class RhythmCombatManager : MonoBehaviour
         allyHP[activeAllyIndex] = Mathf.Max(0, allyHP[activeAllyIndex] - dmg);
         playerController.TriggerInvincibility();
 
+        // Pop-up de dégâts gribouillé sur le joueur (police custom du jeu)
+        if (playerController != null)
+        {
+            DamageNumberPopup.Create(playerController.transform.position + Vector3.up * 1.2f, dmg, isPlayerDamage: true, fontAsset: customCombatFont);
+        }
+
         // Particules d'impact
         if (hitParticles != null)
         {
@@ -933,10 +1047,33 @@ public class RhythmCombatManager : MonoBehaviour
     private IEnumerator VictoryRoutine()
     {
         currentState = CombatState.Victory;
-        logText.text = "Victoire éclatante !";
-        BeatManager.Instance.StopMusic();
 
-        yield return new WaitForSeconds(2.0f);
+        // Jouer l'animation facedance sur le joueur lors de la victoire (0 HP du monstre)
+        if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+        {
+            PlayPlayerAnimation(faceDanceAnimationStateName);
+        }
+
+        // 1. Focus caméra serré sur le monstre qui meurt
+        if (activeEnemy != null)
+        {
+            cameraDistance = 3.2f;
+            cameraHeight = 1.8f;
+        }
+
+        logText.text = "VICTOIRE ! L'ennemi se désintègre !";
+
+        // 2. Animation de désintégration complète du monstre
+        if (activeEnemy != null)
+        {
+            yield return StartCoroutine(AnimateEnemyDisintegration(activeEnemy));
+        }
+        else
+        {
+            yield return new WaitForSeconds(1.0f);
+        }
+
+        // 3. Fin du combat avec victoire
         yield return StartCoroutine(EndCombatRoutine(true));
     }
 
@@ -944,7 +1081,6 @@ public class RhythmCombatManager : MonoBehaviour
     {
         currentState = CombatState.Defeat;
         logText.text = "Tout le groupe a succombé...";
-        BeatManager.Instance.StopMusic();
 
         yield return new WaitForSeconds(2.5f);
         yield return StartCoroutine(EndCombatRoutine(false));
@@ -953,7 +1089,21 @@ public class RhythmCombatManager : MonoBehaviour
     private IEnumerator EndCombatRoutine(bool victory)
     {
         currentState = CombatState.Transitioning;
-        yield return StartCoroutine(Fade(1f));
+
+        // Fondu de sortie fluide de la musique de combat
+        yield return StartCoroutine(FadeOutBeatManager(0.8f));
+
+        // Restauration fluide de la musique d'exploration originale
+        if (previousAudioSource != null && previousMusicClip != null)
+        {
+            previousAudioSource.clip = previousMusicClip;
+            previousAudioSource.time = previousMusicTime;
+            previousAudioSource.gameObject.SetActive(true);
+            previousAudioSource.enabled = true;
+            StartCoroutine(FadeInAudioSource(previousAudioSource, previousMusicVolume, 0.8f));
+        }
+
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f));
 
         // 1. Désactiver la grille
         radialGrid.SetGridActive(false);
@@ -1024,60 +1174,175 @@ public class RhythmCombatManager : MonoBehaviour
             Destroy(activeEnemy);
         }
 
-        // 5. Réactiver Cinemachine et la caméra
+        // 5. Restauration complète de la caméra d'origine (distance, hauteur, orientation et Cinemachine)
+        cameraDistance = originalCameraDistance;
+        cameraHeight = originalCameraHeight;
+
+        if (Camera.main != null)
+        {
+            Camera.main.transform.position = originalMainCamPos;
+            Camera.main.transform.rotation = originalMainCamRot;
+            Camera.main.fieldOfView = originalMainCamFOV;
+        }
+
+        Transform targetLeader = GroupManager.Instance != null && GroupManager.Instance.Leader != null 
+            ? GroupManager.Instance.Leader 
+            : null;
+
+        if (targetLeader == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null) targetLeader = pm.transform;
+        }
+
+        if (virtualCamera == null)
+        {
+            virtualCamera = FindFirstObjectByType<CinemachineCamera>();
+        }
+
+        if (virtualCamera != null)
+        {
+            virtualCamera.enabled = true;
+
+            if (targetLeader != null)
+            {
+                virtualCamera.Follow = targetLeader;
+            }
+
+            if (cameraHelper == null)
+            {
+                cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
+                if (cameraHelper == null) cameraHelper = virtualCamera.GetComponentInChildren<CinemachineHelper>();
+            }
+
+            if (cameraHelper != null)
+            {
+                cameraHelper.enabled = true;
+                if (targetLeader != null) cameraHelper.SetTargetPlayer(targetLeader);
+                cameraHelper.UpdateCameraSettings(false); // Restaure l'offset, la hauteur, la rotation et le FOV d'origine
+            }
+        }
+
         if (brain != null)
         {
             brain.enabled = true;
         }
-        if (virtualCamera != null)
-        {
-            virtualCamera.enabled = true;
-            if (cameraHelper != null)
-            {
-                cameraHelper.enabled = true;
-                cameraHelper.UpdateCameraSettings(false);
-            }
-            if (GroupManager.Instance != null && GroupManager.Instance.Leader != null)
-            {
-                virtualCamera.Follow = GroupManager.Instance.Leader;
-            }
-        }
 
         // 6. Réactiver les compagnons et le mouvement normal
-        if (GroupManager.Instance != null)
-        {
-            GroupManager.Instance.enabled = true;
-            foreach (var follower in GroupManager.Instance.ActiveFollowers)
-            {
-                if (follower != null)
-                {
-                    follower.gameObject.SetActive(true); // Rendre visible
-                    follower.enabled = true;
-                }
-            }
-            GroupManager.Instance.TeleportPartyToLeader();
-            GroupManager.Instance.ReapplyAllCollisions();
-        }
-
-        Transform leader = GroupManager.Instance != null ? GroupManager.Instance.Leader : null;
-        if (leader == null)
-        {
-            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
-            if (pm != null) leader = pm.transform;
-        }
-
-        if (leader != null)
-        {
-            PlayerMovement pm = leader.GetComponent<PlayerMovement>();
-            if (pm != null) pm.enabled = true;
-        }
+        PlayerLockManager.SetPlayerLocked(false);
 
         yield return new WaitForSeconds(0.2f);
-        yield return StartCoroutine(Fade(0f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f));
 
         currentState = CombatState.Transitioning;
         activeEnemy = null;
         Debug.Log("[RhythmCombatManager] Combat terminé !");
+    }
+
+    #endregion
+
+    #region Algorithme de Recherche et Positionnement Dégagé
+
+    private Vector3 FindSafeCombatCenter(Vector3 initialCenter, float arenaRadius = 4.5f)
+    {
+        LayerMask obstacleLayers = LayerMask.GetMask("Default", "Environment", "Obstacle", "Solid", "Wall");
+        // Si aucun obstacle n'est détecté à la position initiale, on garde la position d'origine
+        if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers))
+        {
+            return initialCenter;
+        }
+
+        // Recherche en cercles concentriques extérieurs d'une zone dégagée
+        int steps = 12;
+        float stepDistance = 1.5f;
+        int maxRings = 6;
+
+        for (int ring = 1; ring <= maxRings; ring++)
+        {
+            float radius = ring * stepDistance;
+            for (int i = 0; i < steps; i++)
+            {
+                float angle = i * (2f * Mathf.PI / steps);
+                Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+                Vector3 candidate = initialCenter + offset;
+                candidate = SnapToGround(candidate);
+
+                if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers))
+                {
+                    Debug.Log($"[RhythmCombatManager] Zone de combat dégagée trouvée à {candidate} (décalage de {radius}m).");
+                    return candidate;
+                }
+            }
+        }
+
+        Debug.LogWarning("[RhythmCombatManager] Impossible de trouver une zone de combat 100% dégagée. Utilisation du centre initial.");
+        return initialCenter;
+    }
+
+    #endregion
+
+    #region Helpers Fondu Audio (Crossfade)
+
+    private IEnumerator FadeOutAudioSource(AudioSource source, float duration)
+    {
+        if (source == null) yield break;
+        float startVol = source.volume;
+        float elapsed = 0f;
+        while (elapsed < duration && source != null)
+        {
+            elapsed += Time.deltaTime;
+            source.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            yield return null;
+        }
+        if (source != null)
+        {
+            source.Pause();
+            source.volume = startVol;
+        }
+    }
+
+    private IEnumerator FadeInAudioSource(AudioSource source, float targetVol, float duration)
+    {
+        if (source == null) yield break;
+        source.volume = 0f;
+        if (!source.isPlaying) source.Play();
+        float elapsed = 0f;
+        while (elapsed < duration && source != null)
+        {
+            elapsed += Time.deltaTime;
+            source.volume = Mathf.Lerp(0f, targetVol, elapsed / duration);
+            yield return null;
+        }
+        if (source != null) source.volume = targetVol;
+    }
+
+    private IEnumerator FadeInBeatManager(float targetVol, float duration)
+    {
+        if (BeatManager.Instance == null) yield break;
+        BeatManager.Instance.Volume = 0f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            BeatManager.Instance.Volume = Mathf.Lerp(0f, targetVol, elapsed / duration);
+            yield return null;
+        }
+        BeatManager.Instance.Volume = targetVol;
+    }
+
+    private IEnumerator FadeOutBeatManager(float duration)
+    {
+        if (BeatManager.Instance == null) yield break;
+        float startVol = BeatManager.Instance.Volume;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            BeatManager.Instance.Volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            yield return null;
+        }
+        BeatManager.Instance.StopMusic();
+        BeatManager.Instance.Volume = startVol;
     }
 
     #endregion
@@ -1103,7 +1368,7 @@ public class RhythmCombatManager : MonoBehaviour
         {
             // 1. Zoom Tour du Joueur : Plan héroïque en contre-plongée et décalé sur l'épaule gauche
             Vector3 leftShoulderDir = Vector3.Cross(Vector3.up, dirToCenter).normalized;
-            targetCamPos = playerPos - dirToCenter * cameraDistance - leftShoulderDir * playerTurnCameraLeftOffset + Vector3.up * cameraHeight;
+            targetCamPos = playerPos - dirToCenter * playerTurnCameraDistance - leftShoulderDir * playerTurnCameraLeftOffset + Vector3.up * playerTurnCameraHeight;
             targetCamRot = Quaternion.LookRotation((center + Vector3.up * 1.5f) - targetCamPos);
             // Angle néerlandais (Z-tilt) stylisé et paramétré
             targetCamRot = targetCamRot * Quaternion.Euler(0f, 0f, playerTurnCameraTiltZ);
@@ -1113,10 +1378,10 @@ public class RhythmCombatManager : MonoBehaviour
             // 2. QTE Actif (Attaque) : Vue de profil cinématique (midpoint face-à-face)
             Vector3 profileDir = Vector3.Cross(Vector3.up, dirToCenter).normalized;
             Vector3 midPoint = (playerPos + center) * 0.5f;
-            targetCamPos = midPoint + profileDir * 6f + Vector3.up * 1.8f;
+            targetCamPos = midPoint + profileDir * attackCameraDistance + Vector3.up * attackCameraHeight;
             targetCamRot = Quaternion.LookRotation(midPoint - targetCamPos);
-            // Z-tilt de 2 degrés
-            targetCamRot = targetCamRot * Quaternion.Euler(0f, 0f, 2f);
+            // Z-tilt stylisé et paramétré
+            targetCamRot = targetCamRot * Quaternion.Euler(0f, 0f, attackCameraTiltZ);
         }
         else if (currentPhase == CombatPhase.DialogueActive)
         {
@@ -1322,6 +1587,14 @@ public class RhythmCombatManager : MonoBehaviour
                 combatCanvas.planeDistance = customMenuPlaneDistance;
             }
 
+            // Configurer le CanvasScaler pour la résolution indépendante (1920x1080, Match 0.5)
+            CanvasScaler customScaler = combatCanvas.GetComponent<CanvasScaler>();
+            if (customScaler == null) customScaler = combatCanvas.gameObject.AddComponent<CanvasScaler>();
+            customScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            customScaler.referenceResolution = new Vector2(1920, 1080);
+            customScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            customScaler.matchWidthOrHeight = 0.5f;
+
             // S'assurer de la présence d'un GraphicRaycaster pour la détection des clics
             if (combatCanvas.GetComponent<GraphicRaycaster>() == null)
             {
@@ -1348,6 +1621,8 @@ public class RhythmCombatManager : MonoBehaviour
             CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
 
             canvasObj.AddComponent<GraphicRaycaster>();
             parentTransform = canvasObj.transform;
@@ -1424,10 +1699,11 @@ public class RhythmCombatManager : MonoBehaviour
         groupContainerObj.transform.SetParent(parent, false);
         RectTransform groupRect = groupContainerObj.AddComponent<RectTransform>();
         
-        // Valeur d'ancrage par défaut en bas à gauche (compact)
-        groupRect.anchorMin = new Vector2(0.01f, 0.01f);
-        groupRect.anchorMax = new Vector2(0.18f, 0.054f);
+        // Valeurs d'ancrage configurables dans l'Inspecteur (par défaut Middle Center : 0.32, 0.47 à 0.68, 0.55)
+        groupRect.anchorMin = playerHPAnchorMin;
+        groupRect.anchorMax = playerHPAnchorMax;
         groupRect.sizeDelta = Vector2.zero;
+        groupRect.anchoredPosition = Vector2.zero;
         
         // Inclinaison oblique par défaut (style papier posé de travers)
         groupRect.localRotation = Quaternion.Euler(0f, 0f, 1.5f);
@@ -1477,6 +1753,7 @@ public class RhythmCombatManager : MonoBehaviour
             Image allyBg = allyPanel.AddComponent<Image>();
             allyBg.sprite = uiFillSprite;
             allyBg.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+            if (playerHPBackgroundMaterial != null) allyBg.material = playerHPBackgroundMaterial;
 
             // 4. Remplissage PV (Crayon de couleur rouge ou gris)
             GameObject fillObj = new GameObject("Fill");
@@ -1487,6 +1764,8 @@ public class RhythmCombatManager : MonoBehaviour
             fillImg.type = Image.Type.Filled;
             fillImg.fillMethod = Image.FillMethod.Horizontal;
             fillImg.fillOrigin = (int)Image.OriginHorizontal.Left;
+            if (playerHPFillMaterial != null) fillImg.material = playerHPFillMaterial;
+            else if (playerHPBackgroundMaterial != null) fillImg.material = playerHPBackgroundMaterial;
 
             RectTransform fillRect = fillImg.rectTransform;
             fillRect.anchorMin = Vector2.zero;
@@ -1713,39 +1992,14 @@ public class RhythmCombatManager : MonoBehaviour
         if (customQtePanel != null)
         {
             qtePanel = customQtePanel.gameObject;
-            if (customQteIndicator == null)
-            {
-                foreach (RectTransform r in customQtePanel.GetComponentsInChildren<RectTransform>(true))
-                {
-                    if (r.name.ToLower().Contains("indicator") || r.name.ToLower().Contains("cursor") || r.name.ToLower().Contains("curseur"))
-                    {
-                        customQteIndicator = r;
-                        break;
-                    }
-                }
-            }
-            if (customQteTargetPerfect == null)
-            {
-                foreach (RectTransform r in customQtePanel.GetComponentsInChildren<RectTransform>(true))
-                {
-                    if (r.name.ToLower().Contains("perfect") || r.name.ToLower().Contains("parfait"))
-                    {
-                        customQteTargetPerfect = r;
-                        break;
-                    }
-                }
-            }
-            if (customQteTargetGood == null)
-            {
-                foreach (RectTransform r in customQtePanel.GetComponentsInChildren<RectTransform>(true))
-                {
-                    if (r.name.ToLower().Contains("good") || r.name.ToLower().Contains("bien"))
-                    {
-                        customQteTargetGood = r;
-                        break;
-                    }
-                }
-            }
+
+            // Forcer le Canvas de la QTE au tout premier plan (devant tout le reste)
+            Canvas customQteCanvas = customQtePanel.GetComponent<Canvas>();
+            if (customQteCanvas == null) customQteCanvas = customQtePanel.gameObject.AddComponent<Canvas>();
+            customQteCanvas.overrideSorting = true;
+            customQteCanvas.sortingOrder = 99999;
+            customQteCanvas.planeDistance = 0.1f;
+
             if (customQteInstructionText == null)
             {
                 customQteInstructionText = customQtePanel.GetComponentInChildren<TextMeshProUGUI>(true);
@@ -1762,9 +2016,6 @@ public class RhythmCombatManager : MonoBehaviour
                 }
             }
 
-            if (customQteIndicator != null) qteIndicator = customQteIndicator;
-            if (customQteTargetPerfect != null) qteTargetPerfect = customQteTargetPerfect;
-            if (customQteTargetGood != null) qteTargetGood = customQteTargetGood;
             if (customQteInstructionText != null) qteInstructionText = customQteInstructionText;
             if (customQteFeedbackText != null) qteFeedbackText = customQteFeedbackText;
 
@@ -1772,125 +2023,75 @@ public class RhythmCombatManager : MonoBehaviour
         }
         else
         {
-            // Plaque d'ombre (crayonné papier)
-            GameObject qteShadow = new GameObject("QteShadow");
-            qteShadow.transform.SetParent(parent, false);
-            RectTransform shadowRect = qteShadow.AddComponent<RectTransform>();
-            shadowRect.anchorMin = new Vector2(0.3f, 0.18f);
-            shadowRect.anchorMax = new Vector2(0.7f, 0.38f);
-            shadowRect.sizeDelta = Vector2.zero;
-            shadowRect.anchoredPosition = new Vector2(10f, -10f); // Décalage ombre
-            shadowRect.localRotation = Quaternion.Euler(0f, 0f, 3f);
-            Image shadowImg = qteShadow.AddComponent<Image>();
-            shadowImg.sprite = uiFillSprite;
-            shadowImg.color = new Color(0.9f, 0.9f, 0.92f, 0.6f); // Gris crayonné transparent
-
+            // --- QTE PANEL (Helldivers 2 - Arrow Only UI - Foreground Layer & Monochrome Black/White/Gray) ---
             GameObject qteBorder = new GameObject("QteBorder");
             qteBorder.transform.SetParent(parent, false);
-            RectTransform qteBRect = qteBorder.AddComponent<RectTransform>();
-            qteBRect.anchorMin = new Vector2(0.3f, 0.18f);
-            qteBRect.anchorMax = new Vector2(0.7f, 0.38f);
+            
+            // Forcer l'affichage au tout premier plan (devant le décor 3D et autres UI)
+            Canvas qteCanvas = qteBorder.AddComponent<Canvas>();
+            qteCanvas.overrideSorting = true;
+            qteCanvas.sortingOrder = 99999;
+            qteCanvas.planeDistance = 0.1f;
+            qteBorder.AddComponent<GraphicRaycaster>();
+
+            RectTransform qteBRect = qteBorder.GetComponent<RectTransform>();
+            qteBRect.anchorMin = new Vector2(0.38f, 0.28f); // Rapproché et centré
+            qteBRect.anchorMax = new Vector2(0.62f, 0.40f);
             qteBRect.sizeDelta = Vector2.zero;
-            // Contre-angle dynamique par rapport au menu principal
-            qteBRect.localRotation = Quaternion.Euler(0f, 0f, 3f);
 
-            Image qteBImg = qteBorder.AddComponent<Image>();
-            qteBImg.sprite = uiFillSprite;
-            qteBImg.color = new Color(0.1f, 0.1f, 0.12f, 0.95f); // Bordure charbon foncée
+            qteArrowCardFills.Clear();
+            qteArrowTexts.Clear();
 
-            GameObject qtePanelInner = new GameObject("QtePanelInner");
-            qtePanelInner.transform.SetParent(qteBorder.transform, false);
-            RectTransform qteIRect = qtePanelInner.AddComponent<RectTransform>();
-            qteIRect.anchorMin = Vector2.zero;
-            qteIRect.anchorMax = Vector2.one;
-            qteIRect.offsetMin = new Vector2(3, 4);
-            qteIRect.offsetMax = new Vector2(-3, -2);
-            Image qteIImg = qtePanelInner.AddComponent<Image>();
-            qteIImg.sprite = uiFillSprite;
-            qteIImg.color = new Color(0.95f, 0.95f, 0.95f, 1.0f); // Fond blanc papier sketch!
+            int count = qteComboSequence != null && qteComboSequence.Count > 0 ? qteComboSequence.Count : 5;
+            float cardWidthPct = 1f / count;
 
-            // Instruction
-            GameObject qteInstObj = new GameObject("QteInstruction");
-            qteInstObj.transform.SetParent(qtePanelInner.transform, false);
-            qteInstructionText = qteInstObj.AddComponent<TextMeshProUGUI>();
-            if (customCombatFont != null) qteInstructionText.font = customCombatFont;
-            qteInstructionText.text = "APPUYEZ SUR ESPACE AU BON MOMENT !";
-            qteInstructionText.fontSize = 18f;
-            qteInstructionText.fontStyle = FontStyles.Bold | FontStyles.Italic;
-            qteInstructionText.color = Color.black; // Texte noir sur papier blanc!
-            qteInstructionText.alignment = TextAlignmentOptions.Center;
-            RectTransform qteInstRect = qteInstructionText.rectTransform;
-            qteInstRect.anchorMin = new Vector2(0.05f, 0.72f);
-            qteInstRect.anchorMax = new Vector2(0.95f, 0.95f);
-            qteInstRect.sizeDelta = Vector2.zero;
+            for (int i = 0; i < count; i++)
+            {
+                float minX = i * cardWidthPct;
+                float maxX = (i + 1) * cardWidthPct;
 
-            // Rail de QTE
-            GameObject qteRailObj = new GameObject("QteRail");
-            qteRailObj.transform.SetParent(qtePanelInner.transform, false);
-            Image railImg = qteRailObj.AddComponent<Image>();
-            railImg.sprite = uiFillSprite;
-            railImg.color = new Color(0.06f, 0.06f, 0.08f, 0.95f); // Noir charbon pour le rail
-            RectTransform railRect = railImg.rectTransform;
-            railRect.anchorMin = new Vector2(0.08f, 0.22f);
-            railRect.anchorMax = new Vector2(0.92f, 0.42f);
-            railRect.sizeDelta = Vector2.zero;
+                GameObject arrowTxtObj = new GameObject($"ArrowText_{i}");
+                arrowTxtObj.transform.SetParent(qteBorder.transform, false);
+                TextMeshProUGUI arrowTxt = arrowTxtObj.AddComponent<TextMeshProUGUI>();
+                if (customCombatFont != null) arrowTxt.font = customCombatFont;
+                ArrowDirection dir = (qteComboSequence != null && i < qteComboSequence.Count) ? qteComboSequence[i] : ArrowDirection.Right;
+                arrowTxt.text = GetArrowSymbol(dir);
+                arrowTxt.fontSize = 62f; // Plus grand et plus visible
+                arrowTxt.fontStyle = FontStyles.Bold;
+                arrowTxt.color = new Color(0.25f, 0.25f, 0.28f, 0.65f); // Gris charbon translucide au départ
+                arrowTxt.alignment = TextAlignmentOptions.Center;
 
-            // Zone Jaune (BIEN)
-            GameObject yellowZoneObj = new GameObject("YellowZone");
-            yellowZoneObj.transform.SetParent(qteRailObj.transform, false);
-            Image yellowImg = yellowZoneObj.AddComponent<Image>();
-            yellowImg.sprite = uiFillSprite;
-            yellowImg.color = new Color(0.6f, 0.6f, 0.6f, 0.8f); // Gris crayonné (Bien)
-            RectTransform yellowRect = yellowImg.rectTransform;
-            yellowRect.anchorMin = new Vector2(0.35f, 0f);
-            yellowRect.anchorMax = new Vector2(0.65f, 1f);
-            yellowRect.sizeDelta = Vector2.zero;
-            qteTargetGood = yellowRect;
+                // Epais contour noir très net pour visibilité maximale devant n'importe quel décor 3D
+                arrowTxt.outlineWidth = 0.38f;
+                arrowTxt.outlineColor = new Color(0.04f, 0.04f, 0.06f, 1f);
 
-            // Zone Verte (PARFAIT)
-            GameObject greenZoneObj = new GameObject("GreenZone");
-            greenZoneObj.transform.SetParent(qteRailObj.transform, false);
-            Image greenImg = greenZoneObj.AddComponent<Image>();
-            greenImg.sprite = uiFillSprite;
-            greenImg.color = Color.white; // Blanc pur (Parfait)
-            RectTransform greenRect = greenImg.rectTransform;
-            greenRect.anchorMin = new Vector2(0.45f, 0f);
-            greenRect.anchorMax = new Vector2(0.55f, 1f);
-            greenRect.sizeDelta = Vector2.zero;
-            qteTargetPerfect = greenRect;
+                RectTransform atRect = arrowTxt.rectTransform;
+                atRect.anchorMin = new Vector2(minX, 0f);
+                atRect.anchorMax = new Vector2(maxX, 1f);
+                atRect.sizeDelta = Vector2.zero;
+                qteArrowTexts.Add(arrowTxt);
+            }
 
-            // Indicateur (Curseur)
-            GameObject indicatorObj = new GameObject("Indicator");
-            indicatorObj.transform.SetParent(qteRailObj.transform, false);
-            Image indImg = indicatorObj.AddComponent<Image>();
-            indImg.sprite = uiFillSprite;
-            indImg.color = new Color(0.85f, 0.08f, 0.14f, 1f); // Crayon de couleur rouge pour l'indicateur!
-            qteIndicator = indImg.rectTransform;
-            qteIndicator.anchorMin = new Vector2(0f, -0.2f);
-            qteIndicator.anchorMax = new Vector2(0.015f, 1.2f);
-            qteIndicator.sizeDelta = Vector2.zero;
-
-            // Feedback Text
+            // Feedback Text discret
             GameObject qteFeedObj = new GameObject("QteFeedbackText");
-            qteFeedObj.transform.SetParent(qtePanelInner.transform, false);
+            qteFeedObj.transform.SetParent(qteBorder.transform, false);
             qteFeedbackText = qteFeedObj.AddComponent<TextMeshProUGUI>();
             if (customCombatFont != null) qteFeedbackText.font = customCombatFont;
             qteFeedbackText.text = "";
-            qteFeedbackText.fontSize = 24f;
+            qteFeedbackText.fontSize = 20f;
             qteFeedbackText.fontStyle = FontStyles.Bold | FontStyles.Italic;
             qteFeedbackText.alignment = TextAlignmentOptions.Center;
-            qteFeedbackText.color = Color.black;
+            qteFeedbackText.color = new Color(0.95f, 0.95f, 1f, 1f); // Blanc argenté
+            qteFeedbackText.outlineWidth = 0.35f;
+            qteFeedbackText.outlineColor = new Color(0.04f, 0.04f, 0.06f, 1f);
+
             RectTransform feedRect = qteFeedbackText.rectTransform;
-            feedRect.anchorMin = new Vector2(0.1f, 0.48f);
-            feedRect.anchorMax = new Vector2(0.9f, 0.68f);
+            feedRect.anchorMin = new Vector2(0.05f, -0.4f);
+            feedRect.anchorMax = new Vector2(0.95f, -0.05f);
             feedRect.sizeDelta = Vector2.zero;
 
             qteBorder.SetActive(false); // Masqué au début
             qtePanel = qteBorder;
-
-            // Lier l'ombre comme enfant de la bordure pour simplifier l'activation
-            qteShadow.transform.SetParent(qteBorder.transform, true);
-            qteShadow.transform.SetAsFirstSibling(); // A l'arrière
         }
 
         // --- DIALOGUE PANEL ---
@@ -1902,6 +2103,11 @@ public class RhythmCombatManager : MonoBehaviour
         diaBRect.sizeDelta = Vector2.zero;
         // Légère inclinaison oblique assortie
         diaBRect.localRotation = Quaternion.Euler(0f, 0f, -2f);
+
+        Canvas diaCanvas = diaBorder.AddComponent<Canvas>();
+        diaCanvas.overrideSorting = true;
+        diaCanvas.sortingOrder = 9999;
+        diaBorder.AddComponent<GraphicRaycaster>();
 
         Image diaBImg = diaBorder.AddComponent<Image>();
         diaBImg.sprite = uiFillSprite;
@@ -1921,6 +2127,7 @@ public class RhythmCombatManager : MonoBehaviour
         GameObject diaTextObj = new GameObject("DialogueText");
         diaTextObj.transform.SetParent(diaPanelInner.transform, false);
         dialogueText = diaTextObj.AddComponent<TextMeshProUGUI>();
+        diaTextObj.AddComponent<TypewriterEffects>();
         if (customCombatFont != null) dialogueText.font = customCombatFont;
         dialogueText.text = "...";
         dialogueText.fontSize = 20f;
@@ -2080,6 +2287,8 @@ public class RhythmCombatManager : MonoBehaviour
 
     private void ShowCompanionsSubMenu()
     {
+        if (Time.time < menuEnableTime) return;
+
         // Masquer le menu principal
         rpgMenuPanel.SetActive(false);
         companionsSubPanel.SetActive(true);
@@ -2165,6 +2374,7 @@ public class RhythmCombatManager : MonoBehaviour
     private void TransitionToPlayerTurn()
     {
         currentPhase = CombatPhase.PlayerTurn;
+        menuEnableTime = Time.time + menuInputSecurityDelay;
 
         // Désactiver les contrôles du joueur sur la grille
         if (playerController != null)
@@ -2179,102 +2389,28 @@ public class RhythmCombatManager : MonoBehaviour
         cameraDistance = playerTurnCameraDistance;
         cameraHeight = playerTurnCameraHeight;
 
-        // Afficher l'UI du menu RPG et la barre de vie (les animations sont gérées par PlayerTurnEntranceAnimation)
+        // Afficher l'UI du menu RPG et la barre de vie
         if (rpgMenuPanel != null)
         {
-            // alpha=0 avant SetActive pour éviter le flash — le slide est géré dans le coroutine
             CanvasGroup cg = rpgMenuPanel.GetComponent<CanvasGroup>();
             if (cg == null) cg = rpgMenuPanel.AddComponent<CanvasGroup>();
             cg.alpha = 0f;
 
             rpgMenuPanel.SetActive(true);
 
-            // Vérifier s'il reste d'autres compagnons en vie
-            bool otherAlive = false;
-            for (int i = 0; i < allies.Count; i++)
-            {
-                if (i != activeAllyIndex && allyHP[i] > 0)
-                {
-                    otherAlive = true;
-                    break;
-                }
-            }
-            // Mettre à jour l'affichage du bouton Compagnons en style gribouillé/grésillé (barré) au lieu de le désactiver
-            if (companionsButton != null)
-            {
-                companionsButton.gameObject.SetActive(true); // Conserver le bouton actif pour ne pas casser le layout
-                companionsButton.interactable = otherAlive;
+            // Désactiver temporairement tous les boutons pendant l'animation d'entrée et la sécurité d'input
+            SetCombatMenuButtonsInteractable(false);
 
-                TextMeshProUGUI txt = companionsButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (txt != null)
-                {
-                    if (otherAlive)
-                    {
-                        txt.text = originalCompanionText;
-                        txt.color = Color.white;
-                    }
-                    else
-                    {
-                        txt.text = $"<s>{originalCompanionText}</s>"; // Texte barré / crayonné
-                        txt.color = new Color(0.4f, 0.4f, 0.4f, 0.6f); // Gris atténué crayonné
-                    }
-                }
-
-                // Désactiver le comportement d'animation de survol s'il n'est pas interactif
-                RhythmUIButtonAnimator anim = companionsButton.GetComponent<RhythmUIButtonAnimator>();
-                if (anim != null)
-                {
-                    if (!otherAlive)
-                    {
-                        anim.DeselectButton(); // S'assurer qu'il ne reste pas surélevé ou blanc
-                    }
-                }
-
-                // Assombrir le bouton compagnon pour accentuer l'effet barré
-                Image img = companionsButton.GetComponent<Image>();
-                if (img != null)
-                {
-                    img.color = otherAlive ? new Color(0.06f, 0.06f, 0.08f, 0.95f) : new Color(0.02f, 0.02f, 0.02f, 0.3f);
-                }
-
-                // Masquer ou atténuer l'ombre crayonné correspondante
-                if (companionsButton.transform.parent != null)
-                {
-                    Transform shadowTrans = companionsButton.transform.parent.Find(companionsButton.name + "_Shadow");
-                    if (shadowTrans != null)
-                    {
-                        Image shadowImg = shadowTrans.GetComponent<Image>();
-                        if (shadowImg != null)
-                        {
-                            shadowImg.color = otherAlive ? new Color(0.9f, 0.9f, 0.92f, 0.6f) : new Color(0f, 0f, 0f, 0f);
-                        }
-                    }
-                }
-
-                Debug.Log($"[RhythmCombatManager] Bouton compagnon mis à jour (Interactable: {otherAlive})");
-            }
-            else
-            {
-                Debug.LogWarning("[RhythmCombatManager] Impossible de mettre à jour le bouton compagnon car companionsButton est NULL.");
-            }
-
-            // Forcer le recalcul immédiate du layout (notamment pour les GridLayoutGroup)
+            // Forcer le recalcul immédiat du layout
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(rpgMenuPanel.GetComponent<RectTransform>());
 
-            // Si on utilise le menu généré dynamiquement, s'assurer de leur positionnement standard (4 boutons)
             if (customMenuPanel == null)
             {
                 RepositionRPGButton(attackButton, new Vector2(0.02f, 0.15f), new Vector2(0.24f, 0.85f));
                 RepositionRPGButton(talkButton, new Vector2(0.26f, 0.15f), new Vector2(0.48f, 0.85f));
                 RepositionRPGButton(companionsButton, new Vector2(0.50f, 0.15f), new Vector2(0.72f, 0.85f));
                 RepositionRPGButton(fleeButton, new Vector2(0.74f, 0.15f), new Vector2(0.96f, 0.85f));
-            }
-
-            // Sélectionner le bouton d'attaque par défaut pour la navigation manette/clavier
-            if (EventSystem.current != null && attackButton != null)
-            {
-                EventSystem.current.SetSelectedGameObject(attackButton.gameObject);
             }
         }
 
@@ -2335,6 +2471,17 @@ public class RhythmCombatManager : MonoBehaviour
             rpgMenuPanel.transform.localPosition = origPos;
             cg.alpha = 1f;
         }
+
+        // Attendre la fin du délai de sécurité d'input avant de réactiver l'interactivité
+        yield return new WaitForSeconds(menuInputSecurityDelay);
+
+        SetCombatMenuButtonsInteractable(true);
+
+        if (EventSystem.current != null)
+        {
+            Button defaultBtn = attackButton != null ? attackButton : customFightButton;
+            if (defaultBtn != null) EventSystem.current.SetSelectedGameObject(defaultBtn.gameObject);
+        }
     }
 
     private void TransitionToDodgePhase()
@@ -2342,9 +2489,21 @@ public class RhythmCombatManager : MonoBehaviour
         currentPhase = CombatPhase.DodgePhase;
         dodgeBeatsCount = 0;
 
+        // Remettre l'orientation normale et la danse du joueur
+        RestorePlayerOrientation();
+        if (!string.IsNullOrEmpty(danceAnimationStateName))
+        {
+            PlayPlayerAnimation(danceAnimationStateName);
+        }
+
         // Restaurer la caméra aux distances initiales de combat
         cameraDistance = originalCameraDistance;
         cameraHeight = originalCameraHeight;
+
+        if (combatCanvas != null && combatCanvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            combatCanvas.planeDistance = customMenuPlaneDistance;
+        }
 
         // Réactiver les contrôles du joueur sur la grille
         if (playerController != null)
@@ -2366,153 +2525,597 @@ public class RhythmCombatManager : MonoBehaviour
     {
         if (radialGrid != null)
         {
-            foreach (var key in new List<string>(activeTelegraphs.Keys))
-            {
-                string[] parts = key.Split('_');
-                if (parts.Length == 2)
-                {
-                    int ring = int.Parse(parts[0]);
-                    int sector = int.Parse(parts[1]);
-                    radialGrid.SetCellWarning(ring, sector, false);
-                }
-            }
+            radialGrid.ClearAllWarnings();
         }
         activeTelegraphs.Clear();
         groundOnlyTelegraphs.Clear();
     }
 
+    private string GetArrowSymbol(ArrowDirection dir)
+    {
+        switch (dir)
+        {
+            case ArrowDirection.Up: return "▲";
+            case ArrowDirection.Down: return "▼";
+            case ArrowDirection.Left: return "◄";
+            case ArrowDirection.Right: return "►";
+            default: return "►";
+        }
+    }
+
+    private void PlayPlayerAnimation(string animState)
+    {
+        if (string.IsNullOrEmpty(animState)) return;
+
+        Animator playerAnim = null;
+        if (playerController != null)
+        {
+            playerAnim = playerController.GetComponent<Animator>();
+            if (playerAnim == null) playerAnim = playerController.GetComponentInChildren<Animator>();
+        }
+        if (playerAnim == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null)
+            {
+                playerAnim = pm.GetComponent<Animator>();
+                if (playerAnim == null) playerAnim = pm.GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (playerAnim != null)
+        {
+            playerAnim.Play(animState);
+        }
+    }
+
+    private void SetPlayerShootingState(bool shooting)
+    {
+        if (playerController != null)
+        {
+            playerController.IsShootingAnimation = shooting;
+        }
+        else
+        {
+            RhythmPlayerController rpc = FindFirstObjectByType<RhythmPlayerController>();
+            if (rpc != null) rpc.IsShootingAnimation = shooting;
+        }
+    }
+
+    private void OrientPlayerTowardsEnemy()
+    {
+        SetPlayerShootingState(true);
+
+        Transform playerTrans = (activeAllyIndex >= 0 && activeAllyIndex < allies.Count && allies[activeAllyIndex] != null) 
+            ? allies[activeAllyIndex] 
+            : null;
+
+        if (playerTrans == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null) playerTrans = pm.transform;
+        }
+
+        if (playerTrans != null)
+        {
+            SpriteRenderer sr = playerTrans.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = playerTrans.GetComponentInChildren<SpriteRenderer>();
+            
+            if (sr != null)
+            {
+                Vector3 enemyPos = activeEnemy != null ? activeEnemy.transform.position : (radialGrid != null ? radialGrid.transform.position : transform.position);
+                Camera mainCam = Camera.main;
+                bool enemyOnScreenLeft = mainCam != null ? mainCam.WorldToScreenPoint(enemyPos).x < mainCam.WorldToScreenPoint(playerTrans.position).x : enemyPos.x < playerTrans.position.x;
+                
+                sr.flipX = enemyOnScreenLeft;
+            }
+        }
+    }
+
+    private void RestorePlayerOrientation()
+    {
+        SetPlayerShootingState(false);
+
+        Transform playerTrans = (activeAllyIndex >= 0 && activeAllyIndex < allies.Count && allies[activeAllyIndex] != null) 
+            ? allies[activeAllyIndex] 
+            : null;
+
+        if (playerTrans == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null) playerTrans = pm.transform;
+        }
+
+        if (playerTrans != null)
+        {
+            SpriteRenderer sr = playerTrans.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = playerTrans.GetComponentInChildren<SpriteRenderer>();
+            
+            if (sr != null)
+            {
+                Vector3 enemyPos = activeEnemy != null ? activeEnemy.transform.position : (radialGrid != null ? radialGrid.transform.position : transform.position);
+                Camera mainCam = Camera.main;
+                bool enemyOnScreenLeft = mainCam != null ? mainCam.WorldToScreenPoint(enemyPos).x < mainCam.WorldToScreenPoint(playerTrans.position).x : enemyPos.x < playerTrans.position.x;
+                
+                // Pour l'animation "dance" (qui pointe vers la droite par défaut),
+                // si l'ennemi est à gauche à l'écran, flipX = true.
+                sr.flipX = enemyOnScreenLeft;
+            }
+        }
+    }
+
+    private void SetCombatMenuButtonsInteractable(bool interactable)
+    {
+        bool otherAlive = false;
+        for (int i = 0; i < allies.Count; i++)
+        {
+            if (i != activeAllyIndex && allyHP[i] > 0)
+            {
+                otherAlive = true;
+                break;
+            }
+        }
+
+        if (attackButton != null) attackButton.interactable = interactable;
+        if (talkButton != null) talkButton.interactable = interactable;
+        if (companionsButton != null) companionsButton.interactable = interactable && otherAlive;
+        if (fleeButton != null) fleeButton.interactable = interactable;
+
+        if (customFightButton != null) customFightButton.interactable = interactable;
+        if (customTalkButton != null) customTalkButton.interactable = interactable;
+        if (customCompanionButton != null) customCompanionButton.interactable = interactable && otherAlive;
+        if (customEscapeButton != null) customEscapeButton.interactable = interactable;
+    }
+
     private void StartQTE()
     {
+        if (Time.time < menuEnableTime) return;
+
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
         if (groupContainerObj != null) groupContainerObj.SetActive(false);
-        if (qtePanel != null) qtePanel.SetActive(true);
+
+        // Masquer le panneau QTE au début pendant l'animation de shoot
+        if (qtePanel != null) qtePanel.SetActive(false);
 
         qteResolved = false;
-        qteStartBeat = BeatManager.Instance.GetCurrentBeatDecimal();
-        qteStartFrame = Time.frameCount; // Enregistrer la frame de départ
+        qteCurrentIndex = 0;
+        qteUIWaitingForAnim = true;
         currentPhase = CombatPhase.QTEActive;
 
         if (qteFeedbackText != null) qteFeedbackText.text = "";
-        if (qteIndicator != null)
+
+        // Réinitialiser la couleur et la taille des flèches
+        for (int i = 0; i < qteArrowTexts.Count; i++)
         {
-            qteIndicator.anchorMin = new Vector2(0f, -0.2f);
-            qteIndicator.anchorMax = new Vector2(0.015f, 1.2f);
+            if (qteArrowTexts[i] != null)
+            {
+                qteArrowTexts[i].color = new Color(0.2f, 0.2f, 0.25f, 0.6f);
+                qteArrowTexts[i].rectTransform.localScale = Vector3.one;
+            }
         }
+
+        // Orienter dynamiquement le tir du joueur vers l'ennemi (peu importe le secteur de l'arène)
+        OrientPlayerTowardsEnemy();
+
+        // Déclencher l'animation shoot du joueur
+        Animator playerAnim = null;
+        if (playerController != null)
+        {
+            playerAnim = playerController.GetComponent<Animator>();
+            if (playerAnim == null) playerAnim = playerController.GetComponentInChildren<Animator>();
+        }
+        if (playerAnim == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null)
+            {
+                playerAnim = pm.GetComponent<Animator>();
+                if (playerAnim == null) playerAnim = pm.GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (playerAnim != null && !string.IsNullOrEmpty(shootAnimationStateName))
+        {
+            playerAnim.Play(shootAnimationStateName);
+        }
+
+        // 3. Faire apparaître l'UI QTE à la fin de l'animation de tir
+        StartCoroutine(ShowQTEAfterShootRoutine());
+    }
+
+    private IEnumerator ShowQTEAfterShootRoutine()
+    {
+        yield return new WaitForSeconds(shootAnimationDelay);
+
+        qteUIWaitingForAnim = false;
+        qteStartTime = Time.time;
+        qteStartFrame = Time.frameCount;
+
+        if (qtePanel != null) qtePanel.SetActive(true);
     }
 
     private void UpdateQTE()
     {
-        if (qteResolved) return;
+        if (qteResolved || qteUIWaitingForAnim) return;
 
-        float elapsedBeats = BeatManager.Instance.GetCurrentBeatDecimal() - qteStartBeat;
-        float progress = elapsedBeats / 2.0f; // Le QTE dure 2 battements
-
-        // Mettre à jour la position de l'indicateur (curseur)
-        if (qteIndicator != null)
+        // Vérifier le temps écoule
+        float elapsed = Time.time - qteStartTime;
+        if (elapsed >= qteTimeLimit)
         {
-            qteIndicator.anchorMin = new Vector2(Mathf.Clamp01(progress), -0.2f);
-            qteIndicator.anchorMax = new Vector2(Mathf.Clamp01(progress + 0.015f), 1.2f);
-        }
-
-        // Si le temps est dépassé
-        if (progress >= 1.05f)
-        {
-            StartCoroutine(ResolveQTERoutine(1.05f));
+            StartCoroutine(ResolveHelldiversQTERoutine(false));
             return;
         }
 
-        // Empêcher de consommer l'input de validation du menu RPG (cooldown)
-        if (Time.frameCount == qteStartFrame || elapsedBeats < 0.15f) return;
+        // Anti-flash input frame 1
+        if (Time.frameCount == qteStartFrame || elapsed < 0.1f) return;
 
-        // Détection d'inputs
-        bool inputPressed = false;
-        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) inputPressed = true;
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) inputPressed = true;
-        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame) inputPressed = true;
-
-        if (inputPressed)
+        ArrowDirection? inputDir = GetCurrentDirectionalInput();
+        if (inputDir.HasValue)
         {
-            StartCoroutine(ResolveQTERoutine(progress));
+            ArrowDirection targetDir = (qteComboSequence != null && qteCurrentIndex < qteComboSequence.Count) 
+                ? qteComboSequence[qteCurrentIndex] 
+                : ArrowDirection.Right;
+
+            if (inputDir.Value == targetDir)
+            {
+                OnCorrectArrowInput();
+            }
+            else
+            {
+                StartCoroutine(ResolveHelldiversQTERoutine(false));
+            }
         }
     }
 
-    private IEnumerator ResolveQTERoutine(float progress)
+    private ArrowDirection? GetCurrentDirectionalInput()
+    {
+        bool up = false, down = false, left = false, right = false;
+
+#if ENABLE_INPUT_SYSTEM
+        var kb = Keyboard.current;
+        if (kb != null)
+        {
+            if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame || kb.zKey.wasPressedThisFrame) up = true;
+            if (kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame) down = true;
+            if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame || kb.qKey.wasPressedThisFrame) left = true;
+            if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) right = true;
+        }
+
+        var gp = Gamepad.current;
+        if (gp != null)
+        {
+            if (gp.dpad.up.wasPressedThisFrame || gp.leftStick.up.wasPressedThisFrame) up = true;
+            if (gp.dpad.down.wasPressedThisFrame || gp.leftStick.down.wasPressedThisFrame) down = true;
+            if (gp.dpad.left.wasPressedThisFrame || gp.leftStick.left.wasPressedThisFrame) left = true;
+            if (gp.dpad.right.wasPressedThisFrame || gp.leftStick.right.wasPressedThisFrame) right = true;
+        }
+#else
+        if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Z)) up = true;
+        if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) down = true;
+        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.Q)) left = true;
+        if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) right = true;
+#endif
+
+        if (up) return ArrowDirection.Up;
+        if (down) return ArrowDirection.Down;
+        if (left) return ArrowDirection.Left;
+        if (right) return ArrowDirection.Right;
+
+        return null;
+    }
+
+    private void OnCorrectArrowInput()
+    {
+        if (qteCurrentIndex < qteArrowTexts.Count && qteArrowTexts[qteCurrentIndex] != null)
+        {
+            qteArrowTexts[qteCurrentIndex].color = new Color(1.0f, 1.0f, 1.0f, 1f); // Blanc brillant monochrome
+            qteArrowTexts[qteCurrentIndex].outlineColor = new Color(0.04f, 0.04f, 0.06f, 1f);
+            qteArrowTexts[qteCurrentIndex].outlineWidth = 0.45f;
+            StartCoroutine(AnimateCardPulse(qteArrowTexts[qteCurrentIndex].rectTransform));
+        }
+
+        qteCurrentIndex++;
+
+        int totalCount = qteComboSequence != null ? qteComboSequence.Count : 5;
+        if (qteCurrentIndex >= totalCount)
+        {
+            StartCoroutine(ResolveHelldiversQTERoutine(true));
+        }
+    }
+
+    private IEnumerator AnimateCardPulse(RectTransform cardRect)
+    {
+        if (cardRect == null) yield break;
+        Vector3 origScale = Vector3.one;
+        Vector3 targetScale = new Vector3(1.28f, 1.28f, 1.28f);
+        float elapsed = 0f;
+        float duration = 0.08f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            cardRect.localScale = Vector3.Lerp(origScale, targetScale, elapsed / duration);
+            yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            cardRect.localScale = Vector3.Lerp(targetScale, origScale, elapsed / duration);
+            yield return null;
+        }
+
+        cardRect.localScale = origScale;
+    }
+
+    private IEnumerator ResolveHelldiversQTERoutine(bool success)
     {
         qteResolved = true;
 
-        float distance = Mathf.Abs(progress - 0.5f);
-        string feedback = "";
-        Color color = Color.white;
-        int damage = 0;
+        if (success)
+        {
+            if (qteFeedbackText != null)
+            {
+                qteFeedbackText.text = "COMBINAISON REUSSIE !";
+                qteFeedbackText.color = new Color(0.95f, 0.95f, 1.0f, 1f); // Blanc argenté monochrome
+            }
 
-        if (distance <= 0.05f) // Zone Verte (Parfait)
-        {
-            feedback = "PARFAIT !";
-            color = Color.green;
-            damage = 50;
-        }
-        else if (distance <= 0.15f) // Zone Jaune (Bien)
-        {
-            feedback = "BIEN !";
-            color = Color.yellow;
-            damage = 25;
-        }
-        else // Hors zone (Raté)
-        {
-            feedback = "RATE !";
-            color = Color.red;
-            damage = 0;
-        }
+            logText.text = "Combinaison réussie ! Préparation du tir...";
 
-        if (qteFeedbackText != null)
-        {
-            qteFeedbackText.text = feedback;
-            qteFeedbackText.color = color;
-        }
+            // Masquer l'UI de QTE dès la réussite
+            if (qtePanel != null) qtePanel.SetActive(false);
 
-        // Utiliser aussi le combo feedback text au milieu de l'écran
-        if (comboFeedbackText != null)
-        {
-            comboFeedbackText.text = feedback;
-            comboFeedbackText.color = color;
-            StartCoroutine(AnimateComboText());
-        }
+            // 1. Déclencher l'animation shoot 2 du joueur
+            if (!string.IsNullOrEmpty(qteSuccessShootAnimationStateName))
+            {
+                PlayPlayerAnimation(qteSuccessShootAnimationStateName);
+            }
 
-        if (damage > 0)
-        {
-            enemyHP = Mathf.Max(0, enemyHP - damage);
+            // 2. Attendre la fin de l'animation shoot 2 avant que le projectile ne parte
+            yield return new WaitForSeconds(qteSuccessShootDelay);
+
+            logText.text = "Tir d'encre parti !";
+
+            // Calcul du point de tir du doigt
+            Vector3 spawnPos;
+            if (playerFingerTip != null)
+            {
+                spawnPos = playerFingerTip.position;
+            }
+            else
+            {
+                PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+                Transform pTrans = pm != null ? pm.transform : transform;
+                spawnPos = pTrans.position + Vector3.up * 1.2f + pTrans.forward * 0.5f;
+            }
+
+            // Instancier le projectile d'encre
+            GameObject projObj;
+            if (inkProjectilePrefab != null)
+            {
+                projObj = Instantiate(inkProjectilePrefab, spawnPos, Quaternion.identity);
+            }
+            else
+            {
+                projObj = new GameObject("InkProjectile_Instance");
+                projObj.transform.position = spawnPos;
+                projObj.AddComponent<InkProjectile>();
+            }
+
+            InkProjectile inkScript = projObj.GetComponent<InkProjectile>();
+            if (inkScript == null) inkScript = projObj.AddComponent<InkProjectile>();
+
+            bool impactDone = false;
+            Transform targetTransform = activeEnemy != null ? activeEnemy.transform : transform;
+
+            inkScript.Launch(targetTransform, () =>
+            {
+                impactDone = true;
+            });
+
+            yield return new WaitUntil(() => impactDone);
+
+            // Effet d'impact complet sur l'ennemi (Flash rouge/clignotement comme le joueur + animation Hit)
+            if (activeEnemy != null)
+            {
+                StartCoroutine(AnimateEnemyHitEffect(activeEnemy));
+            }
+
+            // Tremblement de la caméra d'impact
+            ShakeCamera(0.25f, 0.3f);
+
+            // Appliquer les dégâts
+            enemyHP = Mathf.Max(0, enemyHP - 50);
             UpdateUI();
 
-            // Particules de succès
+            // Pop-up de dégâts gribouillé sur l'ennemi (police custom du jeu)
+            if (activeEnemy != null)
+            {
+                DamageNumberPopup.Create(activeEnemy.transform.position + Vector3.up * 1.2f, 50, isPlayerDamage: false, fontAsset: customCombatFont);
+            }
+
             if (attackSuccessParticles != null && activeEnemy != null)
             {
                 ParticleSystem ps = Instantiate(attackSuccessParticles, activeEnemy.transform.position, Quaternion.identity);
                 Destroy(ps.gameObject, 1.0f);
             }
 
-            logText.text = $"Vous touchez le boss en rythme ! Dégâts : {damage}";
+            logText.text = "Le projectile d'encre touche l'ennemi ! Dégâts : 50";
+
+            yield return new WaitForSeconds(0.8f);
+
+            // Remettre l'orientation normale et relancer l'animation dance
+            RestorePlayerOrientation();
+            PlayPlayerAnimation(danceAnimationStateName);
+
+            if (enemyHP <= 0)
+            {
+                StartCoroutine(VictoryRoutine());
+            }
+            else
+            {
+                TransitionToDodgePhase();
+            }
         }
         else
         {
-            logText.text = "Trop tard ou trop tôt ! Suivez le tempo.";
-        }
+            if (qteFeedbackText != null)
+            {
+                qteFeedbackText.text = "RATE !";
+                qteFeedbackText.color = new Color(0.85f, 0.12f, 0.14f, 1f);
+            }
 
-        yield return new WaitForSeconds(1.2f);
+            // Flasher les flèches en rouge
+            for (int i = qteCurrentIndex; i < qteArrowTexts.Count; i++)
+            {
+                if (qteArrowTexts[i] != null)
+                {
+                    qteArrowTexts[i].color = new Color(0.85f, 0.12f, 0.14f, 1f);
+                }
+            }
 
-        if (enemyHP <= 0)
-        {
-            StartCoroutine(VictoryRoutine());
-        }
-        else
-        {
+            logText.text = "Combinaison ratée ! Attaque annulée.";
+
+            if (qtePanel != null)
+            {
+                StartCoroutine(ShakeTransform(qtePanel.transform, 0.35f, 8f));
+            }
+
+            yield return new WaitForSeconds(0.8f);
+
+            if (qtePanel != null) qtePanel.SetActive(false);
+
+            // Remettre l'orientation normale et relancer l'animation dance
+            RestorePlayerOrientation();
+            PlayPlayerAnimation(danceAnimationStateName);
+
             TransitionToDodgePhase();
+        }
+    }
+
+    private IEnumerator ShakeTransform(Transform trans, float duration, float strength)
+    {
+        Vector3 origPos = trans.localPosition;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float offsetX = Random.Range(-strength, strength);
+            float offsetY = Random.Range(-strength, strength);
+            trans.localPosition = origPos + new Vector3(offsetX, offsetY, 0f);
+            yield return null;
+        }
+        trans.localPosition = origPos;
+    }
+
+    public void ShakeCamera(float duration = 0.25f, float intensity = 0.3f)
+    {
+        StartCoroutine(ShakeCameraRoutine(duration, intensity));
+    }
+
+    private IEnumerator ShakeCameraRoutine(float duration, float intensity)
+    {
+        Camera mainCam = Camera.main;
+        if (mainCam == null) yield break;
+
+        Vector3 origPos = mainCam.transform.localPosition;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float offsetX = Random.Range(-intensity, intensity);
+            float offsetY = Random.Range(-intensity, intensity);
+            mainCam.transform.localPosition = origPos + new Vector3(offsetX, offsetY, 0f);
+            yield return null;
+        }
+
+        mainCam.transform.localPosition = origPos;
+    }
+
+    private IEnumerator AnimateEnemyHitEffect(GameObject enemyObj)
+    {
+        if (enemyObj == null) yield break;
+
+        // 1. Déclencher l'animation Hit
+        Animator enemyAnim = enemyObj.GetComponent<Animator>();
+        if (enemyAnim == null) enemyAnim = enemyObj.GetComponentInChildren<Animator>();
+        if (enemyAnim != null && !string.IsNullOrEmpty(enemyHitAnimationName))
+        {
+            enemyAnim.SetTrigger(enemyHitAnimationName);
+            enemyAnim.Play(enemyHitAnimationName);
+        }
+
+        // 2. Clignotement / flash rouge sur le sprite de l'ennemi (identique au joueur)
+        SpriteRenderer[] sprites = enemyObj.GetComponentsInChildren<SpriteRenderer>();
+        Renderer[] renderers = enemyObj.GetComponentsInChildren<Renderer>();
+
+        Color redFlash = new Color(1f, 0.2f, 0.2f, 1f);
+        Vector3 origPos = enemyObj.transform.localPosition;
+
+        float elapsed = 0f;
+        float duration = 0.45f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float blink = Mathf.PingPong(elapsed * 25f, 1f);
+            Color currentColor = blink > 0.5f ? redFlash : Color.white;
+
+            foreach (SpriteRenderer sr in sprites)
+            {
+                if (sr != null) sr.color = currentColor;
+            }
+            foreach (Renderer r in renderers)
+            {
+                if (r != null && r.material.HasProperty("_Color"))
+                {
+                    r.material.color = currentColor;
+                }
+            }
+
+            // Secousse d'impact sur l'ennemi
+            float offsetX = Random.Range(-0.12f, 0.12f);
+            float offsetY = Random.Range(-0.12f, 0.12f);
+            enemyObj.transform.localPosition = origPos + new Vector3(offsetX, offsetY, 0f);
+
+            yield return null;
+        }
+
+        // Restaurer la couleur et position d'origine
+        enemyObj.transform.localPosition = origPos;
+        foreach (SpriteRenderer sr in sprites)
+        {
+            if (sr != null) sr.color = Color.white;
+        }
+        foreach (Renderer r in renderers)
+        {
+            if (r != null && r.material.HasProperty("_Color"))
+            {
+                r.material.color = Color.white;
+            }
         }
     }
 
     private void StartDialogue()
     {
+        if (Time.time < menuEnableTime) return;
+
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
         if (groupContainerObj != null) groupContainerObj.SetActive(false);
+
+        // Jouer l'animation facedance du joueur pendant la discussion
+        if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+        {
+            PlayPlayerAnimation(faceDanceAnimationStateName);
+        }
+
+        // Positionner le plan du Canvas tout près de l'objectif de la caméra (0.5m) pour passer devant tout objet 3D
+        if (combatCanvas != null && combatCanvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            combatCanvas.planeDistance = 0.5f;
+        }
 
         if (DialogueManager.Instance != null && activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
         {
@@ -2552,17 +3155,38 @@ public class RhythmCombatManager : MonoBehaviour
             currentPhase = CombatPhase.DialogueActive;
             dialogueEnterTime = Time.time;
 
+            TypewriterEffects typewriter = dialogueText != null ? dialogueText.GetComponent<TypewriterEffects>() : null;
+            if (typewriter == null && dialogueText != null)
+            {
+                typewriter = dialogueText.gameObject.AddComponent<TypewriterEffects>();
+            }
+
             if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
             {
                 currentDialogueIndex = 0;
-                dialogueText.text = activeCombatData.TalkDialogues[0];
                 logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
+                if (typewriter != null)
+                {
+                    typewriter.StartTyping(activeCombatData.TalkDialogues[0]);
+                }
+                else
+                {
+                    dialogueText.text = activeCombatData.TalkDialogues[0];
+                }
             }
             else
             {
                 currentDialogueIndex = 9999;
-                dialogueText.text = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
+                string msg = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
                 logText.text = "Aucun dialogue disponible.";
+                if (typewriter != null)
+                {
+                    typewriter.StartTyping(msg);
+                }
+                else
+                {
+                    dialogueText.text = msg;
+                }
             }
         }
     }
@@ -2578,12 +3202,19 @@ public class RhythmCombatManager : MonoBehaviour
         if (Time.time - dialogueEnterTime < 0.2f) return;
 
         bool advancePressed = false;
-        if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame)) advancePressed = true;
+        if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.eKey.wasPressedThisFrame)) advancePressed = true;
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) advancePressed = true;
         if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame) advancePressed = true;
 
         if (advancePressed)
         {
+            TypewriterEffects typewriter = dialogueText != null ? dialogueText.GetComponent<TypewriterEffects>() : null;
+            if (typewriter != null && typewriter.IsTyping)
+            {
+                typewriter.Skip();
+                return;
+            }
+
             if (currentDialogueIndex == 9999) // Mode fallback
             {
                 dialoguePanel.SetActive(false);
@@ -2594,8 +3225,16 @@ public class RhythmCombatManager : MonoBehaviour
                 currentDialogueIndex++;
                 if (activeCombatData != null && currentDialogueIndex < activeCombatData.TalkDialogues.Count)
                 {
-                    dialogueText.text = activeCombatData.TalkDialogues[currentDialogueIndex];
+                    string nextSentence = activeCombatData.TalkDialogues[currentDialogueIndex];
                     dialogueEnterTime = Time.time; // réinitialiser le cooldown
+                    if (typewriter != null)
+                    {
+                        typewriter.StartTyping(nextSentence);
+                    }
+                    else
+                    {
+                        dialogueText.text = nextSentence;
+                    }
                 }
                 else
                 {
@@ -2618,6 +3257,122 @@ public class RhythmCombatManager : MonoBehaviour
     {
         yield return new WaitForSeconds(1.0f);
         StartCoroutine(EndCombatRoutine(false));
+    }
+
+    private IEnumerator AnimateEnemyDisintegration(GameObject enemyObj)
+    {
+        if (enemyObj == null) yield break;
+
+        // Déclencher animation de mort/hit si disponible
+        Animator enemyAnim = enemyObj.GetComponent<Animator>();
+        if (enemyAnim == null) enemyAnim = enemyObj.GetComponentInChildren<Animator>();
+        if (enemyAnim != null)
+        {
+            enemyAnim.SetTrigger("Die");
+        }
+
+        SpriteRenderer[] sprites = enemyObj.GetComponentsInChildren<SpriteRenderer>();
+        Renderer[] renderers = enemyObj.GetComponentsInChildren<Renderer>();
+
+        Vector3 origScale = enemyObj.transform.localScale;
+        Vector3 origPos = enemyObj.transform.localPosition;
+
+        // Générer des particules de désintégration (cendres / encre qui s'élèvent)
+        GameObject ashCloudObj = new GameObject("DisintegrationAshCloud");
+        ashCloudObj.transform.position = enemyObj.transform.position + Vector3.up * 0.5f;
+
+        for (int i = 0; i < 28; i++)
+        {
+            GameObject particle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            particle.transform.SetParent(ashCloudObj.transform, false);
+            float scale = Random.Range(0.06f, 0.18f);
+            particle.transform.localScale = Vector3.one * scale;
+
+            Collider c = particle.GetComponent<Collider>();
+            if (c != null) Destroy(c);
+
+            MeshRenderer mr = particle.GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                mr.material = new Material(Shader.Find("Sprites/Default"));
+                mr.material.color = new Color(0.04f, 0.04f, 0.06f, 0.9f);
+            }
+
+            Vector3 randomOffset = Random.insideUnitSphere * 0.6f;
+            particle.transform.localPosition = randomOffset;
+            StartCoroutine(AnimateAshParticle(particle.transform, mr));
+        }
+
+        // Animation de dissolution / écrasement / déformation de désintégration
+        float elapsed = 0f;
+        float duration = 1.4f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            // Translucidité (Alpha 1.0 -> 0.0)
+            float alpha = Mathf.Lerp(1.0f, 0.0f, t);
+            Color fadeColor = new Color(0.1f, 0.1f, 0.12f, alpha);
+
+            foreach (SpriteRenderer sr in sprites)
+            {
+                if (sr != null) sr.color = fadeColor;
+            }
+            foreach (Renderer r in renderers)
+            {
+                if (r != null && r.material.HasProperty("_Color"))
+                {
+                    r.material.color = fadeColor;
+                }
+            }
+
+            // Écrasement / étirement chaotique de désintégration
+            float scaleX = Mathf.Lerp(origScale.x, origScale.x * 1.5f, t);
+            float scaleY = Mathf.Lerp(origScale.y, 0.02f, t);
+            float scaleZ = Mathf.Lerp(origScale.z, origScale.z * 1.5f, t);
+            enemyObj.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
+
+            // Tremblement de désintégration
+            float shakeX = Random.Range(-0.1f, 0.1f) * (1f - t);
+            float shakeY = Random.Range(-0.1f, 0.1f) * (1f - t);
+            enemyObj.transform.localPosition = origPos + new Vector3(shakeX, shakeY, 0f);
+
+            yield return null;
+        }
+
+        Destroy(ashCloudObj, 1.5f);
+        Destroy(enemyObj);
+    }
+
+    private IEnumerator AnimateAshParticle(Transform particleTrans, MeshRenderer mr)
+    {
+        Vector3 startPos = particleTrans.localPosition;
+        Vector3 floatDir = new Vector3(Random.Range(-0.8f, 0.8f), Random.Range(1.2f, 2.5f), Random.Range(-0.8f, 0.8f));
+        float elapsed = 0f;
+        float duration = Random.Range(0.8f, 1.4f);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            if (particleTrans != null)
+            {
+                particleTrans.localPosition = startPos + floatDir * t;
+                particleTrans.localScale = Vector3.Lerp(particleTrans.localScale, Vector3.zero, t);
+            }
+
+            if (mr != null && mr.material.HasProperty("_Color"))
+            {
+                Color c = mr.material.color;
+                c.a = Mathf.Lerp(0.9f, 0f, t);
+                mr.material.color = c;
+            }
+
+            yield return null;
+        }
     }
 
     #endregion
@@ -2687,15 +3442,12 @@ public class RhythmUIButtonAnimator : MonoBehaviour, IPointerEnterHandler, IPoin
             targetBgColor = originalBgColor;
         }
 
+        // Toujours forcer la couleur de texte initiale sur blanc (lisible sur fond sombre)
+        originalTextColor = Color.white;
+        targetTextColor = Color.white;
         if (buttonText != null)
         {
-            originalTextColor = buttonText.color;
-            targetTextColor = originalTextColor;
-        }
-        else
-        {
-            originalTextColor = Color.white;
-            targetTextColor = originalTextColor;
+            buttonText.color = Color.white;
         }
     }
 
@@ -2756,7 +3508,7 @@ public class RhythmUIButtonAnimator : MonoBehaviour, IPointerEnterHandler, IPoin
         targetRotationZ = originalRotationZ;
 
         targetBgColor = originalBgColor;
-        targetTextColor = originalTextColor;
+        targetTextColor = Color.white; // Toujours écriture blanche très lisible quand l'option n'est PAS sélectionnée !
 
         if (shadowImage != null)
         {

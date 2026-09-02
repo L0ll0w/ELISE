@@ -30,10 +30,10 @@ Material:
     m_Ints: []
     m_Floats:
     - _DripBlur: 0.0069
-    - _DripWidth: 0.02
-    - _EyeSpacing: -0.12
-    - _EyeY: 1.07
-    - _FaceCenterX: 0.02
+    - _DripWidth: 0.018
+    - _EyeSpacing: -0.06
+    - _EyeY: 1.28
+    - _FaceCenterX: 0.015
     - _FaceCenterZ: 0.25
     - _FeetY: -4.27
     - _InkProgress: 0.461
@@ -43,7 +43,7 @@ Material:
     - _ToonSmoothness: 0.2
     - _ToonThreshold: 0.3
     - _WiggleFreq: 3
-    - _WiggleStrength: 0.0759
+    - _WiggleStrength: 0
     m_Colors:
     - _BaseColor: {r: 0.6792453, g: 0.6792453, b: 0.6792453, a: 1}
     - _InkColor: {r: 0.049999982, g: 0.049999982, b: 0.049999982, a: 1}

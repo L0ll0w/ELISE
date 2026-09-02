@@ -41,7 +41,7 @@ public class RadialCombatGrid : MonoBehaviour
     [SerializeField] private Color warningColor = new Color(1.0f, 0.1f, 0.1f, 0.6f); // Rouge alerte
 
     private List<LineRenderer> lineRenderers = new List<LineRenderer>();
-    private Dictionary<string, SpriteRenderer> cellWarningIndicators = new Dictionary<string, SpriteRenderer>();
+    private Dictionary<GridCell, SpriteRenderer> cellWarningIndicators = new Dictionary<GridCell, SpriteRenderer>();
     private Sprite warningCellSprite;
 
     private bool isGridActive = false;
@@ -132,6 +132,14 @@ public class RadialCombatGrid : MonoBehaviour
     /// <summary>
     /// Calcule la position 3D d'une case sur la grille polaire, alignée sur le sol.
     /// </summary>
+    public Vector3 GetCellPosition(GridCell cell)
+    {
+        return GetCellPosition(cell.Ring, cell.Sector);
+    }
+
+    /// <summary>
+    /// Calcule la position 3D d'une case sur la grille polaire, alignée sur le sol.
+    /// </summary>
     public Vector3 GetCellPosition(int ringIndex, int sectorIndex)
     {
         // Limiter les indices
@@ -179,16 +187,24 @@ public class RadialCombatGrid : MonoBehaviour
     /// <summary>
     /// Affiche un indicateur d'alerte rouge sur une case donnée.
     /// </summary>
+    public void SetCellWarning(GridCell cell, bool active, Color? customColor = null)
+    {
+        SetCellWarning(cell.Ring, cell.Sector, active, customColor);
+    }
+
+    /// <summary>
+    /// Affiche un indicateur d'alerte rouge sur une case donnée.
+    /// </summary>
     public void SetCellWarning(int ringIndex, int sectorIndex, bool active, Color? customColor = null)
     {
-        string key = $"{ringIndex}_{sectorIndex}";
+        GridCell cell = new GridCell(ringIndex, sectorIndex);
 
         if (active)
         {
-            if (!cellWarningIndicators.ContainsKey(key))
+            if (!cellWarningIndicators.ContainsKey(cell))
             {
-                GameObject indicator = new GameObject($"Warning_{key}");
-                indicator.transform.position = GetCellPosition(ringIndex, sectorIndex) + Vector3.up * 0.05f; // Légèrement surélevé
+                GameObject indicator = new GameObject($"Warning_{cell.Ring}_{cell.Sector}");
+                indicator.transform.position = GetCellPosition(cell) + Vector3.up * 0.05f; // Légèrement surélevé
                 
                 // Placer l'indicateur à plat sur le sol
                 indicator.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
@@ -202,18 +218,18 @@ public class RadialCombatGrid : MonoBehaviour
                 float ringWidth = (outerRadius - innerRadius) / (ringsCount - 1);
                 indicator.transform.localScale = new Vector3(ringWidth * 0.8f, ringWidth * 0.8f, 1f);
 
-                cellWarningIndicators.Add(key, sr);
+                cellWarningIndicators.Add(cell, sr);
             }
         }
         else
         {
-            if (cellWarningIndicators.TryGetValue(key, out SpriteRenderer sr))
+            if (cellWarningIndicators.TryGetValue(cell, out SpriteRenderer sr))
             {
                 if (sr != null)
                 {
                     Destroy(sr.gameObject);
                 }
-                cellWarningIndicators.Remove(key);
+                cellWarningIndicators.Remove(cell);
             }
         }
     }
@@ -268,7 +284,7 @@ public class RadialCombatGrid : MonoBehaviour
         lr.endColor = gridColor;
         lr.startWidth = lineWidth;
         lr.endWidth = lineWidth;
-        lr.useWorldSpace = true;
+        lr.useWorldSpace = false;
         lr.loop = true;
 
         int segments = 60;
@@ -276,8 +292,8 @@ public class RadialCombatGrid : MonoBehaviour
         for (int i = 0; i < segments; i++)
         {
             float angle = i * (2f * Mathf.PI / segments);
-            Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-            lr.SetPosition(i, transform.position + offset + Vector3.up * 0.01f);
+            Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0.01f, Mathf.Sin(angle) * radius);
+            lr.SetPosition(i, offset);
         }
 
         lineRenderers.Add(lr);
@@ -295,16 +311,16 @@ public class RadialCombatGrid : MonoBehaviour
         lr.endColor = gridColor;
         lr.startWidth = lineWidth;
         lr.endWidth = lineWidth;
-        lr.useWorldSpace = true;
+        lr.useWorldSpace = false;
 
         lr.positionCount = 2;
         float rad = angleDegrees * Mathf.Deg2Rad;
         
-        Vector3 startOffset = new Vector3(Mathf.Cos(rad) * innerRadius, 0f, Mathf.Sin(rad) * innerRadius);
-        Vector3 endOffset = new Vector3(Mathf.Cos(rad) * outerRadius, 0f, Mathf.Sin(rad) * outerRadius);
+        Vector3 startOffset = new Vector3(Mathf.Cos(rad) * innerRadius, 0.01f, Mathf.Sin(rad) * innerRadius);
+        Vector3 endOffset = new Vector3(Mathf.Cos(rad) * outerRadius, 0.01f, Mathf.Sin(rad) * outerRadius);
 
-        lr.SetPosition(0, transform.position + startOffset + Vector3.up * 0.01f);
-        lr.SetPosition(1, transform.position + endOffset + Vector3.up * 0.01f);
+        lr.SetPosition(0, startOffset);
+        lr.SetPosition(1, endOffset);
 
         lineRenderers.Add(lr);
     }

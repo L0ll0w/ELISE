@@ -106,7 +106,6 @@ public class CombatManager : MonoBehaviour
 
     private void Start()
     {
-        CreateFadeCanvas();
     }
 
     private void Update()
@@ -148,41 +147,22 @@ public class CombatManager : MonoBehaviour
         Debug.Log("[CombatManager] Initialisation du combat au tour par tour...");
 
         // 1. Fondu au noir
-        yield return StartCoroutine(Fade(1f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f, fadeDuration));
 
         // 2. Geler le joueur et désactiver le suivi de groupe
-        Transform leader = null;
-        if (GroupManager.Instance != null)
-        {
-            leader = GroupManager.Instance.Leader;
-            GroupManager.Instance.enabled = false;
-            foreach (var follower in GroupManager.Instance.ActiveFollowers)
-            {
-                if (follower != null) follower.enabled = false;
-            }
-        }
-        else
+        PlayerLockManager.SetPlayerLocked(true);
+
+        Transform leader = GroupManager.Instance != null ? GroupManager.Instance.Leader : null;
+        if (leader == null)
         {
             PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
             if (pm != null) leader = pm.transform;
-        }
-
-        if (leader != null)
-        {
-            PlayerMovement pm = leader.GetComponent<PlayerMovement>();
-            if (pm != null) pm.enabled = false;
         }
 
         // Désactiver CinemachineHelper et détacher la caméra de son suivi automatique
         virtualCamera = FindFirstObjectByType<CinemachineCamera>();
         if (virtualCamera != null)
         {
-            cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
-            if (cameraHelper != null)
-            {
-                cameraHelper.SaveOriginalSettings();
-                cameraHelper.enabled = false;
-            }
             virtualCamera.Follow = null;
         }
 
@@ -279,7 +259,7 @@ public class CombatManager : MonoBehaviour
         yield return new WaitForSeconds(0.2f);
 
         // 8. Fondu de retour (Fade In)
-        yield return StartCoroutine(Fade(0f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f, fadeDuration));
 
         // 9. Lancer la boucle
         currentState = CombatState.PlayerTurn;
@@ -297,7 +277,7 @@ public class CombatManager : MonoBehaviour
         currentState = CombatState.Transitioning;
 
         // 1. Fondu au noir
-        yield return StartCoroutine(Fade(1f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f, fadeDuration));
 
         // 2. Nettoyage de l'UI
         if (combatCanvas != null)
@@ -316,11 +296,6 @@ public class CombatManager : MonoBehaviour
         // 4. Réactiver la caméra Cinemachine
         if (virtualCamera != null)
         {
-            if (cameraHelper != null)
-            {
-                cameraHelper.enabled = true;
-                cameraHelper.UpdateCameraSettings(false);
-            }
             // Restaurer le suivi du leader
             if (GroupManager.Instance != null && GroupManager.Instance.Leader != null)
             {
@@ -329,34 +304,12 @@ public class CombatManager : MonoBehaviour
         }
 
         // 5. Réactiver les contrôles du joueur et le suivi du groupe
-        if (GroupManager.Instance != null)
-        {
-            GroupManager.Instance.enabled = true;
-            foreach (var follower in GroupManager.Instance.ActiveFollowers)
-            {
-                if (follower != null) follower.enabled = true;
-            }
-            GroupManager.Instance.TeleportPartyToLeader();
-            GroupManager.Instance.ReapplyAllCollisions();
-        }
-
-        Transform leader = GroupManager.Instance != null ? GroupManager.Instance.Leader : null;
-        if (leader == null)
-        {
-            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
-            if (pm != null) leader = pm.transform;
-        }
-
-        if (leader != null)
-        {
-            PlayerMovement pm = leader.GetComponent<PlayerMovement>();
-            if (pm != null) pm.enabled = true;
-        }
+        PlayerLockManager.SetPlayerLocked(false);
 
         yield return new WaitForSeconds(0.2f);
 
         // 6. Fondu de retour au jeu
-        yield return StartCoroutine(Fade(0f));
+        yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f, fadeDuration));
 
         currentState = CombatState.Transitioning; // Arrêt complet
         activeEnemy = null;
@@ -687,48 +640,6 @@ public class CombatManager : MonoBehaviour
     #endregion
 
     #region Génération de l'UI Dynamique
-
-    private void CreateFadeCanvas()
-    {
-        if (fadeCanvasGroup != null) return;
-
-        GameObject canvasObj = new GameObject("CombatFade_Canvas");
-        Canvas canvas = canvasObj.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 2000; // Au-dessus de tout
-
-        fadeCanvasGroup = canvasObj.AddComponent<CanvasGroup>();
-        fadeCanvasGroup.alpha = 0f;
-        fadeCanvasGroup.blocksRaycasts = false;
-
-        GameObject imageObj = new GameObject("BlackImage");
-        imageObj.transform.SetParent(canvasObj.transform, false);
-        Image img = imageObj.AddComponent<Image>();
-        img.color = Color.black;
-
-        RectTransform r = img.rectTransform;
-        r.anchorMin = Vector2.zero;
-        r.anchorMax = Vector2.one;
-        r.sizeDelta = Vector2.zero;
-
-        DontDestroyOnLoad(canvasObj);
-    }
-
-    private IEnumerator Fade(float targetAlpha)
-    {
-        CreateFadeCanvas();
-        float startAlpha = fadeCanvasGroup.alpha;
-        float elapsed = 0f;
-
-        while (elapsed < fadeDuration)
-        {
-            elapsed += Time.deltaTime;
-            fadeCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsed / fadeDuration);
-            yield return null;
-        }
-
-        fadeCanvasGroup.alpha = targetAlpha;
-    }
 
     private void CreateCombatUI()
     {

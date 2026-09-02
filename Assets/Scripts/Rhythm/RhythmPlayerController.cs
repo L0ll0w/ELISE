@@ -22,7 +22,7 @@ public class RhythmPlayerController : MonoBehaviour
 
     [Header("Saut d'Esquive")]
     [Tooltip("Hauteur maximale du saut visuel (offset Y).")]
-    [SerializeField] private float jumpHeight = 0.3f;
+    [SerializeField] private float jumpHeight = 0.65f;
     [Tooltip("Durée en secondes du saut.")]
     [SerializeField] private float jumpDuration = 0.25f;
 
@@ -33,11 +33,13 @@ public class RhythmPlayerController : MonoBehaviour
     // État du Saut
     private bool isJumping = false;
     private float jumpTimer = 0f;
+    private float jumpCooldownTimer = 0f;
     private float landingSquashTimer = 0f;
     private Vector3 jumpVisualOffset = Vector3.zero;
 
     public bool IsJumping => isJumping;
     private Vector3 targetPosition;
+    private Vector3 groundPosition;
     
     private SpriteRenderer spriteRenderer;
     private Animator animator;
@@ -120,6 +122,7 @@ public class RhythmPlayerController : MonoBehaviour
         {
             targetPosition = grid.GetCellPosition(currentRing, currentSector);
             targetPosition.y += groundYOffset;
+            groundPosition = targetPosition;
             transform.position = targetPosition;
         }
 
@@ -158,7 +161,13 @@ public class RhythmPlayerController : MonoBehaviour
     {
         if (grid == null) return;
 
-        // Gérer le saut visuel (offset Y) avec une trajectoire parabolique (physique du saut de déplacement)
+        // Gestion du cooldown anti-spam de saut
+        if (jumpCooldownTimer > 0f)
+        {
+            jumpCooldownTimer -= Time.deltaTime;
+        }
+
+        // Gérer le saut visuel (offset Y) avec une courbe asymétrique dynamique et retombée lourde (Snappy Landing)
         if (isJumping)
         {
             jumpTimer += Time.deltaTime;
@@ -167,17 +176,47 @@ public class RhythmPlayerController : MonoBehaviour
             {
                 isJumping = false;
                 jumpVisualOffset = Vector3.zero;
+                landingSquashTimer = 0.08f; // Déclencher l'effet d'impact à la réception au sol
             }
             else
             {
-                // Trajectoire parabolique snappie (y = 4 * x * (1 - x) * height)
-                float heightOffset = 4f * progress * (1f - progress) * jumpHeight;
-                jumpVisualOffset = Vector3.up * heightOffset;
+                // Courbe asymétrique : Montée vive (0 à 0.4) et chute accélérée par la gravité (0.4 à 1.0)
+                float heightOffset;
+                float apexTime = 0.40f;
+                if (progress < apexTime)
+                {
+                    float t = progress / apexTime;
+                    heightOffset = Mathf.Sin(t * Mathf.PI * 0.5f) * jumpHeight;
+                }
+                else
+                {
+                    float t = (progress - apexTime) / (1f - apexTime);
+                    heightOffset = (1f - Mathf.Pow(t, 2.2f)) * jumpHeight;
+                }
+
+                jumpVisualOffset = Vector3.up * Mathf.Max(0f, heightOffset);
             }
         }
 
-        // Déplacement visuel fluide vers la case cible + offset de saut
-        transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * lerpSpeed) + jumpVisualOffset;
+        // Effet de Squash & Impact à l'atterrissage au sol
+        if (landingSquashTimer > 0f)
+        {
+            landingSquashTimer -= Time.deltaTime;
+            float t = landingSquashTimer / 0.08f;
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.transform.localScale = Vector3.Lerp(Vector3.one, new Vector3(1.18f, 0.80f, 1.18f), t);
+            }
+        }
+        else if (spriteRenderer != null && spriteRenderer.transform.localScale != Vector3.one && !isJumping)
+        {
+            spriteRenderer.transform.localScale = Vector3.Lerp(spriteRenderer.transform.localScale, Vector3.one, Time.deltaTime * 25f);
+        }
+
+        // Déplacement visuel du point d'ancrage sol vers la case cible + offset de saut indépendant
+        if (groundPosition == Vector3.zero) groundPosition = transform.position;
+        groundPosition = Vector3.Lerp(groundPosition, targetPosition, Time.deltaTime * lerpSpeed);
+        transform.position = groundPosition + jumpVisualOffset;
 
         // Faire face à l'ennemi (le centre de la grille)
         OrientTowardsCenter();
@@ -208,10 +247,11 @@ public class RhythmPlayerController : MonoBehaviour
 
     public void Jump()
     {
-        if (!isJumping)
+        if (!isJumping && jumpCooldownTimer <= 0f)
         {
             isJumping = true;
             jumpTimer = 0f;
+            jumpCooldownTimer = jumpDuration + 0.05f; // Cooldown anti-spam
             if (animator != null)
             {
                 animator.SetTrigger("Spawn"); // Même animation de saut court que pour les déplacements
@@ -329,12 +369,43 @@ public class RhythmPlayerController : MonoBehaviour
         }
     }
 
+    private bool isShootingAnimation = false;
+    public bool IsShootingAnimation
+    {
+        get => isShootingAnimation;
+        set => isShootingAnimation = value;
+    }
+
     private void OrientTowardsCenter()
     {
         if (spriteRenderer != null && grid != null)
         {
-            // Dans notre perspective 2.5D, si le boss est à gauche du joueur (axe X), on regarde à gauche (flipX = true)
-            spriteRenderer.flipX = grid.transform.position.x < transform.position.x;
+            Camera mainCam = Camera.main;
+            Vector3 targetPos = grid.transform.position;
+            Vector3 playerPos = transform.position;
+
+            bool isTargetToScreenLeft;
+            if (mainCam != null)
+            {
+                float targetScreenX = mainCam.WorldToScreenPoint(targetPos).x;
+                float playerScreenX = mainCam.WorldToScreenPoint(playerPos).x;
+                isTargetToScreenLeft = targetScreenX < playerScreenX;
+            }
+            else
+            {
+                isTargetToScreenLeft = targetPos.x < playerPos.x;
+            }
+
+            if (isShootingAnimation)
+            {
+                // Sens inversé selon la demande du joueur pour être toujours orienté face à l'ennemi
+                spriteRenderer.flipX = isTargetToScreenLeft;
+            }
+            else
+            {
+                // Animation Dance/Idle normale
+                spriteRenderer.flipX = isTargetToScreenLeft;
+            }
         }
     }
 

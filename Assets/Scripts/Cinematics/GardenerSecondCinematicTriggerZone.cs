@@ -53,7 +53,10 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
     [Tooltip("Durée de la transition de la caméra pour glisser du Jardinier vers le monstre.")]
     [SerializeField] private float transitionToMonsterDuration = 1.5f;
 
-    [Header("Transition Combat")]
+    [Header("Transition Combat Rythmique")]
+    [Tooltip("Données de combat rythmique spécifiques (EnemyCombatData) pour le monstre apparu. Si renseigné, sera assigné au monstre.")]
+    [SerializeField] private EnemyCombatData monsterCombatData;
+
     [Tooltip("Si vrai, ramène la caméra sur le joueur et réactive ses contrôles à la fin de la cinématique. Si faux, laisse le joueur gelé et la caméra sur place pour le combat.")]
     [SerializeField] private bool endCinematicNormally = false;
 
@@ -77,11 +80,7 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
         Debug.Log($"[GardenerSecondCinematicTriggerZone] Déclenchement de la deuxième cinématique sur '{gameObject.name}'");
 
         // 1. Récupération des références caméra et joueur
-        virtualCamera = FindFirstObjectByType<CinemachineCamera>();
-        if (virtualCamera != null)
-        {
-            cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
-        }
+        EnsureReferences();
 
         if (virtualCamera == null)
         {
@@ -89,23 +88,14 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             yield break;
         }
 
-        // Trouver le joueur dans la scène
-        if (playerMovement == null)
-        {
-            playerMovement = FindFirstObjectByType<PlayerMovement>();
-        }
-
-        // Geler le joueur et désactiver le CinemachineHelper
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
-
         if (cameraHelper != null)
         {
             cameraHelper.SaveOriginalSettings();
             cameraHelper.enabled = false;
         }
+
+        // Geler le joueur
+        LockPlayer();
 
         // Attendre avant de commencer le déplacement de la caméra (le joueur est gelé pendant ce temps)
         if (delayBeforeCameraMove > 0f)
@@ -150,22 +140,9 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
         }
 
         // 3. Déclenchement du premier dialogue (champ dialogueData de la classe de base)
-        if (dialogueData != null && DialogueManager.Instance != null)
+        if (dialogueData != null)
         {
-            bool dialogueFinished = false;
-            
-            DialogueManager.Instance.StartDialogue(dialogueData, () =>
-            {
-                dialogueFinished = true;
-                // Forcer le joueur à rester figé après la fermeture de la fenêtre de dialogue
-                if (playerMovement != null)
-                {
-                    playerMovement.enabled = false;
-                }
-            });
-
-            // Attendre que le joueur ait fini de lire et fermé la boîte de dialogue
-            yield return new WaitUntil(() => dialogueFinished);
+            yield return StartCoroutine(RunDialogue(dialogueData));
         }
 
         // 4. ANIMATION : Claquement de doigts (snap)
@@ -252,21 +229,9 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
         }
 
         // 6. Déclenchement du second dialogue
-        if (secondDialogueData != null && DialogueManager.Instance != null)
+        if (secondDialogueData != null)
         {
-            bool secondDialogueFinished = false;
-            
-            DialogueManager.Instance.StartDialogue(secondDialogueData, () =>
-            {
-                secondDialogueFinished = true;
-                // Forcer le joueur à rester figé après la fermeture du dialogue
-                if (playerMovement != null)
-                {
-                    playerMovement.enabled = false;
-                }
-            });
-
-            yield return new WaitUntil(() => secondDialogueFinished);
+            yield return StartCoroutine(RunDialogue(secondDialogueData));
         }
 
         // Temporisation après le dialogue
@@ -281,10 +246,7 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             yield return StartCoroutine(TransitionCameraBack());
             
             // Réactiver le joueur
-            if (playerMovement != null)
-            {
-                playerMovement.enabled = true;
-            }
+            UnlockPlayer();
         }
         else
         {
@@ -292,25 +254,45 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             Debug.Log("[GardenerSecondCinematicTriggerZone] Séquence terminée. Contrôles et caméra figés pour le début du combat.");
         }
 
-        // 8. Lancement du combat au tour par tour (déclenchement de l'événement)
+        // 8. Lancement du combat rythmique radial (RhythmCombatManager)
         if (onCombatTriggered != null)
         {
             Debug.Log("[GardenerSecondCinematicTriggerZone] Appel de l'événement onCombatTriggered.");
             onCombatTriggered.Invoke();
         }
 
-        // Lancement automatique s'il y a un manager de combat dans la scène
-        if (CombatManager.Instance != null)
+        GameObject enemyToFight = spawnedMonster != null ? spawnedMonster : (monsterSceneObject != null ? monsterSceneObject : null);
+        if (enemyToFight != null)
         {
-            GameObject enemyToFight = spawnedMonster != null ? spawnedMonster : (monsterSceneObject != null ? monsterSceneObject : null);
-            if (enemyToFight != null)
+            // Associer les données de combat rythmique si configurées dans l'inspecteur
+            if (monsterCombatData != null)
             {
+                EnemyCombatDataHolder dataHolder = enemyToFight.GetComponent<EnemyCombatDataHolder>();
+                if (dataHolder == null) dataHolder = enemyToFight.AddComponent<EnemyCombatDataHolder>();
+                dataHolder.CombatData = monsterCombatData;
+            }
+
+            RhythmCombatManager rhythmManager = RhythmCombatManager.Instance;
+            if (rhythmManager == null) rhythmManager = FindFirstObjectByType<RhythmCombatManager>();
+
+            if (rhythmManager != null)
+            {
+                Debug.Log($"[GardenerSecondCinematicTriggerZone] Lancement du combat rythmique sur '{enemyToFight.name}' via RhythmCombatManager !");
+                rhythmManager.StartCombat(enemyToFight);
+            }
+            else if (CombatManager.Instance != null)
+            {
+                Debug.Log($"[GardenerSecondCinematicTriggerZone] Lancement du combat via CombatManager classique sur '{enemyToFight.name}'.");
                 CombatManager.Instance.StartCombat(enemyToFight);
             }
             else
             {
-                Debug.LogWarning("[GardenerSecondCinematicTriggerZone] Impossible de lancer le combat car aucun monstre n'a été instancié ou activé.");
+                Debug.LogWarning("[GardenerSecondCinematicTriggerZone] Aucun RhythmCombatManager ni CombatManager trouvé dans la scène.");
             }
+        }
+        else
+        {
+            Debug.LogWarning("[GardenerSecondCinematicTriggerZone] Impossible de lancer le combat car aucun monstre n'a été instancié ou activé.");
         }
     }
 }

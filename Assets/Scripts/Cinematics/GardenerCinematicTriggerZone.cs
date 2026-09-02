@@ -166,29 +166,13 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
     {
         Debug.Log($"[GardenerCinematicTriggerZone] Déclenchement de la cinématique sur '{gameObject.name}'");
 
-        // 1. Récupération des références caméra et joueur (comme dans la classe parente)
-        virtualCamera = FindFirstObjectByType<CinemachineCamera>();
-        if (virtualCamera != null)
-        {
-            cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
-        }
+        // 1. Récupération des références caméra et joueur
+        EnsureReferences();
 
         if (virtualCamera == null)
         {
             Debug.LogError("[GardenerCinematicTriggerZone] Aucune CinemachineCamera trouvée dans la scène !");
             yield break;
-        }
-
-        // Trouver le joueur dans la scène
-        if (playerMovement == null)
-        {
-            playerMovement = FindFirstObjectByType<PlayerMovement>();
-        }
-
-        // Geler le joueur et désactiver le CinemachineHelper
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
         }
 
         if (cameraHelper != null)
@@ -197,13 +181,53 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
             cameraHelper.enabled = false;
         }
 
+        // Geler le joueur
+        LockPlayer();
+
         // Attendre avant de commencer le déplacement de la caméra (le joueur est gelé pendant ce temps)
         if (delayBeforeCameraMove > 0f)
         {
             yield return new WaitForSeconds(delayBeforeCameraMove);
         }
 
-        // 2. Transition de la caméra vers la cible de focus (le Jardinier)
+        // 2. Résolution automatique du Jardinier si focusTarget n'est pas configuré dans l'inspecteur
+        if (focusTarget == null)
+        {
+            if (gardenerTransform != null)
+            {
+                focusTarget = gardenerTransform;
+            }
+            else
+            {
+                if (wateringCan == null) wateringCan = FindFirstObjectByType<GiantWateringCan>();
+                if (wateringCan != null)
+                {
+                    foreach (Transform child in wateringCan.transform)
+                    {
+                        if (child.name != "SpoutPoint" && child.name != "WaterSpoutParticles" && child.GetComponent<SpriteRenderer>() != null)
+                        {
+                            gardenerTransform = child;
+                            focusTarget = child;
+                            break;
+                        }
+                    }
+                }
+
+                if (focusTarget == null)
+                {
+                    foreach (GameObject obj in FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+                    {
+                        if (obj.name.Contains("Gardener") && obj.activeInHierarchy)
+                        {
+                            focusTarget = obj.transform;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Transition de la caméra vers la cible de focus (le Jardinier)
         Transform target = focusTarget != null ? focusTarget : (playerMovement != null ? playerMovement.transform : null);
         
         if (target != null)
@@ -218,22 +242,9 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
         }
 
         // 3. Déclenchement du premier dialogue
-        if (dialogueData != null && DialogueManager.Instance != null)
+        if (dialogueData != null)
         {
-            bool dialogueFinished = false;
-            
-            DialogueManager.Instance.StartDialogue(dialogueData, () =>
-            {
-                dialogueFinished = true;
-                // Forcer le joueur à rester figé après la fermeture de la fenêtre de dialogue
-                if (playerMovement != null)
-                {
-                    playerMovement.enabled = false;
-                }
-            });
-
-            // Attendre que le joueur ait fini de lire et fermé la boîte de dialogue
-            yield return new WaitUntil(() => dialogueFinished);
+            yield return StartCoroutine(RunDialogue(dialogueData));
         }
 
         // 4. ANIMATION : Lancer d'arrosoir + Déplacement du Jardinier
@@ -331,20 +342,9 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
         yield return new WaitForSeconds(delayBeforeSecondDialogue);
 
         // 5. Déclenchement du second dialogue
-        if (secondDialogueData != null && DialogueManager.Instance != null)
+        if (secondDialogueData != null)
         {
-            bool secondDialogueFinished = false;
-            
-            DialogueManager.Instance.StartDialogue(secondDialogueData, () =>
-            {
-                secondDialogueFinished = true;
-                if (playerMovement != null)
-                {
-                    playerMovement.enabled = false;
-                }
-            });
-
-            yield return new WaitUntil(() => secondDialogueFinished);
+            yield return StartCoroutine(RunDialogue(secondDialogueData));
         }
 
         // 6. ANIMATION : Le jardinier se retourne et s'enfuit vers la droite
@@ -377,10 +377,7 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
         yield return StartCoroutine(TransitionCameraBack());
 
         // 8. Réactiver le joueur et détruire/désactiver le jardinier si besoin (on le détruit après sa fuite pour nettoyer la scène)
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = true;
-        }
+        UnlockPlayer();
 
         // Nettoyage : Détruire ou repositionner le jardinier s'il s'est enfui
         if (gardenerTransform != null)

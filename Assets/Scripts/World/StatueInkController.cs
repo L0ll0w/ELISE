@@ -62,11 +62,20 @@ public class StatueInkController : MonoBehaviour
     [SerializeField] private float puddleGrowthSpeed = 0.5f;
 
     [Header("Événement de Spawn (Taille Max Flaque)")]
-    [Tooltip("L'Animator de l'objet à faire spawner.")]
+    [Tooltip("Optionnel : Prefab du joueur/objet à instancier quand la flaque atteint sa taille max.")]
+    [SerializeField] private GameObject spawnObjectPrefab;
+
+    [Tooltip("Point de spawn du prefab.")]
+    [SerializeField] private Transform spawnPoint;
+
+    [Tooltip("L'Animator de l'objet à faire spawner. Si vide, sera recherché sur le joueur ou l'instance.")]
     [SerializeField] private Animator spawnObjectAnimator;
 
-    [Tooltip("Le nom du Trigger ou de l'état d'animation à lancer (ex: Spawn).")]
-    [SerializeField] private string spawnAnimationName = "Spawn";
+    [Tooltip("Nom de l'animation d'attente au début de la cinématique (ex: PlayerSpawnIdle).")]
+    [SerializeField] private string initialIdleAnimationName = "PlayerSpawnIdle";
+
+    [Tooltip("Le nom du Trigger ou de l'état d'animation de spawn (ex: PlayerSpawn).")]
+    [SerializeField] private string spawnAnimationName = "PlayerSpawn";
 
     [Tooltip("Événement personnalisé déclenché quand la flaque atteint sa taille maximale.")]
     public UnityEngine.Events.UnityEvent onPuddleMaxSizeReached;
@@ -160,6 +169,23 @@ public class StatueInkController : MonoBehaviour
             ResetStatueVisuals(statue);
         }
 
+        // Auto-détection de l'Animator du joueur si non renseigné
+        if (spawnObjectAnimator == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null)
+            {
+                spawnObjectAnimator = pm.GetComponent<Animator>();
+                if (spawnObjectAnimator == null) spawnObjectAnimator = pm.GetComponentInChildren<Animator>();
+            }
+        }
+
+        // Au début de la cinématique, placer le joueur/l'objet sur l'animation d'attente PlayerSpawnIdle
+        if (spawnObjectAnimator != null && !string.IsNullOrEmpty(initialIdleAnimationName))
+        {
+            spawnObjectAnimator.Play(initialIdleAnimationName);
+        }
+
         // Lancement des cycles d'animation individuels
         if (gameObject.activeInHierarchy)
         {
@@ -245,15 +271,41 @@ public class StatueInkController : MonoBehaviour
         hasTriggeredMaxSizeEvent = true;
         Debug.Log("[StatueInkController] La flaque d'encre a atteint sa taille maximale ! Déclenchement de l'événement de spawn.");
 
-        // 1. Déclencher l'animation de spawn sur l'Animator s'il est configuré
+        // 1. Instancier le prefab s'il est renseigné dans l'inspecteur
+        if (spawnObjectPrefab != null)
+        {
+            Vector3 pos = spawnPoint != null ? spawnPoint.position : transform.position;
+            Quaternion rot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+            GameObject spawnedInstance = Instantiate(spawnObjectPrefab, pos, rot);
+
+            spawnObjectAnimator = spawnedInstance.GetComponent<Animator>();
+            if (spawnObjectAnimator == null) spawnObjectAnimator = spawnedInstance.GetComponentInChildren<Animator>();
+        }
+
+        // Auto-détection de l'Animator du joueur si toujours nul
+        if (spawnObjectAnimator == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null)
+            {
+                spawnObjectAnimator = pm.GetComponent<Animator>();
+                if (spawnObjectAnimator == null) spawnObjectAnimator = pm.GetComponentInChildren<Animator>();
+            }
+        }
+
+        // 2. Déclencher l'animation PlayerSpawn quand les conditions sont réunies (flaque max size)
         if (spawnObjectAnimator != null)
         {
-            // On appelle le SetTrigger ET Play par sécurité selon la structure de l'Animator Controller de l'utilisateur
+            if (!spawnObjectAnimator.gameObject.activeInHierarchy)
+            {
+                spawnObjectAnimator.gameObject.SetActive(true);
+            }
+            Debug.Log($"[StatueInkController] Lancement de l'animation de spawn '{spawnAnimationName}' sur '{spawnObjectAnimator.gameObject.name}'.");
             spawnObjectAnimator.SetTrigger(spawnAnimationName);
             spawnObjectAnimator.Play(spawnAnimationName);
         }
 
-        // 2. Déclencher l'événement UnityEvent
+        // 3. Déclencher l'événement UnityEvent
         if (onPuddleMaxSizeReached != null)
         {
             onPuddleMaxSizeReached.Invoke();

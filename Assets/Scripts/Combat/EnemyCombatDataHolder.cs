@@ -10,5 +10,9 @@ public class EnemyCombatDataHolder : MonoBehaviour
     [Tooltip("Les données de combat rythmique pour cet ennemi.")]
     [SerializeField] private EnemyCombatData combatData;
 
-    public EnemyCombatData CombatData => combatData;
+    public EnemyCombatData CombatData
+    {
+        get => combatData;
+        set => combatData = value;
+    }
 }

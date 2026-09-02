@@ -20,9 +20,14 @@ public class PauseManager : MonoBehaviour
     private PlayerMovement cachedPlayerMovement;
 
     /// <summary>
-    /// Indique si le jeu est actuellement en pause par au moins une source.
+    /// Indique si le jeu est actuellement sous une pause globale ou un verrouillage de contrôle.
     /// </summary>
     public bool IsPaused => activePauseSources.Count > 0;
+
+    /// <summary>
+    /// Indique si le temps de jeu est complètement gelé (Menu de pause actif).
+    /// </summary>
+    public bool IsTimePaused => activePauseSources.Contains(PauseSource.Menu);
 
     private void Awake()
     {
@@ -68,33 +73,27 @@ public class PauseManager : MonoBehaviour
     /// </summary>
     private void ApplyPauseState()
     {
-        if (IsPaused)
+        bool isFullMenuPause = activePauseSources.Contains(PauseSource.Menu);
+        bool isPlayerLocked = activePauseSources.Count > 0;
+
+        // Le temps global du monde (TimeScale) est uniquement gelé lors de la pause Menu.
+        // Les dialogues laissent le monde animé (TimeScale = 1) et verrouillent seulement le joueur.
+        Time.timeScale = isFullMenuPause ? 0f : 1f;
+
+        // Verrouillage / déverrouillage des commandes du joueur et du groupe
+        PlayerLockManager.SetPlayerLocked(isPlayerLocked);
+
+        if (isFullMenuPause)
         {
-            Time.timeScale = 0f;
-            SetPlayerMovementEnabled(false);
-            Debug.Log($"Jeu mis en PAUSE. Sources actives : {string.Join(", ", activePauseSources)}");
+            Debug.Log($"[PauseManager] Jeu en PAUSE TOTALE (TimeScale = 0). Sources actives : {string.Join(", ", activePauseSources)}");
+        }
+        else if (isPlayerLocked)
+        {
+            Debug.Log($"[PauseManager] Joueur VERROUILLÉ (Monde actif, TimeScale = 1). Sources actives : {string.Join(", ", activePauseSources)}");
         }
         else
         {
-            Time.timeScale = 1f;
-            SetPlayerMovementEnabled(true);
-            Debug.Log("Jeu REPRIS. Plus aucune source de pause active.");
-        }
-    }
-
-    /// <summary>
-    /// Active ou désactive le script de déplacement du joueur.
-    /// </summary>
-    private void SetPlayerMovementEnabled(bool enabled)
-    {
-        if (cachedPlayerMovement == null)
-        {
-            cachedPlayerMovement = FindFirstObjectByType<PlayerMovement>();
-        }
-
-        if (cachedPlayerMovement != null)
-        {
-            cachedPlayerMovement.enabled = enabled;
+            Debug.Log("[PauseManager] Jeu REPRIS et Joueur DÉVERROUILLÉ.");
         }
     }
 }

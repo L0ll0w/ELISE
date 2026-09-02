@@ -102,9 +102,14 @@ public class DialogueManager : MonoBehaviour
     private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
         Canvas canvas = GetComponentInParent<Canvas>();
-        if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
+        if (canvas != null)
         {
-            canvas.worldCamera = Camera.main;
+            canvas.sortingOrder = 9999;
+            if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
+            {
+                canvas.worldCamera = Camera.main;
+                canvas.planeDistance = 0.5f;
+            }
         }
     }
 

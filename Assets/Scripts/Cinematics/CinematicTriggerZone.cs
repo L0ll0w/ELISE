@@ -99,16 +99,28 @@ public class CinematicTriggerZone : MonoBehaviour
         }
     }
 
+    protected virtual void EnsureReferences()
+    {
+        if (virtualCamera == null)
+        {
+            virtualCamera = FindFirstObjectByType<CinemachineCamera>();
+        }
+        if (virtualCamera != null && cameraHelper == null)
+        {
+            cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
+        }
+        if (playerMovement == null)
+        {
+            playerMovement = FindFirstObjectByType<PlayerMovement>();
+        }
+    }
+
     protected virtual IEnumerator ExecuteCinematicRoutine()
     {
         Debug.Log($"[CinematicTriggerZone] Déclenchement de la cinématique sur '{gameObject.name}'");
 
-        // 1. Récupération des références caméra
-        virtualCamera = FindFirstObjectByType<CinemachineCamera>();
-        if (virtualCamera != null)
-        {
-            cameraHelper = virtualCamera.GetComponent<CinemachineHelper>();
-        }
+        // 1. Récupération des références caméra et joueur
+        EnsureReferences();
 
         if (virtualCamera == null)
         {
@@ -116,17 +128,14 @@ public class CinematicTriggerZone : MonoBehaviour
             yield break;
         }
 
-        // 2. Geler le joueur et désactiver le CinemachineHelper
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = false;
-        }
-
         if (cameraHelper != null)
         {
             cameraHelper.SaveOriginalSettings();
             cameraHelper.enabled = false;
         }
+
+        // 2. Geler le joueur
+        LockPlayer();
 
         // Attendre avant de commencer le déplacement de la caméra (le joueur est gelé pendant ce temps)
         if (delayBeforeCameraMove > 0f)
@@ -151,20 +160,7 @@ public class CinematicTriggerZone : MonoBehaviour
         // 5. Déclenchement du dialogue
         if (dialogueData != null && DialogueManager.Instance != null)
         {
-            bool dialogueFinished = false;
-            
-            DialogueManager.Instance.StartDialogue(dialogueData, () =>
-            {
-                dialogueFinished = true;
-                // Forcer le joueur à rester figé après la fermeture de la fenêtre de dialogue
-                if (playerMovement != null)
-                {
-                    playerMovement.enabled = false;
-                }
-            });
-
-            // Attendre que le joueur ait fini de lire et fermé la boîte de dialogue
-            yield return new WaitUntil(() => dialogueFinished);
+            yield return StartCoroutine(RunDialogue(dialogueData));
         }
 
         // 6. Temporisation après le dialogue
@@ -177,12 +173,43 @@ public class CinematicTriggerZone : MonoBehaviour
         yield return StartCoroutine(TransitionCameraBack());
 
         // 8. Réactiver le joueur
-        if (playerMovement != null)
-        {
-            playerMovement.enabled = true;
-        }
+        UnlockPlayer();
 
         Debug.Log($"[CinematicTriggerZone] Fin de la cinématique sur '{gameObject.name}'");
+    }
+
+    protected void LockPlayer()
+    {
+        PlayerLockManager.SetPlayerLocked(true);
+    }
+
+    protected void UnlockPlayer()
+    {
+        PlayerLockManager.SetPlayerLocked(false);
+        if (playerMovement == null) playerMovement = FindFirstObjectByType<PlayerMovement>();
+        if (playerMovement != null)
+        {
+            Animator anim = playerMovement.GetComponent<Animator>();
+            if (anim == null) anim = playerMovement.GetComponentInChildren<Animator>();
+            if (anim != null)
+            {
+                anim.Play("idle");
+            }
+        }
+    }
+
+    protected IEnumerator RunDialogue(DialogueData data)
+    {
+        if (data == null || DialogueManager.Instance == null) yield break;
+
+        bool dialogueFinished = false;
+        DialogueManager.Instance.StartDialogue(data, () =>
+        {
+            dialogueFinished = true;
+            if (playerMovement != null) playerMovement.enabled = false;
+        });
+
+        yield return new WaitUntil(() => dialogueFinished);
     }
 
     protected IEnumerator TransitionCameraToTarget(Transform target)

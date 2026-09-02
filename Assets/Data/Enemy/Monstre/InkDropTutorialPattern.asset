@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 011dba33f5c194144853fc38a3cdd3e5, type: 3}
   m_Name: InkDropTutorialPattern
   m_EditorClassIdentifier: Assembly-CSharp::InkDropTutorialPattern
-  attackInterval: 4
+  attackInterval: 2
   warningDuration: 2
   targetPlayerDirectly: 1
