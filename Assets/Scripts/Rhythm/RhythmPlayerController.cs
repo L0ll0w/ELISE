@@ -241,6 +241,7 @@ public class RhythmPlayerController : MonoBehaviour
         }
 
         if (!isInputEnabled) return;
+        if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive) return;
 
         HandleGridInputs();
     }

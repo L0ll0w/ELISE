@@ -322,16 +322,16 @@ public class CombatManager : MonoBehaviour
 
     private Vector3 FindSafeCombatCenter(Vector3 initialCenter)
     {
-        // Si aucun obstacle n'est détecté, on garde la position
-        if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers))
+        // Si la position initiale est libre d'obstacles ET repose entièrement sur le sol ferme
+        if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers) && IsGroundValidForArena(initialCenter, arenaRadius))
         {
             return initialCenter;
         }
 
-        // Recherche en cercles concentriques extérieurs
-        int steps = 8;
+        // Recherche en cercles concentriques extérieurs d'une zone dégagée et hors du vide
+        int steps = 12;
         float stepDistance = 1.5f;
-        int maxRings = 5;
+        int maxRings = 6;
 
         for (int ring = 1; ring <= maxRings; ring++)
         {
@@ -342,16 +342,46 @@ public class CombatManager : MonoBehaviour
                 Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
                 Vector3 candidate = initialCenter + offset;
 
-                if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers))
+                if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers) && IsGroundValidForArena(candidate, arenaRadius))
                 {
-                    Debug.Log($"[CombatManager] Zone de combat libre trouvée à {candidate} après {ring} cercles de recherche.");
+                    Debug.Log($"[CombatManager] Zone de combat libre et sécurisée trouvée à {candidate} après {ring} cercles de recherche.");
                     return candidate;
                 }
             }
         }
 
-        Debug.LogWarning("[CombatManager] Impossible de trouver une zone de combat 100% libre. Utilisation de la position initiale.");
+        Debug.LogWarning("[CombatManager] Impossible de trouver une zone de combat 100% libre et hors du vide. Utilisation de la position initiale.");
         return initialCenter;
+    }
+
+    /// <summary>
+    /// Vérifie que le centre et la circonférence de l'arène reposent sur du sol solide (pas de falaise/vide).
+    /// </summary>
+    private bool IsGroundValidForArena(Vector3 center, float checkRadius)
+    {
+        LayerMask groundLayers = ~0 & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
+
+        // 1. Vérifier le centre
+        Vector3 centerRayOrigin = center + Vector3.up * 5f;
+        if (!Physics.Raycast(centerRayOrigin, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
+        {
+            return false;
+        }
+
+        // 2. Vérifier 8 points sur le périmètre de l'arène
+        int samplePoints = 8;
+        float sampleRadius = checkRadius * 0.8f;
+        for (int i = 0; i < samplePoints; i++)
+        {
+            float angle = i * (2f * Mathf.PI / samplePoints);
+            Vector3 samplePos = center + new Vector3(Mathf.Cos(angle) * sampleRadius, 5f, Mathf.Sin(angle) * sampleRadius);
+            if (!Physics.Raycast(samplePos, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
+            {
+                return false; // Un point de l'arène tombe dans le vide !
+            }
+        }
+
+        return true;
     }
 
     private Vector3 SnapToGround(Vector3 position)

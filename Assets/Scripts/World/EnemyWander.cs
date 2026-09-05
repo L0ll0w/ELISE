@@ -40,6 +40,19 @@ public class EnemyWander : MonoBehaviour
     [Tooltip("Distance de détection d'obstacle devant l'ennemi pendant sa marche. Si un obstacle est détecté à cette distance, il s'arrête.")]
     [SerializeField] private float obstacleDetectionDistance = 0.8f;
 
+    [Header("Détection du Vide (Bords de Falaise)")]
+    [Tooltip("Si vrai, l'ennemi évite de s'approcher du vide ou de tomber des falaises.")]
+    [SerializeField] private bool preventFallingInVoid = true;
+
+    [Tooltip("Masque de collision définissant les surfaces de sol praticables.")]
+    [SerializeField] private LayerMask groundMask = ~0;
+
+    [Tooltip("Distance maximale vers le bas pour détecter le sol (au-delà, c'est du vide).")]
+    [SerializeField] private float groundCheckDistance = 3f;
+
+    [Tooltip("Distance devant l'ennemi testée pour la présence de sol pendant la marche.")]
+    [SerializeField] private float voidCheckAheadDistance = 0.8f;
+
     [Header("Paramètres d'Animation")]
     [Tooltip("Nom du paramètre booléen dans l'Animator pour indiquer si le personnage bouge.")]
     [SerializeField] private string isMovingParameterName = "IsMoving";
@@ -50,6 +63,9 @@ public class EnemyWander : MonoBehaviour
     private Vector3 targetPosition;
     private bool isWaiting = true;
     private float waitTimer;
+    private bool isPausedForCombat = false;
+
+    public bool IsPausedForCombat => isPausedForCombat;
 
     private SpriteRenderer spriteRenderer;
     private Animator animator;
@@ -86,8 +102,36 @@ public class EnemyWander : MonoBehaviour
         StartWaiting(Random.Range(0f, minWaitTime));
     }
 
+    /// <summary>
+    /// Met en pause ou réactive le comportement de balade de l'ennemi.
+    /// </summary>
+    public void SetCombatState(bool inCombat)
+    {
+        isPausedForCombat = inCombat;
+        if (inCombat)
+        {
+            isWaiting = true;
+            UpdateAnimation(Vector3.zero, 0f);
+        }
+        else
+        {
+            lastPosition = transform.position;
+            StartWaiting(Random.Range(minWaitTime, maxWaitTime));
+        }
+    }
+
+    public void PauseWander() => SetCombatState(true);
+    public void ResumeWander() => SetCombatState(false);
+
     private void Update()
     {
+        // Si le combat est actif ou la patrouille mise en pause
+        if (isPausedForCombat || IsGlobalCombatActive())
+        {
+            UpdateAnimation(Vector3.zero, 0f);
+            return;
+        }
+
         if (isWaiting)
         {
             waitTimer -= Time.deltaTime;
@@ -104,8 +148,14 @@ public class EnemyWander : MonoBehaviour
         MoveTowardsTarget();
     }
 
+    private bool IsGlobalCombatActive()
+    {
+        return (CombatManager.Instance != null && CombatManager.Instance.IsCombatActive) ||
+               (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive);
+    }
+
     /// <summary>
-    /// Gère le déplacement vers la cible actuelle, en gérant la physique et l'évitement d'obstacles.
+    /// Gère le déplacement vers la cible actuelle, en gérant la physique, l'évitement d'obstacles et le vide.
     /// </summary>
     private void MoveTowardsTarget()
     {
@@ -125,15 +175,25 @@ public class EnemyWander : MonoBehaviour
 
         Vector3 moveDirection = movement.normalized;
 
-        // Évitement de collision proactif durant le déplacement :
-        // On projette une sphère en avant pour voir si un obstacle barre la route.
-        // On décale le rayon vers le haut pour ne pas toucher le sol.
+        // Évitement de collision proactif durant le déplacement
         Vector3 castOrigin = currentPos + Vector3.up * obstacleCheckRadius;
         if (Physics.SphereCast(castOrigin, obstacleCheckRadius, moveDirection, out RaycastHit hit, obstacleDetectionDistance, obstacleMask))
         {
-            // Obstacle détecté ! On s'arrête immédiatement et on choisira une autre destination
+            // Obstacle détecté ! On s'arrête immédiatement
             StartWaiting();
             return;
+        }
+
+        // Évitement du vide proactif devant l'ennemi
+        if (preventFallingInVoid)
+        {
+            Vector3 aheadPos = currentPos + moveDirection * voidCheckAheadDistance + Vector3.up * 0.5f;
+            if (!HasGroundUnder(aheadPos, groundCheckDistance + 0.5f))
+            {
+                // Vide détecté devant ! On s'arrête immédiatement
+                StartWaiting();
+                return;
+            }
         }
 
         // Calcul du déplacement pour cette frame
@@ -234,6 +294,12 @@ public class EnemyWander : MonoBehaviour
                 }
             }
 
+            // 3. Vérifie que la position cible repose sur du sol ferme (pas au-dessus du vide)
+            if (preventFallingInVoid && !HasGroundUnder(candidatePos + Vector3.up * 1f, groundCheckDistance + 1f))
+            {
+                continue; // Position candidate dans le vide, on réessaie
+            }
+
             // Le point est valide
             chosenPos = candidatePos;
             foundTarget = true;
@@ -248,7 +314,15 @@ public class EnemyWander : MonoBehaviour
             if (directionToOrigin.magnitude > 0.5f)
             {
                 float fallbackDist = Random.Range(minWanderDistance, Mathf.Min(maxWanderDistance, directionToOrigin.magnitude));
-                chosenPos = transform.position + directionToOrigin.normalized * fallbackDist;
+                Vector3 candidateFallback = transform.position + directionToOrigin.normalized * fallbackDist;
+                if (!preventFallingInVoid || HasGroundUnder(candidateFallback + Vector3.up * 1f, groundCheckDistance + 1f))
+                {
+                    chosenPos = candidateFallback;
+                }
+                else
+                {
+                    chosenPos = transform.position;
+                }
             }
             else
             {
@@ -261,6 +335,26 @@ public class EnemyWander : MonoBehaviour
         targetPosition = chosenPos;
         isWaiting = false;
         lastPosition = transform.position;
+    }
+
+    /// <summary>
+    /// Vérifie si du sol valide est présent sous le point spécifié.
+    /// </summary>
+    private bool HasGroundUnder(Vector3 origin, float maxDistance)
+    {
+        LayerMask mask = groundMask & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
+        Ray ray = new Ray(origin, Vector3.down);
+        RaycastHit[] hits = Physics.RaycastAll(ray, maxDistance, mask);
+
+        foreach (var hit in hits)
+        {
+            if (hit.collider == null || hit.collider.isTrigger) continue;
+            if (hit.collider.transform == transform || hit.collider.transform.IsChildOf(transform)) continue;
+
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -318,7 +412,7 @@ public class EnemyWander : MonoBehaviour
     }
 
     /// <summary>
-    /// Permet de visualiser la zone de balade de l'ennemi dans l'éditeur Unity.
+    /// Permet de visualiser la zone de balade de l'ennemi et les tests de vide dans l'éditeur Unity.
     /// </summary>
     private void OnDrawGizmosSelected()
     {
@@ -341,6 +435,13 @@ public class EnemyWander : MonoBehaviour
             Gizmos.color = Color.yellow;
             Gizmos.DrawLine(transform.position, targetPosition);
             Gizmos.DrawWireSphere(targetPosition, obstacleCheckRadius);
+        }
+
+        // Rayon de contrôle du vide sous le personnage
+        if (preventFallingInVoid)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(transform.position + Vector3.up * 0.5f, Vector3.down * groundCheckDistance);
         }
     }
 

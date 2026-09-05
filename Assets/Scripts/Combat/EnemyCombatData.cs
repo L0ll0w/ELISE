@@ -40,6 +40,29 @@ public class EnemyCombatData : ScriptableObject
     [TextArea(2, 5)]
     [SerializeField] private List<string> talkDialogues = new List<string>();
 
+    [Header("Tutoriel Jardinier (Premier Combat)")]
+    [Tooltip("Cocher si ce combat est le premier combat tutoriel avec interventions du Jardinier.")]
+    [SerializeField] private bool isGardenerTutorial = false;
+
+    [Tooltip("Dialogue du Jardinier au tout début du combat.")]
+    [SerializeField] private DialogueData startTutorialDialogue;
+
+    [Tooltip("Dialogue du Jardinier après la première esquive.")]
+    [SerializeField] private DialogueData afterFirstDodgeDialogue;
+
+    [Tooltip("Dialogue du Jardinier après la deuxième esquive.")]
+    [SerializeField] private DialogueData afterSecondDodgeDialogue;
+
+    [Tooltip("Dialogue du Jardinier après avoir battu le boss.")]
+    [SerializeField] private DialogueData victoryTutorialDialogue;
+
+    [Header("Verdict de Fin de Combat")]
+    [Tooltip("Dialogue joué si le joueur choisit de CONDAMNER l'ennemi.")]
+    [SerializeField] private DialogueData condemnedDialogue;
+
+    [Tooltip("Dialogue joué si le joueur choisit de GRACIER l'ennemi.")]
+    [SerializeField] private DialogueData sparedDialogue;
+
     // Propriétés d'accès en lecture seule
     public string EnemyName => enemyName;
     public int MaxHP => maxHP;
@@ -51,4 +74,11 @@ public class EnemyCombatData : ScriptableObject
     public GameObject ImpactVisualPrefab => impactVisualPrefab;
     public int DodgePhaseDuration => dodgePhaseDuration;
     public List<string> TalkDialogues => talkDialogues;
+    public bool IsGardenerTutorial { get => isGardenerTutorial; set => isGardenerTutorial = value; }
+    public DialogueData StartTutorialDialogue { get => startTutorialDialogue; set => startTutorialDialogue = value; }
+    public DialogueData AfterFirstDodgeDialogue { get => afterFirstDodgeDialogue; set => afterFirstDodgeDialogue = value; }
+    public DialogueData AfterSecondDodgeDialogue { get => afterSecondDodgeDialogue; set => afterSecondDodgeDialogue = value; }
+    public DialogueData VictoryTutorialDialogue { get => victoryTutorialDialogue; set => victoryTutorialDialogue = value; }
+    public DialogueData CondemnedDialogue { get => condemnedDialogue; set => condemnedDialogue = value; }
+    public DialogueData SparedDialogue { get => sparedDialogue; set => sparedDialogue = value; }
 }

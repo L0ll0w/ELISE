@@ -57,6 +57,22 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
     [Tooltip("Données de combat rythmique spécifiques (EnemyCombatData) pour le monstre apparu. Si renseigné, sera assigné au monstre.")]
     [SerializeField] private EnemyCombatData monsterCombatData;
 
+    [Header("Dialogues Tutoriel Jardinier (Optionnel)")]
+    [Tooltip("Si vrai, le combat de cette cinématique sera configuré comme le combat tutoriel du Jardinier.")]
+    [SerializeField] private bool isGardenerTutorialCombat = true;
+
+    [Tooltip("Dialogue du Jardinier au tout début du combat.")]
+    [SerializeField] private DialogueData startTutorialDialogue;
+
+    [Tooltip("Dialogue du Jardinier après la première esquive.")]
+    [SerializeField] private DialogueData afterFirstDodgeDialogue;
+
+    [Tooltip("Dialogue du Jardinier après la deuxième esquive.")]
+    [SerializeField] private DialogueData afterSecondDodgeDialogue;
+
+    [Tooltip("Dialogue du Jardinier après avoir battu le boss.")]
+    [SerializeField] private DialogueData victoryTutorialDialogue;
+
     [Tooltip("Si vrai, ramène la caméra sur le joueur et réactive ses contrôles à la fin de la cinématique. Si faux, laisse le joueur gelé et la caméra sur place pour le combat.")]
     [SerializeField] private bool endCinematicNormally = false;
 
@@ -267,6 +283,15 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             // Associer les données de combat rythmique si configurées dans l'inspecteur
             if (monsterCombatData != null)
             {
+                if (isGardenerTutorialCombat)
+                {
+                    monsterCombatData.IsGardenerTutorial = true;
+                    if (startTutorialDialogue != null) monsterCombatData.StartTutorialDialogue = startTutorialDialogue;
+                    if (afterFirstDodgeDialogue != null) monsterCombatData.AfterFirstDodgeDialogue = afterFirstDodgeDialogue;
+                    if (afterSecondDodgeDialogue != null) monsterCombatData.AfterSecondDodgeDialogue = afterSecondDodgeDialogue;
+                    if (victoryTutorialDialogue != null) monsterCombatData.VictoryTutorialDialogue = victoryTutorialDialogue;
+                }
+
                 EnemyCombatDataHolder dataHolder = enemyToFight.GetComponent<EnemyCombatDataHolder>();
                 if (dataHolder == null) dataHolder = enemyToFight.AddComponent<EnemyCombatDataHolder>();
                 dataHolder.CombatData = monsterCombatData;

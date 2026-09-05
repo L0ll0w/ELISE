@@ -59,6 +59,15 @@ public class EnemyTouchTrigger : MonoBehaviour
         if (CombatManager.Instance != null)
         {
             hasTriggered = true;
+
+            // Mettre en pause le script de déplacement wandering immédiatement
+            EnemyWander wander = GetComponent<EnemyWander>();
+            if (wander == null) wander = GetComponentInParent<EnemyWander>();
+            if (wander != null)
+            {
+                wander.PauseWander();
+            }
+
             Debug.Log($"[EnemyTouchTrigger] Joueur détecté ! Lancement du combat avec {gameObject.name}...");
             CombatManager.Instance.StartCombat(gameObject);
         }
@@ -74,5 +83,12 @@ public class EnemyTouchTrigger : MonoBehaviour
     public void ResetTrigger()
     {
         hasTriggered = false;
+
+        EnemyWander wander = GetComponent<EnemyWander>();
+        if (wander == null) wander = GetComponentInParent<EnemyWander>();
+        if (wander != null)
+        {
+            wander.ResumeWander();
+        }
     }
 }

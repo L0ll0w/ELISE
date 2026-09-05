@@ -70,6 +70,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        // Si un dialogue est actif, ignorer tous les mouvements et sauts
+        if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
+        {
+            shouldJump = false;
+            jumpBufferCounter = 0f;
+            coyoteTimeCounter = 0f;
+            moveDirection = Vector3.zero;
+            if (animator != null) animator.SetBool("isWalking", false);
+            return;
+        }
+
         float horizontal = 0f;
         float vertical = 0f;
 

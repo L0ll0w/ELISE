@@ -229,6 +229,12 @@ public class RhythmCombatManager : MonoBehaviour
     private Quaternion originalMainCamRot = Quaternion.identity;
     private float originalMainCamFOV = 40f;
     private int dodgeBeatsCount = 0;
+    private bool hasPlayedFirstDodgeTutorial = false;
+    private bool hasPlayedSecondDodgeTutorial = false;
+    private bool hasPlayedVictoryTutorial = false;
+    private int tutorialPlayerTurnCount = 0;
+    private bool isGardenerInterventionActive = false;
+    private int currentTalkDialogueStep = 0;
 
     // Références pour la sauvegarde et restauration de la musique de fond d'origine
     private AudioSource previousAudioSource;
@@ -447,6 +453,11 @@ public class RhythmCombatManager : MonoBehaviour
         currentState = CombatState.Transitioning;
         currentPhase = CombatPhase.DodgePhase;
         dodgeBeatsCount = 0;
+        hasPlayedFirstDodgeTutorial = false;
+        hasPlayedSecondDodgeTutorial = false;
+        hasPlayedVictoryTutorial = false;
+        tutorialPlayerTurnCount = 0;
+        currentTalkDialogueStep = 0;
         originalCameraDistance = cameraDistance;
         originalCameraHeight = cameraHeight;
 
@@ -655,7 +666,20 @@ public class RhythmCombatManager : MonoBehaviour
         // 8. Fondu de retour (Fade In)
         yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f));
 
+        // 9. Si c'est le combat tutoriel du Jardinier, lancer le dialogue du tout début
+        if (activeCombatData != null && activeCombatData.IsGardenerTutorial)
+        {
+            DialogueData startDiag = GetTutorialDialogueOrDefault(
+                activeCombatData.StartTutorialDialogue,
+                "Jardinier",
+                "Attention ! Le combat commence. Restez concentré et esquivez les attaques en rythme !"
+            );
+            yield return StartCoroutine(MoveGardenerToPlayerAndRunDialogue(startDiag));
+        }
+
+        isGardenerInterventionActive = false;
         currentState = CombatState.Active;
+        if (playerController != null) playerController.SetInputEnabled(true);
         logText.text = "ESQUIVEZ EN RYTHME ! Évitez les attaques de l'ennemi !";
     }
 
@@ -667,7 +691,7 @@ public class RhythmCombatManager : MonoBehaviour
     {
         if (currentState != CombatState.Active) return;
 
-        if (currentPhase != CombatPhase.DodgePhase) return;
+        if (currentPhase != CombatPhase.DodgePhase || isGardenerInterventionActive) return;
 
         // A. Évaluer et appliquer les dégâts des alertes qui devaient frapper à ce beat
         ApplyTelegraphDamage(beatIndex);
@@ -677,6 +701,32 @@ public class RhythmCombatManager : MonoBehaviour
         int duration = activeCombatData != null ? activeCombatData.DodgePhaseDuration : 16;
         if (dodgeBeatsCount >= duration)
         {
+            if (activeCombatData != null && activeCombatData.IsGardenerTutorial)
+            {
+                if (!hasPlayedFirstDodgeTutorial)
+                {
+                    hasPlayedFirstDodgeTutorial = true;
+                    DialogueData d = GetTutorialDialogueOrDefault(
+                        activeCombatData.AfterFirstDodgeDialogue,
+                        "Jardinier",
+                        "Bien esquivé ! Pour l'instant, utilisez la commande PARLER pour essayer de communiquer."
+                    );
+                    StartCoroutine(RunDodgeTutorialAndTransition(d));
+                    return;
+                }
+                else if (!hasPlayedSecondDodgeTutorial)
+                {
+                    hasPlayedSecondDodgeTutorial = true;
+                    DialogueData d = GetTutorialDialogueOrDefault(
+                        activeCombatData.AfterSecondDodgeDialogue,
+                        "Jardinier",
+                        "Parfait ! Il est temps de riposter ! Utilisez la commande ATTAQUER pour lancer une frappe."
+                    );
+                    StartCoroutine(RunDodgeTutorialAndTransition(d));
+                    return;
+                }
+            }
+
             TransitionToPlayerTurn();
             return;
         }
@@ -1048,34 +1098,515 @@ public class RhythmCombatManager : MonoBehaviour
     {
         currentState = CombatState.Victory;
 
-        // Jouer l'animation facedance sur le joueur lors de la victoire (0 HP du monstre)
+        // Jouer l'animation facedance sur le joueur dès le début du Jugement
         if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
         {
             PlayPlayerAnimation(faceDanceAnimationStateName);
         }
 
-        // 1. Focus caméra serré sur le monstre qui meurt
+        // Dialogue tutoriel de victoire du Jardinier si actif
+        if (activeCombatData != null && activeCombatData.IsGardenerTutorial && !hasPlayedVictoryTutorial)
+        {
+            hasPlayedVictoryTutorial = true;
+            DialogueData vicDiag = GetTutorialDialogueOrDefault(
+                activeCombatData.VictoryTutorialDialogue,
+                "Jardinier",
+                "Beau travail ! Vous avez vaincu le monstre."
+            );
+            yield return StartCoroutine(MoveGardenerToPlayerAndRunDialogue(vicDiag));
+        }
+
+        // Focus caméra serré sur l'ennemi qui attend son jugement
         if (activeEnemy != null)
         {
             cameraDistance = 3.2f;
             cameraHeight = 1.8f;
         }
 
-        logText.text = "VICTOIRE ! L'ennemi se désintègre !";
+        if (logText != null) logText.text = "L'ennemi est à votre merci... Quel est votre jugement ?";
 
-        // 2. Animation de désintégration complète du monstre
-        if (activeEnemy != null)
+        // 1. Fondu d'assombrissement du décor et apparition du halo lumineux sur l'ennemi
+        Vector3 haloPos = activeEnemy != null ? activeEnemy.transform.position : transform.position;
+        yield return StartCoroutine(DimSceneLightingAndSpawnHaloRoutine(haloPos));
+
+        // 2. Affichage et choix dans le Menu de Verdict (Balance de la Justice)
+        int verdictChoice = -1; // 0 = GRACIER (Gauche), 1 = CONDAMNER (Droite)
+        yield return StartCoroutine(RunVerdictChoiceRoutine(res => verdictChoice = res));
+
+        // 3. Traitement selon la sentence choisie
+        if (verdictChoice == 1) // CONDAMNER
         {
-            yield return StartCoroutine(AnimateEnemyDisintegration(activeEnemy));
+            if (logText != null) logText.text = "Vous choisissez de CONDAMNER l'ennemi !";
+
+            DialogueData condDiag = activeCombatData != null ? activeCombatData.CondemnedDialogue : null;
+            if (condDiag != null)
+            {
+                yield return StartCoroutine(RunDirectDialogue(condDiag));
+            }
+
+            if (activeEnemy != null)
+            {
+                yield return StartCoroutine(AnimateEnemyDisintegration(activeEnemy));
+            }
+            else
+            {
+                yield return new WaitForSeconds(1.0f);
+            }
+        }
+        else // GRACIER (0)
+        {
+            if (logText != null) logText.text = "Vous choisissez de GRACIER l'ennemi !";
+
+            DialogueData sparedDiag = activeCombatData != null ? activeCombatData.SparedDialogue : null;
+            if (sparedDiag != null)
+            {
+                yield return StartCoroutine(RunDirectDialogue(sparedDiag));
+            }
+
+            if (activeEnemy != null)
+            {
+                yield return StartCoroutine(AnimateEnemyAscension(activeEnemy));
+            }
+            else
+            {
+                yield return new WaitForSeconds(1.0f);
+            }
+        }
+
+        // 4. Restauration de l'éclairage de la scène
+        yield return StartCoroutine(RestoreSceneLightingRoutine());
+
+        // 5. Fin du combat avec victoire
+        yield return StartCoroutine(EndCombatRoutine(true));
+    }
+
+    private IEnumerator RunDirectDialogue(DialogueData dialogueData)
+    {
+        if (dialogueData == null) yield break;
+
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
+
+        bool dialogueFinished = false;
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.StartDialogue(dialogueData, () => dialogueFinished = true);
+            while (!dialogueFinished) yield return null;
         }
         else
         {
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(1.5f);
+        }
+    }
+
+    #region Système de Verdict (Balance de la Justice : Condamner vs Gracier)
+
+    private GameObject verdictHaloObj;
+    private Light verdictSpotlight;
+    private Color savedAmbientLight;
+    private List<System.Tuple<Light, float>> savedLightIntensities = new List<System.Tuple<Light, float>>();
+
+    private IEnumerator DimSceneLightingAndSpawnHaloRoutine(Vector3 targetPos)
+    {
+        // 1. Sauvegarder la couleur de lumière ambiante originale
+        savedAmbientLight = RenderSettings.ambientLight;
+        savedLightIntensities.Clear();
+
+        // 2. Récupérer toutes les lumières de la scène et sauvegarder leurs intensités
+        Light[] allLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
+        foreach (Light l in allLights)
+        {
+            if (l != null && l.enabled)
+            {
+                savedLightIntensities.Add(new System.Tuple<Light, float>(l, l.intensity));
+            }
         }
 
-        // 3. Fin du combat avec victoire
-        yield return StartCoroutine(EndCombatRoutine(true));
+        // 3. Fondu d'assombrissement (0.8s)
+        float elapsed = 0f;
+        float fadeDur = 0.8f;
+        Color targetAmbient = new Color(0.04f, 0.04f, 0.08f, 1f);
+
+        while (elapsed < fadeDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeDur);
+
+            RenderSettings.ambientLight = Color.Lerp(savedAmbientLight, targetAmbient, t);
+
+            foreach (var item in savedLightIntensities)
+            {
+                if (item.Item1 != null)
+                {
+                    item.Item1.intensity = Mathf.Lerp(item.Item2, item.Item2 * 0.15f, t);
+                }
+            }
+            yield return null;
+        }
+
+        // 4. Instancier le Halo de lumière céleste au-dessus de l'ennemi
+        if (verdictHaloObj != null) Destroy(verdictHaloObj);
+
+        verdictHaloObj = new GameObject("Verdict_HaloLightBeam");
+        verdictHaloObj.transform.position = targetPos;
+
+        // Spotlight 3D dirigé vers le sol
+        GameObject spotObj = new GameObject("Verdict_Spotlight");
+        spotObj.transform.SetParent(verdictHaloObj.transform, false);
+        spotObj.transform.position = targetPos + Vector3.up * 7f;
+        spotObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        verdictSpotlight = spotObj.AddComponent<Light>();
+        verdictSpotlight.type = LightType.Spot;
+        verdictSpotlight.range = 14f;
+        verdictSpotlight.spotAngle = 36f;
+        verdictSpotlight.intensity = 8f;
+        verdictSpotlight.color = new Color(1f, 0.95f, 0.75f, 1f);
+
+        // Faisceau visuel vertical (procédural)
+        GameObject beamObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        beamObj.name = "Verdict_BeamVisual";
+        beamObj.transform.SetParent(verdictHaloObj.transform, false);
+        beamObj.transform.position = targetPos + Vector3.up * 3.5f;
+        beamObj.transform.localScale = new Vector3(2.4f, 3.5f, 2.4f);
+
+        Collider c = beamObj.GetComponent<Collider>();
+        if (c != null) Destroy(c);
+
+        MeshRenderer mr = beamObj.GetComponent<MeshRenderer>();
+        if (mr != null)
+        {
+            mr.material = new Material(Shader.Find("Sprites/Default"));
+            mr.material.color = new Color(1f, 0.92f, 0.65f, 0.25f);
+        }
     }
+
+    private IEnumerator RestoreSceneLightingRoutine()
+    {
+        // Nettoyer le halo
+        if (verdictHaloObj != null)
+        {
+            Destroy(verdictHaloObj);
+            verdictHaloObj = null;
+        }
+
+        // Fondu de restauration de l'éclairage de la scène
+        float elapsed = 0f;
+        float fadeDur = 0.8f;
+        Color currentAmbient = RenderSettings.ambientLight;
+
+        while (elapsed < fadeDur)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeDur);
+
+            RenderSettings.ambientLight = Color.Lerp(currentAmbient, savedAmbientLight, t);
+
+            foreach (var item in savedLightIntensities)
+            {
+                if (item.Item1 != null)
+                {
+                    item.Item1.intensity = Mathf.Lerp(item.Item1.intensity, item.Item2, t);
+                }
+            }
+            yield return null;
+        }
+
+        RenderSettings.ambientLight = savedAmbientLight;
+        foreach (var item in savedLightIntensities)
+        {
+            if (item.Item1 != null)
+            {
+                item.Item1.intensity = item.Item2;
+            }
+        }
+    }
+
+    private IEnumerator RunVerdictChoiceRoutine(System.Action<int> callback)
+    {
+        // 1. Déterminer le parent UI Canvas
+        Transform parentTransform = (runtimeUIContainer != null) ? runtimeUIContainer.transform : (combatCanvas != null ? combatCanvas.transform : transform);
+
+        // 2. Créer le conteneur principal du Verdict
+        GameObject vPanel = new GameObject("VerdictPanel");
+        vPanel.transform.SetParent(parentTransform, false);
+
+        RectTransform vRect = vPanel.AddComponent<RectTransform>();
+        vRect.anchorMin = Vector2.zero;
+        vRect.anchorMax = Vector2.one;
+        vRect.sizeDelta = Vector2.zero;
+
+        // Titre de jugement
+        GameObject titleObj = new GameObject("VerdictTitle");
+        titleObj.transform.SetParent(vPanel.transform, false);
+        TextMeshProUGUI titleTxt = titleObj.AddComponent<TextMeshProUGUI>();
+        if (customCombatFont != null) titleTxt.font = customCombatFont;
+        titleTxt.text = "BALANCE DE LA JUSTICE\n<size=22>QUEL EST VOTRE JUGEMENT ?</size>";
+        titleTxt.fontSize = 32f;
+        titleTxt.fontStyle = FontStyles.Bold;
+        titleTxt.alignment = TextAlignmentOptions.Center;
+        titleTxt.color = new Color(1f, 0.95f, 0.8f, 1f);
+
+        RectTransform tRect = titleTxt.rectTransform;
+        tRect.anchorMin = new Vector2(0.2f, 0.76f);
+        tRect.anchorMax = new Vector2(0.8f, 0.94f);
+        tRect.sizeDelta = Vector2.zero;
+
+        // --- GRAPHISME DE LA BALANCE DE LA JUSTICE ---
+        GameObject balanceRoot = new GameObject("JusticeScale_Root");
+        balanceRoot.transform.SetParent(vPanel.transform, false);
+        RectTransform scaleRootRect = balanceRoot.AddComponent<RectTransform>();
+        scaleRootRect.anchorMin = new Vector2(0.42f, 0.35f);
+        scaleRootRect.anchorMax = new Vector2(0.58f, 0.72f);
+        scaleRootRect.sizeDelta = Vector2.zero;
+
+        // Base/Pied vertical de la balance
+        GameObject baseObj = new GameObject("Scale_Base");
+        baseObj.transform.SetParent(balanceRoot.transform, false);
+        Image baseImg = baseObj.AddComponent<Image>();
+        baseImg.sprite = uiFillSprite;
+        baseImg.color = new Color(0.18f, 0.16f, 0.14f, 0.95f);
+        RectTransform bRect = baseImg.rectTransform;
+        bRect.anchorMin = new Vector2(0.46f, 0.05f);
+        bRect.anchorMax = new Vector2(0.54f, 0.85f);
+        bRect.sizeDelta = Vector2.zero;
+
+        // Socle horizontal du bas
+        GameObject socleObj = new GameObject("Scale_Socle");
+        socleObj.transform.SetParent(balanceRoot.transform, false);
+        Image socleImg = socleObj.AddComponent<Image>();
+        socleImg.sprite = uiFillSprite;
+        socleImg.color = new Color(0.85f, 0.75f, 0.45f, 1f); // Or doré
+        RectTransform sRect = socleImg.rectTransform;
+        sRect.anchorMin = new Vector2(0.15f, 0.0f);
+        sRect.anchorMax = new Vector2(0.85f, 0.06f);
+        sRect.sizeDelta = Vector2.zero;
+
+        // Barre pivotante (Beam) de la balance
+        GameObject beamObj = new GameObject("Scale_Beam");
+        beamObj.transform.SetParent(balanceRoot.transform, false);
+        RectTransform beamRect = beamObj.AddComponent<RectTransform>();
+        beamRect.anchorMin = new Vector2(0.5f, 0.8f);
+        beamRect.anchorMax = new Vector2(0.5f, 0.8f);
+        beamRect.sizeDelta = new Vector2(260f, 14f);
+        beamRect.anchoredPosition = Vector2.zero;
+
+        Image beamImg = beamObj.AddComponent<Image>();
+        beamImg.sprite = uiFillSprite;
+        beamImg.color = new Color(0.9f, 0.8f, 0.45f, 1f); // Doré brillant
+
+        // Plateau Gauche (Gracier)
+        GameObject leftPan = new GameObject("Pan_Left");
+        leftPan.transform.SetParent(beamObj.transform, false);
+        RectTransform leftPanRect = leftPan.AddComponent<RectTransform>();
+        leftPanRect.anchoredPosition = new Vector2(-120f, -40f);
+        leftPanRect.sizeDelta = new Vector2(70f, 12f);
+        Image lpImg = leftPan.AddComponent<Image>();
+        lpImg.sprite = uiFillSprite;
+        lpImg.color = new Color(0.2f, 0.8f, 0.35f, 0.9f); // Vert clémence
+
+        // Filin Gauche
+        GameObject leftString = new GameObject("String_Left");
+        leftString.transform.SetParent(beamObj.transform, false);
+        RectTransform lsRect = leftString.AddComponent<RectTransform>();
+        lsRect.anchoredPosition = new Vector2(-120f, -20f);
+        lsRect.sizeDelta = new Vector2(3f, 40f);
+        Image lsImg = leftString.AddComponent<Image>();
+        lsImg.sprite = uiFillSprite;
+        lsImg.color = new Color(0.8f, 0.8f, 0.8f, 0.7f);
+
+        // Plateau Droit (Condamner)
+        GameObject rightPan = new GameObject("Pan_Right");
+        rightPan.transform.SetParent(beamObj.transform, false);
+        RectTransform rightPanRect = rightPan.AddComponent<RectTransform>();
+        rightPanRect.anchoredPosition = new Vector2(120f, -40f);
+        rightPanRect.sizeDelta = new Vector2(70f, 12f);
+        Image rpImg = rightPan.AddComponent<Image>();
+        rpImg.sprite = uiFillSprite;
+        rpImg.color = new Color(0.9f, 0.15f, 0.15f, 0.9f); // Rouge condamnation
+
+        // Filin Droit
+        GameObject rightString = new GameObject("String_Right");
+        rightString.transform.SetParent(beamObj.transform, false);
+        RectTransform rsRect = rightString.AddComponent<RectTransform>();
+        rsRect.anchoredPosition = new Vector2(120f, -20f);
+        rsRect.sizeDelta = new Vector2(3f, 40f);
+        Image rsImg = rightString.AddComponent<Image>();
+        rsImg.sprite = uiFillSprite;
+        rsImg.color = new Color(0.8f, 0.8f, 0.8f, 0.7f);
+
+        // --- BOUTONS GRACIER (GAUCHE) ET CONDAMNER (DROITE) ---
+        int selectedIndex = 0; // 0 = GRACIER (Gauche), 1 = CONDAMNER (Droite)
+        bool chosen = false;
+
+        Button gracierBtn = CreateRPGButton("GracierBtn", "GRACIER\n<size=14>(Grâce Céleste)</size>", vPanel.transform, 
+            new Vector2(0.12f, 0.35f), new Vector2(0.38f, 0.52f), 
+            () => { selectedIndex = 0; chosen = true; }, -3f, 0f);
+
+        Button condamnerBtn = CreateRPGButton("CondamnerBtn", "CONDAMNER\n<size=14>(Sentence Suprême)</size>", vPanel.transform, 
+            new Vector2(0.62f, 0.35f), new Vector2(0.88f, 0.52f), 
+            () => { selectedIndex = 1; chosen = true; }, 3f, 0f);
+
+        RepositionRPGButton(condamnerBtn, new Vector2(0.62f, 0.35f), new Vector2(0.88f, 0.52f));
+
+        if (EventSystem.current != null && gracierBtn != null)
+        {
+            EventSystem.current.SetSelectedGameObject(gracierBtn.gameObject);
+        }
+
+        // Boucle d'attente d'entrée joueur avec animation de la balance
+        float enterTime = Time.time;
+        while (!chosen)
+        {
+            // Entrées Clavier / Gamepad pour switcher entre Gauche et Droite
+            bool leftPressed = false;
+            bool rightPressed = false;
+            bool submitPressed = false;
+
+#if ENABLE_INPUT_SYSTEM
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame || kb.qKey.wasPressedThisFrame) leftPressed = true;
+                if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) rightPressed = true;
+                if (kb.enterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame) submitPressed = true;
+            }
+            var gp = Gamepad.current;
+            if (gp != null)
+            {
+                if (gp.dpad.left.wasPressedThisFrame || gp.leftStick.left.wasPressedThisFrame) leftPressed = true;
+                if (gp.dpad.right.wasPressedThisFrame || gp.leftStick.right.wasPressedThisFrame) rightPressed = true;
+                if (gp.buttonSouth.wasPressedThisFrame) submitPressed = true;
+            }
+#else
+            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.Q)) leftPressed = true;
+            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) rightPressed = true;
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.E)) submitPressed = true;
+#endif
+
+            if (leftPressed)
+            {
+                selectedIndex = 0;
+                if (EventSystem.current != null && gracierBtn != null) EventSystem.current.SetSelectedGameObject(gracierBtn.gameObject);
+            }
+            else if (rightPressed)
+            {
+                selectedIndex = 1;
+                if (EventSystem.current != null && condamnerBtn != null) EventSystem.current.SetSelectedGameObject(condamnerBtn.gameObject);
+            }
+
+            // Détection du survol de souris
+            if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+            {
+                if (EventSystem.current.currentSelectedGameObject == condamnerBtn.gameObject) selectedIndex = 1;
+                else if (EventSystem.current.currentSelectedGameObject == gracierBtn.gameObject) selectedIndex = 0;
+            }
+
+            if (submitPressed && Time.time - enterTime > 0.3f)
+            {
+                chosen = true;
+            }
+
+            // --- ANIMATION D'INCLINAISON DE LA BALANCE DE LA JUSTICE ---
+            // Gracier (Gauche) penche la balance vers la gauche (-18 degrés), Condamner (Droite) vers la droite (+18 degrés)
+            float targetBeamAngle = (selectedIndex == 0) ? -18f : 18f;
+
+            // Oscillations légères comme une vraie balance
+            targetBeamAngle += Mathf.Sin(Time.time * 3f) * 1.5f;
+
+            beamRect.localRotation = Quaternion.Slerp(beamRect.localRotation, Quaternion.Euler(0f, 0f, targetBeamAngle), Time.deltaTime * 7f);
+
+            // Conserver les plateaux de la balance toujours verticaux
+            leftPanRect.localRotation = Quaternion.Euler(0f, 0f, -beamRect.localRotation.eulerAngles.z);
+            rightPanRect.localRotation = Quaternion.Euler(0f, 0f, -beamRect.localRotation.eulerAngles.z);
+
+            yield return null;
+        }
+
+        // Nettoyer l'UI du Verdict
+        Destroy(vPanel);
+
+        callback?.Invoke(selectedIndex);
+    }
+
+    private IEnumerator AnimateEnemyAscension(GameObject enemyObj)
+    {
+        if (enemyObj == null) yield break;
+
+        // Déclencher animation d'idle ou lévitation si disponible
+        Animator enemyAnim = enemyObj.GetComponent<Animator>();
+        if (enemyAnim == null) enemyAnim = enemyObj.GetComponentInChildren<Animator>();
+        if (enemyAnim != null)
+        {
+            enemyAnim.Play("idle");
+        }
+
+        SpriteRenderer[] sprites = enemyObj.GetComponentsInChildren<SpriteRenderer>();
+        Renderer[] renderers = enemyObj.GetComponentsInChildren<Renderer>();
+
+        Vector3 startPos = enemyObj.transform.position;
+        Vector3 targetAscentPos = startPos + Vector3.up * 8f; // Monter de 8m dans le faisceau lumineux
+
+        // Créer un nuage d'étincelles célestes qui s'élèvent
+        GameObject sparkCloud = new GameObject("Ascension_SparkCloud");
+        sparkCloud.transform.position = startPos + Vector3.up * 0.5f;
+
+        for (int i = 0; i < 30; i++)
+        {
+            GameObject spark = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            spark.transform.SetParent(sparkCloud.transform, false);
+            spark.transform.localScale = Vector3.one * Random.Range(0.08f, 0.22f);
+
+            Collider c = spark.GetComponent<Collider>();
+            if (c != null) Destroy(c);
+
+            MeshRenderer mr = spark.GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                mr.material = new Material(Shader.Find("Sprites/Default"));
+                mr.material.color = new Color(1f, 0.95f, 0.7f, 0.9f); // Doré lumineux
+            }
+
+            spark.transform.localPosition = Random.insideUnitSphere * 0.8f;
+            StartCoroutine(AnimateAshParticle(spark.transform, mr));
+        }
+
+        float elapsed = 0f;
+        float duration = 2.2f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            // Mouvement vertical vers le haut à travers le halo
+            float easeUp = Mathf.Pow(t, 2f); // Accélération vers le haut
+            enemyObj.transform.position = Vector3.Lerp(startPos, targetAscentPos, easeUp);
+
+            // Teinte dorée & Fondu de transparence céleste (Alpha 1.0 -> 0.0)
+            float alpha = Mathf.Lerp(1.0f, 0.0f, t);
+            Color goldFadeColor = new Color(1f, 0.96f, 0.8f, alpha);
+
+            foreach (SpriteRenderer sr in sprites)
+            {
+                if (sr != null) sr.color = goldFadeColor;
+            }
+            foreach (Renderer r in renderers)
+            {
+                if (r != null && r.material.HasProperty("_Color"))
+                {
+                    r.material.color = goldFadeColor;
+                }
+            }
+
+            yield return null;
+        }
+
+        Destroy(sparkCloud);
+        Destroy(enemyObj);
+    }
+
+    #endregion
 
     private IEnumerator DefeatRoutine()
     {
@@ -1085,6 +1616,209 @@ public class RhythmCombatManager : MonoBehaviour
         yield return new WaitForSeconds(2.5f);
         yield return StartCoroutine(EndCombatRoutine(false));
     }
+
+    #region Tutoriel Jardinier & Déplacements
+
+    private DialogueData GetTutorialDialogueOrDefault(DialogueData data, string defaultSpeaker, string defaultText)
+    {
+        if (data != null && data.nodes != null && data.nodes.Length > 0) return data;
+
+        DialogueData temp = ScriptableObject.CreateInstance<DialogueData>();
+        DialogueNode node = new DialogueNode();
+        node.nodeID = "0";
+        node.characterName = defaultSpeaker;
+        node.sentence = defaultText;
+        temp.nodes = new DialogueNode[] { node };
+        return temp;
+    }
+
+    private IEnumerator RunDodgeTutorialAndTransition(DialogueData dialogueData)
+    {
+        isGardenerInterventionActive = true;
+        currentPhase = CombatPhase.DodgePhase;
+
+        // 1. Conserver la caméra à la distance d'esquive d'origine (AVANT tout changement de plan)
+        cameraDistance = originalCameraDistance;
+        cameraHeight = originalCameraHeight;
+
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
+
+        // 2. Attendre la fin complète du dernier battement d'esquive et l'impact des projectiles
+        float beatDurationSeconds = 60f / (activeCombatData != null ? activeCombatData.Bpm : musicBpm);
+        yield return new WaitForSeconds(beatDurationSeconds * 1.2f);
+
+        // 3. Nettoyer les alertes restantes
+        ClearAllTelegraphs();
+
+        // 4. Déplacer le Jardinier vers le joueur et lancer son dialogue (AVANT le changement de plan caméra et avant le menu)
+        if (dialogueData != null)
+        {
+            yield return StartCoroutine(MoveGardenerToPlayerAndRunDialogue(dialogueData));
+        }
+
+        // 5. Passer la main au tour du joueur, changer le plan caméra et ouvrir le menu de combat !
+        isGardenerInterventionActive = false;
+        TransitionToPlayerTurn();
+    }
+
+    /// <summary>
+    /// Déplace le Jardinier présent dans la scène vers le joueur pour lui parler, puis le ramène à sa position initiale.
+    /// </summary>
+    private IEnumerator MoveGardenerToPlayerAndRunDialogue(DialogueData dialogueData)
+    {
+        if (dialogueData == null) yield break;
+
+        isGardenerInterventionActive = true;
+        currentPhase = CombatPhase.DodgePhase;
+
+        // Bloquer les mouvements du joueur sur la grille pendant tout le déplacement et le dialogue du Jardinier
+        if (playerController != null) playerController.SetInputEnabled(false);
+
+        // Masquer le menu RPG et maintenir la caméra en vue d'esquive large pendant toute l'intervention du Jardinier
+        if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
+        if (groupContainerObj != null) groupContainerObj.SetActive(false);
+        cameraDistance = originalCameraDistance;
+        cameraHeight = originalCameraHeight;
+
+        // Rechercher le Jardinier dans la scène
+        Transform gardenerTransform = null;
+        GameObject gardenerObj = GameObject.Find("Gardener");
+        if (gardenerObj != null)
+        {
+            gardenerTransform = gardenerObj.transform;
+        }
+        else
+        {
+            foreach (var go in FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+            {
+                if (go.name.Contains("Gardener") && go.activeInHierarchy)
+                {
+                    gardenerTransform = go.transform;
+                    break;
+                }
+            }
+        }
+
+        if (gardenerTransform == null)
+        {
+            Debug.LogWarning("[RhythmCombatManager] Jardinier introuvable dans la scène pour le dialogue tutoriel. Ouverture directe du dialogue.");
+            if (DialogueManager.Instance != null)
+            {
+                bool finished = false;
+                DialogueManager.Instance.StartDialogue(dialogueData, () => finished = true);
+                while (!finished) yield return null;
+            }
+            isGardenerInterventionActive = false;
+            yield break;
+        }
+
+        SpriteRenderer gardenerSprite = gardenerTransform.GetComponent<SpriteRenderer>();
+        if (gardenerSprite == null) gardenerSprite = gardenerTransform.GetComponentInChildren<SpriteRenderer>();
+
+        Animator gardenerAnimator = gardenerTransform.GetComponent<Animator>();
+        if (gardenerAnimator == null) gardenerAnimator = gardenerTransform.GetComponentInChildren<Animator>();
+
+        Vector3 originalPos = gardenerTransform.position;
+        Quaternion originalRot = gardenerTransform.rotation;
+
+        Transform playerTransform = playerController != null ? playerController.transform : null;
+        if (playerTransform == null && GroupManager.Instance != null) playerTransform = GroupManager.Instance.Leader;
+
+        Vector3 targetPos = originalPos;
+        if (playerTransform != null)
+        {
+            float targetY = Mathf.Max(originalPos.y, playerTransform.position.y + 0.8f);
+            targetPos = new Vector3(
+                playerTransform.position.x + 2.2f,
+                targetY,
+                playerTransform.position.z + 0.8f
+            );
+        }
+
+        // 1. Déplacement vers le joueur
+        if (gardenerAnimator != null) gardenerAnimator.Play("levitate");
+        if (gardenerSprite != null) gardenerSprite.flipX = targetPos.x > gardenerTransform.position.x;
+
+        float moveSpeed = 4.5f;
+        float dist = Vector3.Distance(gardenerTransform.position, targetPos);
+        if (dist > 0.1f)
+        {
+            float duration = dist / moveSpeed;
+            float elapsed = 0f;
+            Vector3 startPos = gardenerTransform.position;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                Vector3 current = Vector3.Lerp(startPos, targetPos, t);
+                current.y += Mathf.Sin(elapsed * 8f) * 0.15f; // Lévitation
+                gardenerTransform.position = current;
+                yield return null;
+            }
+        }
+        gardenerTransform.position = targetPos;
+
+        if (gardenerAnimator != null) gardenerAnimator.Play("idle");
+        if (gardenerSprite != null && playerTransform != null)
+        {
+            gardenerSprite.flipX = playerTransform.position.x > gardenerTransform.position.x;
+        }
+
+        // 2. Lancement du dialogue
+        bool dialogueFinished = false;
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.StartDialogue(dialogueData, () => dialogueFinished = true);
+            while (!dialogueFinished) yield return null;
+        }
+        else
+        {
+            yield return new WaitForSeconds(1.5f);
+        }
+
+        // 3. Retour à la position d'origine
+        if (gardenerAnimator != null) gardenerAnimator.Play("levitate");
+        if (gardenerSprite != null) gardenerSprite.flipX = originalPos.x > gardenerTransform.position.x;
+
+        dist = Vector3.Distance(gardenerTransform.position, originalPos);
+        if (dist > 0.1f)
+        {
+            float duration = dist / moveSpeed;
+            float elapsed = 0f;
+            Vector3 startPos = gardenerTransform.position;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                Vector3 current = Vector3.Lerp(startPos, originalPos, t);
+                current.y += Mathf.Sin(elapsed * 8f) * 0.15f;
+                gardenerTransform.position = current;
+                yield return null;
+            }
+        }
+
+        gardenerTransform.position = originalPos;
+        gardenerTransform.rotation = originalRot;
+        if (gardenerAnimator != null) gardenerAnimator.Play("idle");
+        if (gardenerSprite != null)
+        {
+            // Se retourner pour refaire face au joueur/centre de la scène après être revenu à sa place
+            if (playerTransform != null)
+            {
+                gardenerSprite.flipX = playerTransform.position.x > gardenerTransform.position.x;
+            }
+            else
+            {
+                gardenerSprite.flipX = false;
+            }
+        }
+        isGardenerInterventionActive = false;
+    }
+
+    #endregion
 
     private IEnumerator EndCombatRoutine(bool victory)
     {
@@ -1246,13 +1980,13 @@ public class RhythmCombatManager : MonoBehaviour
     private Vector3 FindSafeCombatCenter(Vector3 initialCenter, float arenaRadius = 4.5f)
     {
         LayerMask obstacleLayers = LayerMask.GetMask("Default", "Environment", "Obstacle", "Solid", "Wall");
-        // Si aucun obstacle n'est détecté à la position initiale, on garde la position d'origine
-        if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers))
+        // Si aucun obstacle n'est détecté ET que la position repose sur du sol ferme hors du vide
+        if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers) && IsGroundValidForArena(initialCenter, arenaRadius))
         {
             return initialCenter;
         }
 
-        // Recherche en cercles concentriques extérieurs d'une zone dégagée
+        // Recherche en cercles concentriques extérieurs d'une zone dégagée et sécurisée
         int steps = 12;
         float stepDistance = 1.5f;
         int maxRings = 6;
@@ -1267,16 +2001,46 @@ public class RhythmCombatManager : MonoBehaviour
                 Vector3 candidate = initialCenter + offset;
                 candidate = SnapToGround(candidate);
 
-                if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers))
+                if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers) && IsGroundValidForArena(candidate, arenaRadius))
                 {
-                    Debug.Log($"[RhythmCombatManager] Zone de combat dégagée trouvée à {candidate} (décalage de {radius}m).");
+                    Debug.Log($"[RhythmCombatManager] Zone de combat dégagée et sécurisée trouvée à {candidate} (décalage de {radius}m).");
                     return candidate;
                 }
             }
         }
 
-        Debug.LogWarning("[RhythmCombatManager] Impossible de trouver une zone de combat 100% dégagée. Utilisation du centre initial.");
+        Debug.LogWarning("[RhythmCombatManager] Impossible de trouver une zone de combat 100% dégagée et hors du vide. Utilisation du centre initial.");
         return initialCenter;
+    }
+
+    /// <summary>
+    /// Vérifie que le centre et la circonférence de la grille reposent sur du sol solide (pas au-dessus du vide).
+    /// </summary>
+    private bool IsGroundValidForArena(Vector3 center, float checkRadius)
+    {
+        LayerMask groundLayers = ~0 & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
+
+        // 1. Vérifier le centre
+        Vector3 centerRayOrigin = center + Vector3.up * 5f;
+        if (!Physics.Raycast(centerRayOrigin, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
+        {
+            return false;
+        }
+
+        // 2. Vérifier 8 points sur le périmètre
+        int samplePoints = 8;
+        float sampleRadius = checkRadius * 0.8f;
+        for (int i = 0; i < samplePoints; i++)
+        {
+            float angle = i * (2f * Mathf.PI / samplePoints);
+            Vector3 samplePos = center + new Vector3(Mathf.Cos(angle) * sampleRadius, 5f, Mathf.Sin(angle) * sampleRadius);
+            if (!Physics.Raycast(samplePos, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
+            {
+                return false; // Un point de l'arène tombe dans le vide !
+            }
+        }
+
+        return true;
     }
 
     #endregion
@@ -2374,6 +3138,7 @@ public class RhythmCombatManager : MonoBehaviour
     private void TransitionToPlayerTurn()
     {
         currentPhase = CombatPhase.PlayerTurn;
+        tutorialPlayerTurnCount++;
         menuEnableTime = Time.time + menuInputSecurityDelay;
 
         // Désactiver les contrôles du joueur sur la grille
@@ -2486,6 +3251,7 @@ public class RhythmCombatManager : MonoBehaviour
 
     private void TransitionToDodgePhase()
     {
+        isGardenerInterventionActive = false;
         currentPhase = CombatPhase.DodgePhase;
         dodgeBeatsCount = 0;
 
@@ -2656,15 +3422,56 @@ public class RhythmCombatManager : MonoBehaviour
             }
         }
 
-        if (attackButton != null) attackButton.interactable = interactable;
-        if (talkButton != null) talkButton.interactable = interactable;
-        if (companionsButton != null) companionsButton.interactable = interactable && otherAlive;
-        if (fleeButton != null) fleeButton.interactable = interactable;
+        bool isTutorial = activeCombatData != null && activeCombatData.IsGardenerTutorial;
 
-        if (customFightButton != null) customFightButton.interactable = interactable;
-        if (customTalkButton != null) customTalkButton.interactable = interactable;
-        if (customCompanionButton != null) customCompanionButton.interactable = interactable && otherAlive;
-        if (customEscapeButton != null) customEscapeButton.interactable = interactable;
+        bool canFight;
+        bool canTalk;
+        bool canCompanions;
+        bool canFlee;
+
+        if (isTutorial)
+        {
+            canFlee = false; // Escape est TOUJOURS désactivé durant ce combat tutoriel
+
+            if (tutorialPlayerTurnCount == 1)
+            {
+                // Après le 2ème dialogue (1ère esquive) : UNIQUEMENT Talk (Parler)
+                canFight = false;
+                canTalk = interactable;
+                canCompanions = false;
+            }
+            else if (tutorialPlayerTurnCount == 2)
+            {
+                // Après le 3ème dialogue (2ème esquive) : UNIQUEMENT Fight (Attaquer)
+                canFight = interactable;
+                canTalk = false;
+                canCompanions = false;
+            }
+            else
+            {
+                // Tours 3+ : Combat normal (Fight, Talk, Companions), sauf Escape qui reste désactivé
+                canFight = interactable;
+                canTalk = interactable;
+                canCompanions = interactable && otherAlive;
+            }
+        }
+        else
+        {
+            canFight = interactable;
+            canTalk = interactable;
+            canCompanions = interactable && otherAlive;
+            canFlee = interactable;
+        }
+
+        if (attackButton != null) attackButton.interactable = canFight;
+        if (talkButton != null) talkButton.interactable = canTalk;
+        if (companionsButton != null) companionsButton.interactable = canCompanions;
+        if (fleeButton != null) fleeButton.interactable = canFlee;
+
+        if (customFightButton != null) customFightButton.interactable = canFight;
+        if (customTalkButton != null) customTalkButton.interactable = canTalk;
+        if (customCompanionButton != null) customCompanionButton.interactable = canCompanions;
+        if (customEscapeButton != null) customEscapeButton.interactable = canFlee;
     }
 
     private void StartQTE()
@@ -3121,33 +3928,30 @@ public class RhythmCombatManager : MonoBehaviour
         {
             currentPhase = CombatPhase.DialogueActive;
 
-            // Créer un DialogueData temporaire à la volée
+            // Déterminer l'index de la réplique (1 réplique par action PARLER, puis boucle sur la dernière)
+            int lineIndex = Mathf.Min(currentTalkDialogueStep, activeCombatData.TalkDialogues.Count - 1);
+            currentTalkDialogueStep++;
+
+            // Créer un DialogueData d'une seule réplique
             DialogueData tempDialogue = ScriptableObject.CreateInstance<DialogueData>();
-            List<string> lines = activeCombatData.TalkDialogues;
-            DialogueNode[] nodes = new DialogueNode[lines.Count];
-            for (int i = 0; i < lines.Count; i++)
-            {
-                nodes[i] = new DialogueNode();
-                nodes[i].nodeID = i.ToString();
-                nodes[i].characterName = activeCombatData.EnemyName;
-                nodes[i].portrait = null; // Pas de portrait !
-                nodes[i].sentence = lines[i];
-                nodes[i].nextNodeID = (i + 1 < lines.Count) ? (i + 1).ToString() : null;
-                nodes[i].choices = null;
-            }
-            tempDialogue.nodes = nodes;
+            DialogueNode node = new DialogueNode();
+            node.nodeID = "0";
+            node.characterName = activeCombatData.EnemyName;
+            node.portrait = null;
+            node.sentence = activeCombatData.TalkDialogues[lineIndex];
+            node.nextNodeID = null; // Une seule ligne par commande PARLER
+            node.choices = null;
+            tempDialogue.nodes = new DialogueNode[] { node };
 
-            // Masquer notre propre panel de combat de dialogue s'il y en a un
             if (dialoguePanel != null) dialoguePanel.SetActive(false);
-
-            logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
+            if (logText != null) logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
 
             DialogueManager.Instance.StartDialogue(tempDialogue, () =>
             {
                 TransitionToDodgePhase();
             });
         }
-        else
+        else if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
         {
             // Fallback si DialogueManager n'est pas présent dans la scène
             if (dialoguePanel != null) dialoguePanel.SetActive(true);
@@ -3155,38 +3959,52 @@ public class RhythmCombatManager : MonoBehaviour
             currentPhase = CombatPhase.DialogueActive;
             dialogueEnterTime = Time.time;
 
+            int lineIndex = Mathf.Min(currentTalkDialogueStep, activeCombatData.TalkDialogues.Count - 1);
+            currentTalkDialogueStep++;
+
+            currentDialogueIndex = 9999; // Se ferme au prochain clic
+            if (logText != null) logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
+
             TypewriterEffects typewriter = dialogueText != null ? dialogueText.GetComponent<TypewriterEffects>() : null;
             if (typewriter == null && dialogueText != null)
             {
                 typewriter = dialogueText.gameObject.AddComponent<TypewriterEffects>();
             }
 
-            if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
+            if (typewriter != null)
             {
-                currentDialogueIndex = 0;
-                logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
-                if (typewriter != null)
-                {
-                    typewriter.StartTyping(activeCombatData.TalkDialogues[0]);
-                }
-                else
-                {
-                    dialogueText.text = activeCombatData.TalkDialogues[0];
-                }
+                typewriter.StartTyping(activeCombatData.TalkDialogues[lineIndex]);
             }
-            else
+            else if (dialogueText != null)
             {
-                currentDialogueIndex = 9999;
-                string msg = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
-                logText.text = "Aucun dialogue disponible.";
-                if (typewriter != null)
-                {
-                    typewriter.StartTyping(msg);
-                }
-                else
-                {
-                    dialogueText.text = msg;
-                }
+                dialogueText.text = activeCombatData.TalkDialogues[lineIndex];
+            }
+        }
+        else
+        {
+            // Fallback si aucun dialogue n'est configuré
+            if (dialoguePanel != null) dialoguePanel.SetActive(true);
+
+            currentPhase = CombatPhase.DialogueActive;
+            dialogueEnterTime = Time.time;
+            currentDialogueIndex = 9999;
+
+            string msg = "Vous tentez de parler, mais l'ennemi ne semble pas disposé à discuter...";
+            if (logText != null) logText.text = "Aucun dialogue disponible.";
+
+            TypewriterEffects typewriter = dialogueText != null ? dialogueText.GetComponent<TypewriterEffects>() : null;
+            if (typewriter == null && dialogueText != null)
+            {
+                typewriter = dialogueText.gameObject.AddComponent<TypewriterEffects>();
+            }
+
+            if (typewriter != null)
+            {
+                typewriter.StartTyping(msg);
+            }
+            else if (dialogueText != null)
+            {
+                dialogueText.text = msg;
             }
         }
     }
