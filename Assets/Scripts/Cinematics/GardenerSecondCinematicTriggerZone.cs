@@ -73,6 +73,22 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
     [Tooltip("Dialogue du Jardinier après avoir battu le boss.")]
     [SerializeField] private DialogueData victoryTutorialDialogue;
 
+    [Header("Dialogue & Séquence Post-Combat du Juge")]
+    [Tooltip("Dialogue du Juge après le combat si le joueur a GRACIÉ l'âme.")]
+    [SerializeField] private DialogueData postCombatSparedDialogue;
+
+    [Tooltip("Dialogue du Juge après le combat si le joueur a CONDAMNÉ l'âme.")]
+    [SerializeField] private DialogueData postCombatCondemnedDialogue;
+
+    [Tooltip("Délai (en secondes) après le claquement de doigts avant que le Juge ne disparaisse.")]
+    [SerializeField] private float delayBeforeDisappear = 0.6f;
+
+    [Tooltip("Préfab d'effet visuel de disparition (fumée/particules). Si vide, utilisera spawnEffectPrefab ou de la fumée procédurale.")]
+    [SerializeField] private GameObject disappearEffectPrefab;
+
+    [Tooltip("Le flag de l'histoire à définir à True dans StoryStateManager une fois la séquence post-combat du Juge terminée.")]
+    [SerializeField] private string flagToSetOnComplete = "gardener_post_combat_completed";
+
     [Tooltip("Si vrai, ramène la caméra sur le joueur et réactive ses contrôles à la fin de la cinématique. Si faux, laisse le joueur gelé et la caméra sur place pour le combat.")]
     [SerializeField] private bool endCinematicNormally = false;
 
@@ -303,7 +319,26 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             if (rhythmManager != null)
             {
                 Debug.Log($"[GardenerSecondCinematicTriggerZone] Lancement du combat rythmique sur '{enemyToFight.name}' via RhythmCombatManager !");
+
+                bool combatFinished = false;
+                bool wasSpared = true;
+
+                System.Action<bool> onEndHandler = null;
+                onEndHandler = (spared) =>
+                {
+                    wasSpared = spared;
+                    combatFinished = true;
+                    RhythmCombatManager.OnCombatEndedWithVerdict -= onEndHandler;
+                };
+
+                RhythmCombatManager.OnCombatEndedWithVerdict += onEndHandler;
                 rhythmManager.StartCombat(enemyToFight);
+
+                // Attendre que le combat et son animation de verdict soient totalement terminés
+                yield return new WaitUntil(() => combatFinished);
+
+                // Déclencher la séquence de dialogue post-combat, snap d'animation et disparition du Juge
+                yield return StartCoroutine(RunJudgePostCombatRoutine(wasSpared));
             }
             else if (CombatManager.Instance != null)
             {
@@ -319,5 +354,118 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
         {
             Debug.LogWarning("[GardenerSecondCinematicTriggerZone] Impossible de lancer le combat car aucun monstre n'a été instancié ou activé.");
         }
+    }
+
+    /// <summary>
+    /// Séquence post-combat : dialogue ramifié selon la décision du joueur (Gracié / Condamné),
+    /// suivi du claquement de doigts (snap), de la disparition du Juge et du retour de caméra.
+    /// </summary>
+    private IEnumerator RunJudgePostCombatRoutine(bool wasSpared)
+    {
+        Debug.Log($"[GardenerSecondCinematicTriggerZone] Début de la séquence post-combat du Juge. Gracié = {wasSpared}");
+
+        // Verrouiller le joueur pendant la séquence post-combat
+        LockPlayer();
+
+        // 1. Mise au point de la caméra sur le Juge (Gardener)
+        Transform judgeTransform = focusTarget;
+        if (judgeTransform == null)
+        {
+            GameObject g = GameObject.Find("Gardener");
+            if (g != null) judgeTransform = g.transform;
+        }
+
+        if (judgeTransform != null && virtualCamera != null)
+        {
+            yield return StartCoroutine(TransitionCameraToTarget(judgeTransform));
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 2. Récupération et exécution du dialogue ramifié selon le verdict
+        DialogueData dialogueToRun = wasSpared ? postCombatSparedDialogue : postCombatCondemnedDialogue;
+
+        if (dialogueToRun == null && monsterCombatData != null)
+        {
+            dialogueToRun = wasSpared ? monsterCombatData.PostCombatSparedDialogue : monsterCombatData.PostCombatCondemnedDialogue;
+        }
+
+        // Fallback procédural si aucun fichier de dialogue n'est assigné dans l'Inspecteur
+        if (dialogueToRun == null)
+        {
+            dialogueToRun = ScriptableObject.CreateInstance<DialogueData>();
+            DialogueNode node = new DialogueNode();
+            node.nodeID = "0";
+            node.characterName = "Le Juge";
+            if (wasSpared)
+            {
+                node.sentence = "Vous avez choisi d'accorder votre grâce... Intéressant. Nos chemins se recroiseront, jeune âme.";
+            }
+            else
+            {
+                node.sentence = "Vous avez condamné cette âme sans hésitation... La sentence est irrévocable. À bientôt.";
+            }
+            dialogueToRun.nodes = new DialogueNode[] { node };
+        }
+
+        yield return StartCoroutine(RunDialogue(dialogueToRun));
+
+        if (delayAfterDialogue > 0f)
+        {
+            yield return new WaitForSeconds(delayAfterDialogue);
+        }
+
+        // 3. ANIMATION : Claquement de doigts (snap)
+        if (gardenerAnimator == null && judgeTransform != null)
+        {
+            gardenerAnimator = judgeTransform.GetComponent<Animator>();
+            if (gardenerAnimator == null) gardenerAnimator = judgeTransform.GetComponentInChildren<Animator>();
+        }
+
+        if (gardenerAnimator != null && !string.IsNullOrEmpty(snapAnimationStateName))
+        {
+            Debug.Log($"[GardenerSecondCinematicTriggerZone] Animation '{snapAnimationStateName}' jouée sur le Juge avant sa disparition.");
+            gardenerAnimator.Play(snapAnimationStateName);
+        }
+
+        if (delayBeforeDisappear > 0f)
+        {
+            yield return new WaitForSeconds(delayBeforeDisappear);
+        }
+
+        // 4. DISPARITION : Instancier l'effet visuel de fumée/particules et désactiver le Juge
+        Vector3 disappearPos = judgeTransform != null ? judgeTransform.position : transform.position;
+        Quaternion disappearRot = judgeTransform != null ? judgeTransform.rotation : Quaternion.identity;
+
+        GameObject effectToUse = disappearEffectPrefab != null ? disappearEffectPrefab : spawnEffectPrefab;
+        if (effectToUse != null)
+        {
+            GameObject fxInstance = Instantiate(effectToUse, disappearPos, disappearRot);
+            Destroy(fxInstance, 4f);
+        }
+        else
+        {
+            GameObject proceduralSmoke = new GameObject("ProceduralSmokeDisappearEffect");
+            proceduralSmoke.transform.position = disappearPos;
+            proceduralSmoke.transform.rotation = disappearRot;
+            proceduralSmoke.AddComponent<ProceduralSmokeEffect>();
+        }
+
+        if (judgeTransform != null)
+        {
+            judgeTransform.gameObject.SetActive(false);
+        }
+
+        // 5. Restauration de la caméra et réactivation des mouvements du joueur
+        yield return StartCoroutine(TransitionCameraBack());
+        UnlockPlayer();
+
+        // 6. Enregistrement du flag d'histoire
+        if (StoryStateManager.Instance != null && !string.IsNullOrEmpty(flagToSetOnComplete))
+        {
+            StoryStateManager.Instance.SetFlag(flagToSetOnComplete, true);
+        }
+
+        Debug.Log("[GardenerSecondCinematicTriggerZone] Séquence post-combat du Juge terminée avec succès.");
     }
 }

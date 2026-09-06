@@ -29,6 +29,12 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Si coché, les directions Z/X s'alignent avec l'orientation de la caméra principale.")]
     [SerializeField] private bool moveRelativeToCamera = false;
 
+    public bool MoveRelativeToCamera
+    {
+        get => moveRelativeToCamera;
+        set => moveRelativeToCamera = value;
+    }
+
     private SpriteRenderer spriteRenderer;
     private Rigidbody rb;
     private Collider playerCollider;

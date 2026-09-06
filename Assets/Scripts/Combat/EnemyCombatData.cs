@@ -63,6 +63,13 @@ public class EnemyCombatData : ScriptableObject
     [Tooltip("Dialogue joué si le joueur choisit de GRACIER l'ennemi.")]
     [SerializeField] private DialogueData sparedDialogue;
 
+    [Header("Dialogue Post-Combat Juge / Jardinier")]
+    [Tooltip("Dialogue du Juge/Jardinier après le combat si le joueur a GRACIÉ l'ennemi.")]
+    [SerializeField] private DialogueData postCombatSparedDialogue;
+
+    [Tooltip("Dialogue du Juge/Jardinier après le combat si le joueur a CONDAMNÉ l'ennemi.")]
+    [SerializeField] private DialogueData postCombatCondemnedDialogue;
+
     // Propriétés d'accès en lecture seule
     public string EnemyName => enemyName;
     public int MaxHP => maxHP;
@@ -81,4 +88,6 @@ public class EnemyCombatData : ScriptableObject
     public DialogueData VictoryTutorialDialogue { get => victoryTutorialDialogue; set => victoryTutorialDialogue = value; }
     public DialogueData CondemnedDialogue { get => condemnedDialogue; set => condemnedDialogue = value; }
     public DialogueData SparedDialogue { get => sparedDialogue; set => sparedDialogue = value; }
+    public DialogueData PostCombatSparedDialogue { get => postCombatSparedDialogue; set => postCombatSparedDialogue = value; }
+    public DialogueData PostCombatCondemnedDialogue { get => postCombatCondemnedDialogue; set => postCombatCondemnedDialogue = value; }
 }

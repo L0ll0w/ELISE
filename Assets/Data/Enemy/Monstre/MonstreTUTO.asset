@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ca0ef06f462ab35488ff8719d0aceb82, type: 3}
-  m_Name: Monstre
+  m_Name: MonstreTUTO
   m_EditorClassIdentifier: Assembly-CSharp::EnemyCombatData
   enemyName: Ame  Voleuse
   maxHP: 150
@@ -25,12 +25,10 @@ MonoBehaviour:
   - "Piti\xE9 Juge soyer clement je devais nourir ma famille"
   - JE N'ES RIEN FAIT DE MAL PITIER EPARGNE MOI !
   - PITIER
-  isGardenerTutorial: 0
+  isGardenerTutorial: 1
   startTutorialDialogue: {fileID: 11400000, guid: c4299ef9da521334d9c6db110fbd5085, type: 2}
   afterFirstDodgeDialogue: {fileID: 11400000, guid: bc3156fc349f0e4498e72ca05a69d41e, type: 2}
   afterSecondDodgeDialogue: {fileID: 11400000, guid: 3da8aee5a1b765d46bba80ebb73116d7, type: 2}
   victoryTutorialDialogue: {fileID: 11400000, guid: 5ed6601aded1a474bb4f67d346af7fe4, type: 2}
   condemnedDialogue: {fileID: 11400000, guid: 4c2029b7afbc03a4f93d97c7386d5756, type: 2}
   sparedDialogue: {fileID: 11400000, guid: 23c8bcebcbb13c54d8a56fae979da420, type: 2}
-  postCombatSparedDialogue: {fileID: 0}
-  postCombatCondemnedDialogue: {fileID: 0}

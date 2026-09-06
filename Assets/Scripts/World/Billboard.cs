@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Micro-script de Billboard pour aligner un sprite 2.5D avec la caméra ou une cible (ex: le Joueur).
+/// Gère intelligemment les Rigidbodies pour préserver l'interpolation physique sans provoquer de saccades.
 /// </summary>
 [ExecuteAlways]
 [DefaultExecutionOrder(9999)]
@@ -32,12 +33,44 @@ public class Billboard : MonoBehaviour
     [Tooltip("Caméra cible spécifique si 'Use Main Camera' est désactivé.")]
     [SerializeField] private Camera targetCamera;
 
+    private Rigidbody rb;
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
+
+    private void OnEnable()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
+
+    private void FixedUpdate()
+    {
+        // En mode jeu, si le GameObject possède un Rigidbody physique actif, la rotation doit être appliquée en FixedUpdate
+        if (Application.isPlaying && rb != null && !rb.isKinematic)
+        {
+            UpdateRotation(true);
+        }
+    }
+
     private void LateUpdate()
     {
+        // Si pas de Rigidbody physique actif ou en mode édition dans Unity Editor, utiliser LateUpdate
+        if (!Application.isPlaying || rb == null || rb.isKinematic)
+        {
+            UpdateRotation(false);
+        }
+    }
+
+    private void UpdateRotation(bool usePhysics)
+    {
+        Quaternion targetRotation = transform.rotation;
+        bool hasTargetRotation = false;
+
         // --- 1. GESTION DES MODES LOOK AT CIBLE (JOUEUR / TRANSFORM) ---
         if (mode == BillboardMode.LookAtTarget || mode == BillboardMode.LookAtTargetY)
         {
-            // Recherche automatique du joueur par son tag s'il n'est pas assigné
             if (targetTransform == null)
             {
                 GameObject player = GameObject.FindWithTag("Player");
@@ -49,62 +82,71 @@ public class Billboard : MonoBehaviour
 
             if (targetTransform == null) return;
 
-            if (mode == BillboardMode.LookAtTarget)
+            Vector3 dir = targetTransform.position - transform.position;
+            if (mode == BillboardMode.LookAtTargetY)
             {
-                // Regarde directement la cible sur tous les axes (3D complet)
-                transform.LookAt(targetTransform.position);
+                dir.y = 0f;
             }
-            else // LookAtTargetY
-            {
-                // Regarde la cible uniquement en pivotant sur l'axe Y (conserve l'herbe/le sprite bien droit verticalement)
-                Vector3 targetPos = targetTransform.position;
-                targetPos.y = transform.position.y; // Aligne la hauteur sur celle du sprite
-                transform.LookAt(targetPos);
-            }
-            return;
-        }
 
-        // --- 2. GESTION DES MODES CAMERA ---
-        Camera activeCamera = null;
-        if (useMainCamera)
-        {
-            activeCamera = Camera.main;
+            if (dir.sqrMagnitude > 0.0001f)
+            {
+                targetRotation = Quaternion.LookRotation(dir);
+                hasTargetRotation = true;
+            }
         }
         else
         {
-            activeCamera = targetCamera;
+            // --- 2. GESTION DES MODES CAMERA ---
+            Camera activeCamera = useMainCamera ? Camera.main : targetCamera;
+
+            #if UNITY_EDITOR
+            if (activeCamera == null && !Application.isPlaying)
+            {
+                activeCamera = UnityEditor.SceneView.lastActiveSceneView != null 
+                    ? UnityEditor.SceneView.lastActiveSceneView.camera 
+                    : null;
+            }
+            #endif
+
+            if (activeCamera == null) return;
+
+            switch (mode)
+            {
+                case BillboardMode.CameraRotationY:
+                    targetRotation = Quaternion.Euler(0f, activeCamera.transform.rotation.eulerAngles.y, 0f);
+                    hasTargetRotation = true;
+                    break;
+
+                case BillboardMode.CameraRotationFull:
+                    targetRotation = activeCamera.transform.rotation;
+                    hasTargetRotation = true;
+                    break;
+
+                case BillboardMode.LookAtCamera:
+                    Vector3 camForward = activeCamera.transform.rotation * Vector3.forward;
+                    Vector3 camUp = activeCamera.transform.rotation * Vector3.up;
+                    targetRotation = Quaternion.LookRotation(camForward, camUp);
+                    hasTargetRotation = true;
+                    break;
+            }
         }
 
-        // En mode édition dans Unity, si Camera.main n'est pas disponible,
-        // on utilise la caméra de la vue Scène pour que le billboard réagisse en direct.
-        #if UNITY_EDITOR
-        if (activeCamera == null && !Application.isPlaying)
+        if (hasTargetRotation)
         {
-            activeCamera = UnityEditor.SceneView.lastActiveSceneView != null 
-                ? UnityEditor.SceneView.lastActiveSceneView.camera 
-                : null;
-        }
-        #endif
-
-        if (activeCamera == null) return;
-
-        switch (mode)
-        {
-            case BillboardMode.CameraRotationY:
-                // Aligne la rotation sur l'axe Y de la caméra uniquement
-                transform.rotation = Quaternion.Euler(0f, activeCamera.transform.rotation.eulerAngles.y, 0f);
-                break;
-
-            case BillboardMode.CameraRotationFull:
-                // Copie exactement la rotation de la caméra
-                transform.rotation = activeCamera.transform.rotation;
-                break;
-
-            case BillboardMode.LookAtCamera:
-                // Fait face directement à la caméra (tous les axes)
-                transform.LookAt(transform.position + activeCamera.transform.rotation * Vector3.forward,
-                                 activeCamera.transform.rotation * Vector3.up);
-                break;
+            if (usePhysics && rb != null && !rb.isKinematic)
+            {
+                if (Quaternion.Angle(rb.rotation, targetRotation) > 0.01f)
+                {
+                    rb.MoveRotation(targetRotation);
+                }
+            }
+            else
+            {
+                if (Quaternion.Angle(transform.rotation, targetRotation) > 0.01f)
+                {
+                    transform.rotation = targetRotation;
+                }
+            }
         }
     }
 }

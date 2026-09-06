@@ -61,16 +61,16 @@ public class DayNightSkyManager : MonoBehaviour
     [SerializeField] private float lightDownwardTilt = 0.7f;
 
     [Header("Intensités & Couleurs (Directional Light)")]
-    [SerializeField] private float dayLightIntensity = 1.2f;
-    [SerializeField] private float nightLightIntensity = 0.15f;
-    [SerializeField] private Color dayLightColor = new Color(1f, 0.95f, 0.85f); // Chaud ensoleillé
-    [SerializeField] private Color nightLightColor = new Color(0.15f, 0.2f, 0.4f); // Bleu nuit lunaire
+    [SerializeField] private float dayLightIntensity = 1.8f;
+    [SerializeField] private float nightLightIntensity = 0.8f;
+    [SerializeField] private Color dayLightColor = new Color(1.0f, 0.94f, 0.84f); // Chaud ensoleillé
+    [SerializeField] private Color nightLightColor = new Color(0.4f, 0.6f, 0.95f); // Bleu lunaire vibrant
 
     [Header("Lumière Ambiante (Global)")]
     [Tooltip("Ajuster automatiquement la couleur ambiante globale de la scène (RenderSettings).")]
-    [SerializeField] private bool controlAmbientLight = true;
-    [SerializeField] private Color dayAmbientColor = new Color(0.2f, 0.2f, 0.25f);
-    [SerializeField] private Color nightAmbientColor = new Color(0.03f, 0.03f, 0.07f);
+    [SerializeField] private bool controlAmbientLight = false;
+    [SerializeField] private Color dayAmbientColor = new Color(0.35f, 0.55f, 0.75f);
+    [SerializeField] private Color nightAmbientColor = new Color(0.12f, 0.15f, 0.35f);
 
     [Header("Ajustements Herbe (Grass Shader)")]
     [Tooltip("La teinte de couleur appliquée à l'herbe du côté Nuit.")]
@@ -132,7 +132,7 @@ public class DayNightSkyManager : MonoBehaviour
     {
         if (directionalLight == null)
         {
-            Light[] lights = FindObjectsByType<Light>(FindObjectsSortMode.None);
+            Light[] lights = Object.FindObjectsOfType<Light>();
             foreach (Light l in lights)
             {
                 if (l.type == LightType.Directional)

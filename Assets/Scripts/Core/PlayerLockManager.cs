@@ -46,6 +46,16 @@ public static class PlayerLockManager
         if (pm != null)
         {
             pm.enabled = !isLocked;
+            if (!isLocked)
+            {
+                Animator anim = pm.GetComponent<Animator>();
+                if (anim == null) anim = pm.GetComponentInChildren<Animator>();
+                if (anim != null)
+                {
+                    anim.Play("idle");
+                    anim.SetBool("isWalking", false);
+                }
+            }
         }
     }
 }

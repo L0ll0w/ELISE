@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CylindricalWaterfall
+  m_Shader: {fileID: 4800000, guid: 2b8a1c2d3e4f5a6b7c8d9e0f1a2b3c4d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3010
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BottomFade: 0.08
+    - _DepthFoamDistance: 0.2
+    - _DisplacementAmount: 0.08
+    - _DisplacementFrequency: 4
+    - _DisplacementSpeed: 2.5
+    - _DistortionSpeed: 1.8
+    - _DistortionStrength: 0.12
+    - _FlowSpeed: 3.5
+    - _FoamSoftness: 0.15
+    - _FoamThreshold: 0.52
+    - _FresnelPower: 2
+    - _StreamScale: 16
+    - _StreamSpeed: 5
+    - _TopFade: 0.08
+    m_Colors:
+    - _DeepColor: {r: 0.02, g: 0.25, b: 0.55, a: 0.88}
+    - _FoamColor: {r: 0.95, g: 0.99, b: 1, a: 0.95}
+    - _FresnelColor: {r: 0.5, g: 0.92, b: 1, a: 1}
+    - _ShallowColor: {r: 0.1, g: 0.78, b: 0.95, a: 0.72}

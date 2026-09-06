@@ -95,6 +95,14 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
             pm.transform.position = secondCinematicTeleportTarget.position;
 
             if (playerRb != null) playerRb.isKinematic = wasKinematic;
+
+            Animator playerAnim = pm.GetComponent<Animator>();
+            if (playerAnim == null) playerAnim = pm.GetComponentInChildren<Animator>();
+            if (playerAnim != null)
+            {
+                playerAnim.Play("idle");
+                playerAnim.SetBool("isWalking", false);
+            }
         }
 
         // 2. Téléporter le Jardinier vers sa destination post-cinématique si spécifiée

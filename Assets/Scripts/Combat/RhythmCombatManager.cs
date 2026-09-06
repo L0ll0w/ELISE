@@ -20,6 +20,16 @@ public class RhythmCombatManager : MonoBehaviour
     public static RhythmCombatManager Instance { get; private set; }
 
     /// <summary>
+    /// Événement déclenché à la fin d'un combat victorieux avec l'information de verdict (true = Gracié, false = Condamné).
+    /// </summary>
+    public static event System.Action<bool> OnCombatEndedWithVerdict;
+
+    /// <summary>
+    /// Indique si le dernier verdict rendu par le joueur était d'avoir gracié l'âme (true) ou condamné (false).
+    /// </summary>
+    public bool LastVerdictWasSpared { get; private set; } = true;
+
+    /// <summary>
     /// Indique si le combat rythmique est actuellement actif.
     /// </summary>
     public bool IsCombatActive => activeEnemy != null;
@@ -468,22 +478,29 @@ public class RhythmCombatManager : MonoBehaviour
             originalMainCamFOV = Camera.main.fieldOfView;
         }
 
-        // 0. Détecter et effectuer un fondu de sortie sur la musique de fond actuelle
-        previousAudioSource = null;
-        previousMusicClip = null;
-        AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
-        AudioSource beatManagerSource = BeatManager.Instance != null ? BeatManager.Instance.GetComponent<AudioSource>() : null;
-
-        foreach (var source in allAudioSources)
+        // 0. Détecter et effectuer un fondu de sortie sur la musique de fond actuelle (via AudioManager s'il existe)
+        if (AudioManager.Instance != null)
         {
-            if (source != null && source.isPlaying && source.clip != null && source != beatManagerSource)
+            AudioManager.Instance.PauseZoneMusicForCombat(0.8f);
+        }
+        else
+        {
+            previousAudioSource = null;
+            previousMusicClip = null;
+            AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
+            AudioSource beatManagerSource = BeatManager.Instance != null ? BeatManager.Instance.GetComponent<AudioSource>() : null;
+
+            foreach (var source in allAudioSources)
             {
-                previousAudioSource = source;
-                previousMusicClip = source.clip;
-                previousMusicTime = source.time;
-                previousMusicVolume = source.volume;
-                StartCoroutine(FadeOutAudioSource(source, 0.8f));
-                break;
+                if (source != null && source.isPlaying && source.clip != null && source != beatManagerSource)
+                {
+                    previousAudioSource = source;
+                    previousMusicClip = source.clip;
+                    previousMusicTime = source.time;
+                    previousMusicVolume = source.volume;
+                    StartCoroutine(FadeOutAudioSource(source, 0.8f));
+                    break;
+                }
             }
         }
 
@@ -1136,6 +1153,18 @@ public class RhythmCombatManager : MonoBehaviour
         // 3. Traitement selon la sentence choisie
         if (verdictChoice == 1) // CONDAMNER
         {
+            LastVerdictWasSpared = false;
+            if (StoryStateManager.Instance != null)
+            {
+                StoryStateManager.Instance.SetFlag("last_soul_spared", false);
+                StoryStateManager.Instance.SetFlag("last_soul_condemned", true);
+                if (activeCombatData != null && activeCombatData.IsGardenerTutorial)
+                {
+                    StoryStateManager.Instance.SetFlag("gardener_tutorial_spared", false);
+                    StoryStateManager.Instance.SetFlag("gardener_tutorial_condemned", true);
+                }
+            }
+
             if (logText != null) logText.text = "Vous choisissez de CONDAMNER l'ennemi !";
 
             DialogueData condDiag = activeCombatData != null ? activeCombatData.CondemnedDialogue : null;
@@ -1155,6 +1184,18 @@ public class RhythmCombatManager : MonoBehaviour
         }
         else // GRACIER (0)
         {
+            LastVerdictWasSpared = true;
+            if (StoryStateManager.Instance != null)
+            {
+                StoryStateManager.Instance.SetFlag("last_soul_spared", true);
+                StoryStateManager.Instance.SetFlag("last_soul_condemned", false);
+                if (activeCombatData != null && activeCombatData.IsGardenerTutorial)
+                {
+                    StoryStateManager.Instance.SetFlag("gardener_tutorial_spared", true);
+                    StoryStateManager.Instance.SetFlag("gardener_tutorial_condemned", false);
+                }
+            }
+
             if (logText != null) logText.text = "Vous choisissez de GRACIER l'ennemi !";
 
             DialogueData sparedDiag = activeCombatData != null ? activeCombatData.SparedDialogue : null;
@@ -1828,7 +1869,11 @@ public class RhythmCombatManager : MonoBehaviour
         yield return StartCoroutine(FadeOutBeatManager(0.8f));
 
         // Restauration fluide de la musique d'exploration originale
-        if (previousAudioSource != null && previousMusicClip != null)
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.ResumeZoneMusicAfterCombat(0.8f);
+        }
+        else if (previousAudioSource != null && previousMusicClip != null)
         {
             previousAudioSource.clip = previousMusicClip;
             previousAudioSource.time = previousMusicTime;
@@ -1971,6 +2016,11 @@ public class RhythmCombatManager : MonoBehaviour
         currentState = CombatState.Transitioning;
         activeEnemy = null;
         Debug.Log("[RhythmCombatManager] Combat terminé !");
+
+        if (victory)
+        {
+            OnCombatEndedWithVerdict?.Invoke(LastVerdictWasSpared);
+        }
     }
 
     #endregion
