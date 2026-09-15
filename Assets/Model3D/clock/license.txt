@@ -1,0 +1,11 @@
+Model Information:
+* title:	CLOCK
+* source:	https://sketchfab.com/3d-models/clock-41e96ea138c04e008e267501c18f3e3e
+* author:	HASSAN (https://sketchfab.com/7ASSAN)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "CLOCK" (https://sketchfab.com/3d-models/clock-41e96ea138c04e008e267501c18f3e3e) by HASSAN (https://sketchfab.com/7ASSAN) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

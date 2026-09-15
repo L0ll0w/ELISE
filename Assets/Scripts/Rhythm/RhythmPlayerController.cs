@@ -141,10 +141,19 @@ public class RhythmPlayerController : MonoBehaviour
 
         groundYOffset = yOffset;
 
+        // Réinitialiser complètement l'état de saut de combat
+        isJumping = false;
+        jumpTimer = 0f;
+        jumpCooldownTimer = 0f;
+        landingSquashTimer = 0f;
+        jumpVisualOffset = Vector3.zero;
+
         // Passer le Rigidbody en mode cinématique pour éviter les conflits de physique/gravité avec la grille
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
             rb.isKinematic = true;
         }
 
@@ -162,6 +171,7 @@ public class RhythmPlayerController : MonoBehaviour
 
         if (animator != null)
         {
+            animator.speed = 1f;
             animator.Play(danceHash);
             animator.SetBool(isWalkingHash, false);
             animator.SetBool(isJumpingHash, false);
@@ -287,14 +297,14 @@ public class RhythmPlayerController : MonoBehaviour
         // Maintenir en continu l'état d'animation approprié pendant le combat (dance en combat normal, facedance pendant le jugement)
         if (animator != null && !isShootingAnimation && (DialogueManager.Instance == null || !DialogueManager.Instance.IsDialogueActive))
         {
+            animator.speed = 1f;
             AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-            int currentHash = stateInfo.shortNameHash;
 
             bool isJudgment = RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsInJudgment;
             int targetAnimHash = isJudgment ? faceDanceHash : danceHash;
 
-            // Pendant le jugement, le joueur doit toujours être en facedance. En combat normal, en dance.
-            if (currentHash == idleHash || currentHash == walkHash || currentHash == jumpHash || (isJudgment && currentHash == danceHash))
+            // Ne relancer l'animation QUE si l'animateur n'est pas déjà dans l'état cible et n'est pas en transition
+            if (stateInfo.shortNameHash != targetAnimHash && !animator.IsInTransition(0))
             {
                 animator.Play(targetAnimHash);
             }
@@ -402,20 +412,41 @@ public class RhythmPlayerController : MonoBehaviour
         if (!hasReleasedHorizontal && !allowHoldToRepeat) return false;
 
         int previousSector = currentSector;
-        if (h > 0f)
+
+        if (grid != null && grid.IsLooping)
         {
-            // Droite (sens anti-horaire pour aller vers la droite de l'écran)
-            currentSector = (currentSector + 1) % grid.SectorsCount;
+            if (h > 0f)
+            {
+                // Droite (sens anti-horaire)
+                currentSector = (currentSector + 1) % grid.SectorsCount;
+            }
+            else
+            {
+                // Gauche (sens horaire)
+                currentSector = (currentSector - 1 + grid.SectorsCount) % grid.SectorsCount;
+            }
         }
-        else
+        else if (grid != null)
         {
-            // Gauche (sens horaire pour aller vers la gauche de l'écran)
-            currentSector = (currentSector - 1 + grid.SectorsCount) % grid.SectorsCount;
+            // Arc de cercle délimité : bloquer sur les bords gauche et droit !
+            int step = h > 0f ? 1 : -1;
+            int targetSector = currentSector + step;
+
+            if (targetSector < 0 || targetSector >= grid.SectorsCount)
+            {
+                return false; // Impossible de dépasser les limites de l'arc
+            }
+            currentSector = targetSector;
         }
 
-        OnMoveCell(previousSector, currentRing);
-        hasReleasedHorizontal = false;
-        return true;
+        if (currentSector != previousSector)
+        {
+            OnMoveCell(previousSector, currentRing);
+            hasReleasedHorizontal = false;
+            return true;
+        }
+
+        return false;
     }
 
     private bool TryMoveVertical(float v)
@@ -481,27 +512,27 @@ public class RhythmPlayerController : MonoBehaviour
             Vector3 targetPos = grid.transform.position;
             Vector3 playerPos = transform.position;
 
-            bool isTargetToScreenLeft;
+            float deltaScreenX = 0f;
             if (mainCam != null)
             {
                 float targetScreenX = mainCam.WorldToScreenPoint(targetPos).x;
                 float playerScreenX = mainCam.WorldToScreenPoint(playerPos).x;
-                isTargetToScreenLeft = targetScreenX < playerScreenX;
+                deltaScreenX = targetScreenX - playerScreenX;
             }
             else
             {
-                isTargetToScreenLeft = targetPos.x < playerPos.x;
+                deltaScreenX = (targetPos.x - playerPos.x) * 100f;
             }
 
-            if (isShootingAnimation)
+            // Zone morte de 15 pixels écran pour éviter tout flip intempestif quand le joueur est pile en face du centre
+            float screenDeadzone = 15f;
+            if (deltaScreenX < -screenDeadzone)
             {
-                // Sens inversé selon la demande du joueur pour être toujours orienté face à l'ennemi
-                spriteRenderer.flipX = isTargetToScreenLeft;
+                spriteRenderer.flipX = true;
             }
-            else
+            else if (deltaScreenX > screenDeadzone)
             {
-                // Animation Dance/Idle normale
-                spriteRenderer.flipX = isTargetToScreenLeft;
+                spriteRenderer.flipX = false;
             }
         }
     }

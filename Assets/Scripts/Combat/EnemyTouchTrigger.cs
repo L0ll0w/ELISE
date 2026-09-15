@@ -13,7 +13,32 @@ public class EnemyTouchTrigger : MonoBehaviour
     [Tooltip("Si vrai, le collider doit être configuré en 'Is Trigger'.")]
     [SerializeField] private bool useTriggerOnly = true;
 
+    [Header("Point de Repère de Combat")]
+    [Tooltip("Transform / GameObject repère optionnel placé sur la carte pour définir le centre exact de l'arène de combat. Si vide, la position de l'ennemi sera utilisée.")]
+    [SerializeField] private Transform combatCenterMarker;
+
+    [Tooltip("Si vrai et que le point de repère est un enfant de cet ennemi, il sera automatiquement détaché au lancement du jeu pour rester fixe dans la scène pendant la ronde.")]
+    [SerializeField] private bool lockMarkerInWorldSpace = true;
+
+    public Transform CombatCenterMarker
+    {
+        get => combatCenterMarker;
+        set => combatCenterMarker = value;
+    }
+
     private bool hasTriggered = false;
+
+    private void Awake()
+    {
+        if (combatCenterMarker != null && lockMarkerInWorldSpace)
+        {
+            // Si le marqueur est un enfant de l'ennemi, le détacher pour qu'il reste fixe dans le monde
+            if (combatCenterMarker.IsChildOf(transform))
+            {
+                combatCenterMarker.SetParent(null, true);
+            }
+        }
+    }
 
     private void Start()
     {
@@ -68,12 +93,22 @@ public class EnemyTouchTrigger : MonoBehaviour
                 wander.PauseWander();
             }
 
-            Debug.Log($"[EnemyTouchTrigger] Joueur détecté ! Lancement du combat avec {gameObject.name}...");
-            CombatManager.Instance.StartCombat(gameObject);
+            Debug.Log($"[EnemyTouchTrigger] Joueur détecté ! Lancement du combat avec {gameObject.name} (Centre: {(combatCenterMarker != null ? combatCenterMarker.name : "Position Ennemi")})...");
+            CombatManager.Instance.StartCombat(gameObject, combatCenterMarker);
         }
         else
         {
             Debug.LogError("[EnemyTouchTrigger] CombatManager.Instance est introuvable dans la scène !");
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (combatCenterMarker != null)
+        {
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(combatCenterMarker.position, 0.6f);
+            Gizmos.DrawLine(transform.position, combatCenterMarker.position);
         }
     }
 

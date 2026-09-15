@@ -38,6 +38,9 @@ public class CinemachineHelper : MonoBehaviour
     [Tooltip("Vitesse de lissage de la rotation de la caméra.")]
     [SerializeField] private float rotationLerpSpeed = 8f;
 
+    [Tooltip("Vitesse de glissement fluide de la caméra vers la plateforme lors d'une réapparition chute.")]
+    [SerializeField] private float platformLockGlideSpeed = 6f;
+
     [Tooltip("Activer une légère inclinaison de roulis (Roll / axe Z) lors des virages pour un effet cinématique RPG.")]
     [SerializeField] private bool enableTurnRoll = false;
 
@@ -162,17 +165,19 @@ public class CinemachineHelper : MonoBehaviour
 
     /// <summary>
     /// Fige le cadrage de la caméra sur la plateforme pendant la chute dans le vide et la réapparition du ciel.
+    /// Si instant est faux (par défaut), la caméra glisse de façon fluide vers la position de la plateforme.
     /// </summary>
-    public void LockCameraToPlatform(Vector3 platformWorldPos)
+    public void LockCameraToPlatform(Vector3 platformWorldPos, bool instant = false)
     {
-        if (isCameraLockedToPlatform) return; // Déjà verrouillée, ne pas écraser la position de la plateforme à chaque frame !
-
         isCameraLockedToPlatform = true;
         lockedPlatformPosition = platformWorldPos;
         if (dummyTarget != null)
         {
             dummyTarget.SetParent(null);
-            dummyTarget.position = platformWorldPos;
+            if (instant)
+            {
+                dummyTarget.position = platformWorldPos;
+            }
         }
     }
 
@@ -397,6 +402,7 @@ public class CinemachineHelper : MonoBehaviour
             return;
         }
 
+        float deltaTime = Time.deltaTime;
         Vector3 playerPos;
 
         if (isCameraLockedToPlatform)
@@ -405,8 +411,9 @@ public class CinemachineHelper : MonoBehaviour
             {
                 dummyTarget.SetParent(null);
             }
-            dummyTarget.position = lockedPlatformPosition;
-            playerPos = lockedPlatformPosition;
+            // Glissement fluide du proxy de caméra vers la plateforme au lieu d'un saut instantané
+            dummyTarget.position = Vector3.Lerp(dummyTarget.position, lockedPlatformPosition, deltaTime * platformLockGlideSpeed);
+            playerPos = dummyTarget.position;
         }
         else
         {
@@ -418,8 +425,6 @@ public class CinemachineHelper : MonoBehaviour
             playerPos = targetPlayer.position;
         }
 
-        float deltaTime = Time.deltaTime;
-        
         // 1. Calcul de la vitesse et de la pente
         if (deltaTime > 0f)
         {

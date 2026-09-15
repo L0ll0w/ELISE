@@ -38,6 +38,7 @@ Shader "Custom/StatueInkShader"
         _DripBlur ("Tear Edge Softness", Range(0.001, 0.1)) = 0.01
         _WiggleFreq ("Tear Path Wavy Freq", Float) = 3.0
         _WiggleStrength ("Tear Path Wavy Strength", Range(0.0, 0.2)) = 0.03
+        [HideInInspector] _CullMode ("Cull Mode", Float) = 0
     }
 
     SubShader

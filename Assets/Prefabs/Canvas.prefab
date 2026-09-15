@@ -4732,9 +4732,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 7090190299516629842}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 70.88753, y: -2.5794}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchoredPosition: {x: 231.88753, y: -2.5794}
   m_SizeDelta: {x: 415.9011, y: 69.8223}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5255207790609793098
@@ -6333,9 +6333,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DialogueManager
   dialoguePanel: {fileID: 1407359193483892783}
   portraitImage: {fileID: 7283060379332998606}
+  portraitContainer: {fileID: 0}
   nameText: {fileID: 6303194645068811016}
   namePanel: {fileID: 925643875832083309}
   dialogueText: {fileID: 2129345708447575570}
+  textContentContainer: {fileID: 0}
+  autoAdjustTextPosition: 1
+  textLeftMarginWithoutPortrait: 30
   choicesPanel: {fileID: 1146316540276307829}
   choicesContainer: {fileID: 1672743615317517145}
   choiceTextPrefab: {fileID: 6403637575012218873, guid: 570a7c1d580911c4b9fbab66960f04e3, type: 3}

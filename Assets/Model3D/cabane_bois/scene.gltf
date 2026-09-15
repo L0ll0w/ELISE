@@ -1,0 +1,319 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        100.09178924560547,
+        83.23046875,
+        24.68017578125
+      ],
+      "min": [
+        -98.0625,
+        -80.33592987060547,
+        -231.46340942382813
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 59580,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        0.999963641166687,
+        0.9999926090240479,
+        0.9996793866157532
+      ],
+      "min": [
+        -0.9999470710754395,
+        -0.999980628490448,
+        -0.999866247177124
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        0.9970932602882385,
+        0.9996796250343323
+      ],
+      "min": [
+        0.0057198950089514256,
+        0.004641637206077576
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 39720,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        0.9990019202232361,
+        0.9752663373947144
+      ],
+      "min": [
+        0.0009980034083127975,
+        0.0009742921101860702
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 79440,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        0.9970932602882385,
+        0.9996796250343323
+      ],
+      "min": [
+        0.0057198950089514256,
+        0.004641637206077576
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 119160,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        0.9970932602882385,
+        0.9996796250343323
+      ],
+      "min": [
+        0.0057198950089514256,
+        0.004641637206077576
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 158880,
+      "componentType": 5126,
+      "count": 4965,
+      "max": [
+        0.9970932602882385,
+        0.9996796250343323
+      ],
+      "min": [
+        0.0057198950089514256,
+        0.004641637206077576
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 14850,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "piwici7944 (https://sketchfab.com/piwici7944)",
+      "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+      "source": "https://sketchfab.com/3d-models/cabane-bois-f131d103d4a14de3961b70a65f3ea995",
+      "title": "Cabane Bois"
+    },
+    "generator": "Sketchfab-12.65.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 59400,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 198600,
+      "byteOffset": 59400,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 119160,
+      "byteOffset": 258000,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 377160,
+      "uri": "scene.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "textures/Cabane01_baseColor.png"
+    },
+    {
+      "uri": "textures/Cabane01_metallicRoughness.png"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Cabane01",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.6992489479716261,
+          0.6992489479716261,
+          0.6992489479716261,
+          1.0
+        ],
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0,
+        "metallicRoughnessTexture": {
+          "index": 1
+        },
+        "roughnessFactor": 0.47709725009793513
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Object_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2,
+            "TEXCOORD_1": 3,
+            "TEXCOORD_2": 4,
+            "TEXCOORD_3": 5,
+            "TEXCOORD_4": 6
+          },
+          "indices": 7,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "name": "root"
+    },
+    {
+      "children": [
+        3
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "GLTF_SceneRootNode"
+    },
+    {
+      "children": [
+        4
+      ],
+      "matrix": [
+        0.009774074145715957,
+        -2.9913108532926064e-10,
+        0.0021136346650375256,
+        0.0,
+        -0.0021136346650375433,
+        -8.157647325925624e-10,
+        0.009774074145715924,
+        0.0,
+        -1.1995010411057259e-10,
+        -0.009999999776482547,
+        -8.605600617379996e-10,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Cabane01_0"
+    },
+    {
+      "mesh": 0,
+      "name": "Object_4"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    }
+  ]
+}

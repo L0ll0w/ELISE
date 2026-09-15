@@ -58,6 +58,14 @@ public class TypewriterEffects : MonoBehaviour
     /// </summary>
     public void StartTyping(string rawText, System.Action onComplete = null)
     {
+        if (!gameObject.activeInHierarchy)
+        {
+            if (textComponent == null) textComponent = GetComponent<TextMeshProUGUI>();
+            if (textComponent != null) textComponent.text = rawText;
+            onComplete?.Invoke();
+            return;
+        }
+
         if (typingCoroutine != null)
         {
             StopCoroutine(typingCoroutine);

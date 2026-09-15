@@ -82,6 +82,10 @@ public class RhythmCombatManager : MonoBehaviour
     [Tooltip("Inclinaison (Pitch) de la caméra.")]
     [SerializeField] private float cameraPitch = 30f;
 
+    [Header("Sensibilité d'Orientation Boss")]
+    [Tooltip("Seuil de zone morte (en mètres) pour empêcher le boss de clignoter/flipper rapidement lorsqu'il est pile en face du joueur.")]
+    [SerializeField] private float bossFlipDeadzone = 0.35f;
+
     [Header("Configuration Caméra Tour Joueur")]
     [Tooltip("Distance de la caméra par rapport au joueur lors de son tour.")]
     [SerializeField] private float playerTurnCameraDistance = 4f;
@@ -220,6 +224,8 @@ public class RhythmCombatManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI customQteInstructionText;
     [Tooltip("Feedback textuel du QTE personnalisé.")]
     [SerializeField] private TextMeshProUGUI customQteFeedbackText;
+    [Tooltip("Matériau personnalisé à appliquer aux flèches du QTE (ex: UI/Default, UI/Overlay, Shader personnalisé, Glow, etc.).")]
+    [SerializeField] private Material customQteArrowMaterial;
 
     [Header("Rotation 3D de l'Attaque / QTE")]
     [Tooltip("Rotation X (inclinaison verticale) pour l'effet 3D de la QTE.")]
@@ -239,6 +245,7 @@ public class RhythmCombatManager : MonoBehaviour
     // État du combat
     private CombatState currentState = CombatState.Transitioning;
     private GameObject activeEnemy;
+    private Transform customCenterMarker;
     private Vector3 combatCenter;
     private RhythmPlayerController playerController;
     private CombatCameraOccluder cameraOccluder;
@@ -262,6 +269,8 @@ public class RhythmCombatManager : MonoBehaviour
     private int tutorialPlayerTurnCount = 0;
     private bool isGardenerInterventionActive = false;
     private int currentTalkDialogueStep = 0;
+    private int currentDodgePhaseIndex = 0;
+    private bool wasLastActionTalk = false;
 
     // Références pour la sauvegarde et restauration de la musique de fond d'origine
     private AudioSource previousAudioSource;
@@ -283,7 +292,6 @@ public class RhythmCombatManager : MonoBehaviour
     private RectTransform qteTargetGood;
     private TextMeshProUGUI qteInstructionText;
     private TextMeshProUGUI qteFeedbackText;
-    private float qteStartBeat = 0f;
     private bool qteResolved = false;
     private int qteStartFrame = -1;
 
@@ -483,7 +491,7 @@ public class RhythmCombatManager : MonoBehaviour
 
     #region Lancement du Combat Rythmique
 
-    public void StartCombat(GameObject enemy)
+    public void StartCombat(GameObject enemy, Transform customCombatCenter = null)
     {
         if (enemy == null)
         {
@@ -492,6 +500,7 @@ public class RhythmCombatManager : MonoBehaviour
         }
 
         activeEnemy = enemy;
+        customCenterMarker = customCombatCenter;
 
         // Récupérer le conteneur de données de combat s'il existe
         EnemyCombatDataHolder holder = enemy.GetComponent<EnemyCombatDataHolder>();
@@ -511,6 +520,8 @@ public class RhythmCombatManager : MonoBehaviour
         hasPlayedVictoryTutorial = false;
         tutorialPlayerTurnCount = 0;
         currentTalkDialogueStep = 0;
+        currentDodgePhaseIndex = 0;
+        wasLastActionTalk = false;
         originalCameraDistance = cameraDistance;
         originalCameraHeight = cameraHeight;
 
@@ -540,6 +551,29 @@ public class RhythmCombatManager : MonoBehaviour
         {
             PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
             if (pm != null) leader = pm.transform;
+        }
+
+        // Si le joueur est en l'air lors du déclenchement du combat, le remettre immédiatement au sol et réinitialiser sa physique
+        if (leader != null)
+        {
+            leader.position = SnapToGround(leader.position);
+
+            Rigidbody playerRb = leader.GetComponent<Rigidbody>();
+            if (playerRb == null) playerRb = leader.GetComponentInChildren<Rigidbody>();
+            if (playerRb != null)
+            {
+                playerRb.linearVelocity = Vector3.zero;
+                playerRb.angularVelocity = Vector3.zero;
+                playerRb.isKinematic = true;
+            }
+
+            PlayerMovement playerMovement = leader.GetComponent<PlayerMovement>();
+            if (playerMovement == null) playerMovement = leader.GetComponentInChildren<PlayerMovement>();
+            if (playerMovement != null)
+            {
+                playerMovement.ResetAirborneState();
+                playerMovement.enabled = false;
+            }
         }
 
         // Désactiver Cinemachine (Cerveau de la caméra principale + Caméra virtuelle)
@@ -624,11 +658,23 @@ public class RhythmCombatManager : MonoBehaviour
             activeVisualPrefab.transform.localRotation = Quaternion.identity;
         }
 
-        // 4. Recherche de Zone Libre et Repositionnement synchrone Ennemi + Grille + Joueur
-        Vector3 initialCenter = activeEnemy.transform.position;
-        combatCenter = SnapToGround(FindSafeCombatCenter(initialCenter, 4.5f));
+        // 4. Positionnement Ennemi + Grille + Joueur
+        Transform targetMarker = customCenterMarker;
+        if (targetMarker == null && activeEnemy != null)
+        {
+            EnemyTouchTrigger touchTrigger = activeEnemy.GetComponent<EnemyTouchTrigger>();
+            if (touchTrigger == null) touchTrigger = activeEnemy.GetComponentInParent<EnemyTouchTrigger>();
+            if (touchTrigger == null) touchTrigger = activeEnemy.GetComponentInChildren<EnemyTouchTrigger>();
+            if (touchTrigger != null && touchTrigger.CombatCenterMarker != null)
+            {
+                targetMarker = touchTrigger.CombatCenterMarker;
+            }
+        }
 
-        // Déplacer l'ennemi au centre de la zone sécurisée et figer sa physique
+        Vector3 initialCenter = (targetMarker != null) ? targetMarker.position : activeEnemy.transform.position;
+        combatCenter = SnapToGround(initialCenter);
+
+        // Déplacer l'ennemi au centre de la zone et figer sa physique
         activeEnemy.transform.position = combatCenter;
 
         Rigidbody enemyRb = activeEnemy.GetComponent<Rigidbody>();
@@ -658,18 +704,43 @@ public class RhythmCombatManager : MonoBehaviour
             radialGrid = gridObj.AddComponent<RadialCombatGrid>();
         }
 
-        // Déplacer la grille au centre de la zone sécurisée
+        // Appliquer la configuration de grille spécifique à cet ennemi s'il en a une
+        if (activeCombatData != null)
+        {
+            radialGrid.Configure(activeCombatData.GridShape, activeCombatData.SectorsCount, activeCombatData.RingsCount, activeCombatData.ArcAngleDegrees, activeCombatData.ArcCenterAngle);
+        }
+
+        // Déplacer la grille au centre
         radialGrid.transform.position = combatCenter;
         radialGrid.SetGridActive(true);
 
-        // 5. Calculer le secteur de départ du joueur et le placer directement sur la nouvelle grille
-        Vector3 dirToPlayer = (leader.position - initialCenter).normalized;
-        if (dirToPlayer.sqrMagnitude < 0.001f) dirToPlayer = Vector3.forward;
-        float angleRad = Mathf.Atan2(dirToPlayer.z, dirToPlayer.x);
-        float angleDeg = angleRad * Mathf.Rad2Deg;
-        if (angleDeg < 0f) angleDeg += 360f;
-        int startSector = Mathf.RoundToInt((angleDeg - 22.5f) / 45f) % 8;
-        startSector = (startSector + 8) % 8;
+        // 5. Calculer le secteur et le ring de départ du joueur
+        int startSector;
+        if (radialGrid.IsLooping)
+        {
+            Vector3 dirToPlayer = leader.position - initialCenter;
+            dirToPlayer.y = 0f;
+            if (dirToPlayer.sqrMagnitude < 0.001f) dirToPlayer = Vector3.forward;
+            else dirToPlayer.Normalize();
+
+            float angleRad = Mathf.Atan2(dirToPlayer.z, dirToPlayer.x);
+            float angleDeg = angleRad * Mathf.Rad2Deg;
+            if (angleDeg < 0f) angleDeg += 360f;
+            float angleStep = 360f / radialGrid.SectorsCount;
+            startSector = Mathf.RoundToInt((angleDeg - (angleStep / 2f)) / angleStep) % radialGrid.SectorsCount;
+            startSector = (startSector + radialGrid.SectorsCount) % radialGrid.SectorsCount;
+        }
+        else
+        {
+            // Pour un arc limité (PartialArc), placer le joueur sur la case du milieu
+            startSector = radialGrid.SectorsCount / 2;
+        }
+
+        int startRing = radialGrid.RingsCount - 1; // Rangée extérieure du fond
+
+        // Repositionner physiquement le joueur sur sa case de départ sur la grille réalignée AU SOL avant d'initialiser son contrôleur
+        Vector3 playerCellPos = radialGrid.GetCellPosition(startRing, startSector);
+        leader.position = SnapToGround(playerCellPos);
 
         playerController = leader.gameObject.GetComponent<RhythmPlayerController>();
         if (playerController == null)
@@ -677,11 +748,7 @@ public class RhythmCombatManager : MonoBehaviour
             playerController = leader.gameObject.AddComponent<RhythmPlayerController>();
         }
         playerController.MoveCooldown = playerMoveCooldown;
-        playerController.Initialize(radialGrid, 0, startSector);
-
-        // Repositionner physiquement le joueur sur sa case de départ sur la grille réalignée
-        Vector3 playerCellPos = radialGrid.GetCellPosition(0, startSector);
-        leader.position = SnapToGround(playerCellPos);
+        playerController.Initialize(radialGrid, startRing, startSector);
 
         playerController.SetInputEnabled(true);
 
@@ -744,6 +811,10 @@ public class RhythmCombatManager : MonoBehaviour
                 "Attention ! Le combat commence. Restez concentré et esquivez les attaques en rythme !"
             );
             yield return StartCoroutine(MoveGardenerToPlayerAndRunDialogue(startDiag));
+        }
+        else
+        {
+            TryTriggerDodgePhaseDialogue();
         }
 
         isGardenerInterventionActive = false;
@@ -2118,13 +2189,12 @@ public class RhythmCombatManager : MonoBehaviour
     private Vector3 FindSafeCombatCenter(Vector3 initialCenter, float arenaRadius = 4.5f)
     {
         LayerMask obstacleLayers = LayerMask.GetMask("Default", "Environment", "Obstacle", "Solid", "Wall");
-        // Si aucun obstacle n'est détecté ET que la position repose sur du sol ferme hors du vide
+
         if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers) && IsGroundValidForArena(initialCenter, arenaRadius))
         {
             return initialCenter;
         }
 
-        // Recherche en cercles concentriques extérieurs d'une zone dégagée et sécurisée
         int steps = 12;
         float stepDistance = 1.5f;
         int maxRings = 6;
@@ -2136,36 +2206,28 @@ public class RhythmCombatManager : MonoBehaviour
             {
                 float angle = i * (2f * Mathf.PI / steps);
                 Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-                Vector3 candidate = initialCenter + offset;
-                candidate = SnapToGround(candidate);
+                Vector3 candidate = SnapToGround(initialCenter + offset);
 
                 if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers) && IsGroundValidForArena(candidate, arenaRadius))
                 {
-                    Debug.Log($"[RhythmCombatManager] Zone de combat dégagée et sécurisée trouvée à {candidate} (décalage de {radius}m).");
                     return candidate;
                 }
             }
         }
 
-        Debug.LogWarning("[RhythmCombatManager] Impossible de trouver une zone de combat 100% dégagée et hors du vide. Utilisation du centre initial.");
         return initialCenter;
     }
 
-    /// <summary>
-    /// Vérifie que le centre et la circonférence de la grille reposent sur du sol solide (pas au-dessus du vide).
-    /// </summary>
     private bool IsGroundValidForArena(Vector3 center, float checkRadius)
     {
         LayerMask groundLayers = ~0 & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
 
-        // 1. Vérifier le centre
         Vector3 centerRayOrigin = center + Vector3.up * 5f;
         if (!Physics.Raycast(centerRayOrigin, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
         {
             return false;
         }
 
-        // 2. Vérifier 8 points sur le périmètre
         int samplePoints = 8;
         float sampleRadius = checkRadius * 0.8f;
         for (int i = 0; i < samplePoints; i++)
@@ -2174,7 +2236,7 @@ public class RhythmCombatManager : MonoBehaviour
             Vector3 samplePos = center + new Vector3(Mathf.Cos(angle) * sampleRadius, 5f, Mathf.Sin(angle) * sampleRadius);
             if (!Physics.Raycast(samplePos, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
             {
-                return false; // Un point de l'arène tombe dans le vide !
+                return false;
             }
         }
 
@@ -2314,7 +2376,7 @@ public class RhythmCombatManager : MonoBehaviour
         }
     }
 
-    private Vector3 SnapToGround(Vector3 position)
+    private Vector3 SnapToGround(Vector3 position, float maxVerticalDelta = 3.0f)
     {
         // Récupérer et désactiver temporairement les colliders de l'ennemi et du joueur pour éviter l'auto-collision
         Collider[] enemyColliders = activeEnemy != null ? activeEnemy.GetComponentsInChildren<Collider>() : new Collider[0];
@@ -2346,13 +2408,20 @@ public class RhythmCombatManager : MonoBehaviour
             playerColliders[i].enabled = false;
         }
 
-        RaycastHit hit;
-        Vector3 origin = new Vector3(position.x, position.y + 10f, position.z);
+        LayerMask groundLayers = ~0 & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
+        Vector3 origin = new Vector3(position.x, position.y + 2.5f, position.z);
         Vector3 finalPos = position;
         
-        if (Physics.Raycast(origin, Vector3.down, out hit, 25f))
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 6.0f, groundLayers, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (var hit in hits)
         {
-            finalPos = hit.point;
+            if (Mathf.Abs(hit.point.y - position.y) <= maxVerticalDelta)
+            {
+                finalPos = hit.point;
+                break;
+            }
         }
 
         // Restaurer les colliders
@@ -2375,8 +2444,19 @@ public class RhythmCombatManager : MonoBehaviour
             SpriteRenderer sr = activeEnemy.GetComponentInChildren<SpriteRenderer>();
             if (sr != null)
             {
-                // Dans la perspective 2.5D, si le joueur est à gauche (axe X) du boss, le boss regarde à gauche (flipX = true)
-                sr.flipX = playerController.transform.position.x < activeEnemy.transform.position.x;
+                float deltaX = playerController.transform.position.x - activeEnemy.transform.position.x;
+                float deadzone = Mathf.Max(0.05f, bossFlipDeadzone);
+
+                // Zone morte d'hystérésis pour éviter le clignotement / flip rapide quand le joueur est pile en face du boss
+                if (deltaX < -deadzone)
+                {
+                    sr.flipX = true;  // Le joueur est nettement à gauche -> Regarder à gauche
+                }
+                else if (deltaX > deadzone)
+                {
+                    sr.flipX = false; // Le joueur est nettement à droite -> Regarder à droite
+                }
+                // Si deltaX est dans la zone morte (-deadzone <= deltaX <= deadzone), ne pas flipper et conserver l'orientation actuelle !
             }
         }
     }
@@ -2900,7 +2980,6 @@ public class RhythmCombatManager : MonoBehaviour
             if (customQteCanvas == null) customQteCanvas = customQtePanel.gameObject.AddComponent<Canvas>();
             customQteCanvas.overrideSorting = true;
             customQteCanvas.sortingOrder = 99999;
-            customQteCanvas.planeDistance = 0.1f;
 
             if (customQteInstructionText == null)
             {
@@ -2921,6 +3000,27 @@ public class RhythmCombatManager : MonoBehaviour
             if (customQteInstructionText != null) qteInstructionText = customQteInstructionText;
             if (customQteFeedbackText != null) qteFeedbackText = customQteFeedbackText;
 
+            foreach (var tmp in customQtePanel.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                if (tmp != null && tmp.fontMaterial != null)
+                {
+                    bool isTmpMat = customQteArrowMaterial != null && customQteArrowMaterial.shader != null && customQteArrowMaterial.shader.name.Contains("TextMeshPro");
+                    Material mat = isTmpMat ? new Material(customQteArrowMaterial) : new Material(tmp.fontMaterial);
+                    if (mat.HasProperty("_ZTest")) mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+                    tmp.fontMaterial = mat;
+                }
+            }
+            foreach (var img in customQtePanel.GetComponentsInChildren<Image>(true))
+            {
+                if (img != null)
+                {
+                    bool isUiMat = customQteArrowMaterial != null && customQteArrowMaterial.shader != null && !customQteArrowMaterial.shader.name.Contains("TextMeshPro");
+                    Material mat = isUiMat ? new Material(customQteArrowMaterial) : (img.material != null ? new Material(img.material) : null);
+                    if (mat != null && mat.HasProperty("_ZTest")) mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+                    if (mat != null) img.material = mat;
+                }
+            }
+
             customQtePanel.gameObject.SetActive(false); // Masqué au début
         }
         else
@@ -2933,7 +3033,6 @@ public class RhythmCombatManager : MonoBehaviour
             Canvas qteCanvas = qteBorder.AddComponent<Canvas>();
             qteCanvas.overrideSorting = true;
             qteCanvas.sortingOrder = 99999;
-            qteCanvas.planeDistance = 0.1f;
             qteBorder.AddComponent<GraphicRaycaster>();
 
             RectTransform qteBRect = qteBorder.GetComponent<RectTransform>();
@@ -2956,6 +3055,15 @@ public class RhythmCombatManager : MonoBehaviour
                 arrowTxtObj.transform.SetParent(qteBorder.transform, false);
                 TextMeshProUGUI arrowTxt = arrowTxtObj.AddComponent<TextMeshProUGUI>();
                 if (customCombatFont != null) arrowTxt.font = customCombatFont;
+                
+                // Matériau d'overlay avec ZTest Always pour garantir un affichage tout devant sans clipping 3D
+                if (arrowTxt.fontMaterial != null)
+                {
+                    bool isTmpMat = customQteArrowMaterial != null && customQteArrowMaterial.shader != null && customQteArrowMaterial.shader.name.Contains("TextMeshPro");
+                    Material zAlwaysMat = isTmpMat ? new Material(customQteArrowMaterial) : new Material(arrowTxt.fontMaterial);
+                    if (zAlwaysMat.HasProperty("_ZTest")) zAlwaysMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
+                    arrowTxt.fontMaterial = zAlwaysMat;
+                }
                 ArrowDirection dir = (qteComboSequence != null && i < qteComboSequence.Count) ? qteComboSequence[i] : ArrowDirection.Right;
                 arrowTxt.text = GetArrowSymbol(dir);
                 arrowTxt.fontSize = 62f; // Plus grand et plus visible
@@ -3454,7 +3562,68 @@ public class RhythmCombatManager : MonoBehaviour
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         if (companionsSubPanel != null) companionsSubPanel.SetActive(false);
 
+        // Déclencher le dialogue de phase d'esquive si configuré pour cette phase
+        if (TryTriggerDodgePhaseDialogue())
+        {
+            return;
+        }
+
         logText.text = "ESQUIVEZ EN RYTHME !";
+    }
+
+    private bool TryTriggerDodgePhaseDialogue()
+    {
+        if (wasLastActionTalk)
+        {
+            wasLastActionTalk = false;
+            return false;
+        }
+
+        if (activeCombatData == null || activeCombatData.DodgePhaseDialogues == null || activeCombatData.DodgePhaseDialogues.Count == 0)
+        {
+            return false;
+        }
+
+        if (currentDodgePhaseIndex < activeCombatData.DodgePhaseDialogues.Count)
+        {
+            DialogueData dodgeDiag = activeCombatData.DodgePhaseDialogues[currentDodgePhaseIndex];
+            currentDodgePhaseIndex++;
+
+            if (dodgeDiag != null && DialogueManager.Instance != null)
+            {
+                currentPhase = CombatPhase.DialogueActive;
+                if (playerController != null) playerController.SetInputEnabled(false);
+
+                // Passer le joueur en animation "facedance" et orienter la caméra vers le joueur
+                if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+                {
+                    PlayPlayerAnimation(faceDanceAnimationStateName);
+                }
+                OrientPlayerTowardsEnemy();
+                cameraDistance = playerTurnCameraDistance;
+                cameraHeight = playerTurnCameraHeight;
+
+                DialogueManager.Instance.StartDialogue(dodgeDiag, () =>
+                {
+                    currentPhase = CombatPhase.DodgePhase;
+                    
+                    // Restaurer l'animation de danse normale et la caméra
+                    RestorePlayerOrientation();
+                    if (!string.IsNullOrEmpty(danceAnimationStateName))
+                    {
+                        PlayPlayerAnimation(danceAnimationStateName);
+                    }
+                    cameraDistance = originalCameraDistance;
+                    cameraHeight = originalCameraHeight;
+
+                    if (playerController != null) playerController.SetInputEnabled(true);
+                    logText.text = "ESQUIVEZ EN RYTHME !";
+                });
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ClearAllTelegraphs()
@@ -3501,7 +3670,12 @@ public class RhythmCombatManager : MonoBehaviour
 
         if (playerAnim != null)
         {
-            playerAnim.Play(animState);
+            playerAnim.speed = 1f;
+            AnimatorStateInfo stateInfo = playerAnim.GetCurrentAnimatorStateInfo(0);
+            if (!stateInfo.IsName(animState))
+            {
+                playerAnim.Play(animState);
+            }
         }
     }
 
@@ -4079,6 +4253,8 @@ public class RhythmCombatManager : MonoBehaviour
     {
         if (Time.time < menuEnableTime) return;
 
+        wasLastActionTalk = true;
+
         if (rpgMenuPanel != null) rpgMenuPanel.SetActive(false);
         if (groupContainerObj != null) groupContainerObj.SetActive(false);
 
@@ -4098,41 +4274,41 @@ public class RhythmCombatManager : MonoBehaviour
         {
             currentPhase = CombatPhase.DialogueActive;
 
-            // Déterminer l'index de la réplique (1 réplique par action PARLER, puis boucle sur la dernière)
+            // Déterminer l'index du dialogue (1 dialogue par action PARLER, puis boucle/maintien sur le dernier)
             int lineIndex = Mathf.Min(currentTalkDialogueStep, activeCombatData.TalkDialogues.Count - 1);
             currentTalkDialogueStep++;
 
-            // Créer un DialogueData d'une seule réplique
-            DialogueData tempDialogue = ScriptableObject.CreateInstance<DialogueData>();
-            DialogueNode node = new DialogueNode();
-            node.nodeID = "0";
-            node.characterName = activeCombatData.EnemyName;
-            node.portrait = null;
-            node.sentence = activeCombatData.TalkDialogues[lineIndex];
-            node.nextNodeID = null; // Une seule ligne par commande PARLER
-            node.choices = null;
-            tempDialogue.nodes = new DialogueNode[] { node };
+            DialogueData talkDiag = activeCombatData.TalkDialogues[lineIndex];
 
             if (dialoguePanel != null) dialoguePanel.SetActive(false);
             if (logText != null) logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
 
-            DialogueManager.Instance.StartDialogue(tempDialogue, () =>
+            if (talkDiag != null)
+            {
+                DialogueManager.Instance.StartDialogue(talkDiag, () =>
+                {
+                    TransitionToDodgePhase();
+                });
+            }
+            else
             {
                 TransitionToDodgePhase();
-            });
+            }
         }
         else if (activeCombatData != null && activeCombatData.TalkDialogues != null && activeCombatData.TalkDialogues.Count > 0)
         {
             // Fallback si DialogueManager n'est pas présent dans la scène
-            if (dialoguePanel != null) dialoguePanel.SetActive(true);
-
-            currentPhase = CombatPhase.DialogueActive;
-            dialogueEnterTime = Time.time;
-
             int lineIndex = Mathf.Min(currentTalkDialogueStep, activeCombatData.TalkDialogues.Count - 1);
             currentTalkDialogueStep++;
 
-            currentDialogueIndex = 9999; // Se ferme au prochain clic
+            DialogueData talkDiag = activeCombatData.TalkDialogues[lineIndex];
+            string sentence = (talkDiag != null && talkDiag.nodes != null && talkDiag.nodes.Length > 0) ? talkDiag.nodes[0].sentence : "...";
+
+            if (dialoguePanel != null) dialoguePanel.SetActive(true);
+            currentPhase = CombatPhase.DialogueActive;
+            dialogueEnterTime = Time.time;
+            currentDialogueIndex = 9999;
+
             if (logText != null) logText.text = "Discussion engagée avec " + activeCombatData.EnemyName;
 
             TypewriterEffects typewriter = dialogueText != null ? dialogueText.GetComponent<TypewriterEffects>() : null;
@@ -4141,14 +4317,8 @@ public class RhythmCombatManager : MonoBehaviour
                 typewriter = dialogueText.gameObject.AddComponent<TypewriterEffects>();
             }
 
-            if (typewriter != null)
-            {
-                typewriter.StartTyping(activeCombatData.TalkDialogues[lineIndex]);
-            }
-            else if (dialogueText != null)
-            {
-                dialogueText.text = activeCombatData.TalkDialogues[lineIndex];
-            }
+            if (typewriter != null) typewriter.StartTyping(sentence);
+            else if (dialogueText != null) dialogueText.text = sentence;
         }
         else
         {
@@ -4181,8 +4351,14 @@ public class RhythmCombatManager : MonoBehaviour
 
     private void UpdateDialogue()
     {
-        // Si le gestionnaire de dialogue global est actif, il gère les inputs de son côté
-        if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
+        // Si le gestionnaire de dialogue global est présent, il gère l'UI et les inputs
+        if (DialogueManager.Instance != null)
+        {
+            return;
+        }
+
+        // Si le panneau de dialogue fallback est inactif, ne rien faire
+        if (dialoguePanel == null || !dialoguePanel.activeInHierarchy || dialogueText == null || !dialogueText.gameObject.activeInHierarchy)
         {
             return;
         }
@@ -4192,7 +4368,7 @@ public class RhythmCombatManager : MonoBehaviour
         bool advancePressed = false;
         if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.eKey.wasPressedThisFrame)) advancePressed = true;
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) advancePressed = true;
-        if (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame) advancePressed = true;
+        if (Gamepad.current != null && Gamepad.current.buttonWest.wasPressedThisFrame) advancePressed = true;
 
         if (advancePressed)
         {
@@ -4213,7 +4389,8 @@ public class RhythmCombatManager : MonoBehaviour
                 currentDialogueIndex++;
                 if (activeCombatData != null && currentDialogueIndex < activeCombatData.TalkDialogues.Count)
                 {
-                    string nextSentence = activeCombatData.TalkDialogues[currentDialogueIndex];
+                    DialogueData talkDiag = activeCombatData.TalkDialogues[currentDialogueIndex];
+                    string nextSentence = (talkDiag != null && talkDiag.nodes != null && talkDiag.nodes.Length > 0) ? talkDiag.nodes[0].sentence : "...";
                     dialogueEnterTime = Time.time; // réinitialiser le cooldown
                     if (typewriter != null)
                     {

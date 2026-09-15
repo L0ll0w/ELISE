@@ -10,18 +10,33 @@ using UnityEngine;
 [AddComponentMenu("2.5D RPG/Rhythm/Radial Combat Grid")]
 public class RadialCombatGrid : MonoBehaviour
 {
-    [Header("Dimensions de la Grille")]
+    public enum GridShapeType
+    {
+        FullCircle, // Cercle complet (360°)
+        PartialArc  // Arc de cercle frontal délimité sur les côtés (ex: 3 ou 5 cases de large)
+    }
+
+    [Header("Forme & Dimensions de la Grille")]
+    [Tooltip("Forme de la grille : Cercle complet (360°) ou Arc de cercle (délimité).")]
+    [SerializeField] private GridShapeType gridShape = GridShapeType.FullCircle;
+
     [Tooltip("Rayon du cercle intérieur (première ligne).")]
     [SerializeField] private float innerRadius = 2.5f;
 
     [Tooltip("Rayon du cercle extérieur (deuxième ligne).")]
     [SerializeField] private float outerRadius = 5.0f;
 
-    [Tooltip("Nombre de secteurs angulaires (divisions de camembert).")]
+    [Tooltip("Nombre de secteurs angulaires / cases en largeur (ex: 3, 5, 8).")]
     [SerializeField] private int sectorsCount = 8;
 
-    [Tooltip("Nombre de cercles concentriques (lignes).")]
+    [Tooltip("Nombre de cercles concentriques / rangées en profondeur (ex: 2, 3).")]
     [SerializeField] private int ringsCount = 2;
+
+    [Tooltip("Angle d'ouverture total de l'arc en degrés si GridShape est PartialArc (ex: 60° pour 3 cases, 90° pour 5 cases).")]
+    [SerializeField] private float arcAngleDegrees = 90f;
+
+    [Tooltip("Orientation du centre de l'arc en degrés (270° = en face du boss / vers le bas écran).")]
+    [SerializeField] private float arcCenterAngle = 270f;
 
     [Header("Visualisation au sol")]
     [Tooltip("Matériau pour dessiner les lignes de la grille.")]
@@ -46,10 +61,37 @@ public class RadialCombatGrid : MonoBehaviour
 
     private bool isGridActive = false;
 
+    public bool IsLooping => gridShape == GridShapeType.FullCircle;
+    public GridShapeType GridShape => gridShape;
+    public float ArcAngleDegrees => arcAngleDegrees;
+    public float ArcCenterAngle => arcCenterAngle;
+    public float InnerRadius => innerRadius;
+    public float OuterRadius => outerRadius;
+    public int SectorsCount => sectorsCount;
+    public int RingsCount => ringsCount;
+
     private void Start()
     {
         // Générer le sprite pour les alertes de caisses si nécessaire
         warningCellSprite = GenerateCellWarningSprite();
+    }
+
+    /// <summary>
+    /// Reconfigure la forme, le nombre de secteurs et de rangées de la grille.
+    /// </summary>
+    public void Configure(GridShapeType shape, int sectors, int rings, float arcAngle = 90f, float centerAngle = 270f)
+    {
+        gridShape = shape;
+        sectorsCount = Mathf.Max(1, sectors);
+        ringsCount = Mathf.Max(1, rings);
+        arcAngleDegrees = Mathf.Clamp(arcAngle, 10f, 360f);
+        arcCenterAngle = centerAngle;
+
+        ClearGridLines();
+        if (isGridActive)
+        {
+            DrawGrid();
+        }
     }
 
     /// <summary>
@@ -59,8 +101,8 @@ public class RadialCombatGrid : MonoBehaviour
     {
         isGridActive = active;
 
-        // Générer la grille si elle n'existe pas encore
-        if (active && lineRenderers.Count == 0)
+        // Générer la grille si elle n'existe pas encore ou la rafraîchir
+        if (active)
         {
             DrawGrid();
         }
@@ -97,7 +139,6 @@ public class RadialCombatGrid : MonoBehaviour
     private void HandleBeatPulse(int beatIndex)
     {
         if (!isGridActive) return;
-        // Effet de pulsation visuelle : on lance une coroutine pour faire clignoter la grille
         StartCoroutine(PulseRoutine());
     }
 
@@ -142,13 +183,23 @@ public class RadialCombatGrid : MonoBehaviour
     /// </summary>
     public Vector3 GetCellPosition(int ringIndex, int sectorIndex)
     {
-        // Limiter les indices
         ringIndex = Mathf.Clamp(ringIndex, 0, ringsCount - 1);
-        sectorIndex = (sectorIndex % sectorsCount + sectorsCount) % sectorsCount; // Gestion du modulo négatif
 
-        // Calculer l'angle au milieu du secteur (pour centrer le joueur)
-        float angleStep = 360f / sectorsCount;
-        float angleDeg = (sectorIndex * angleStep) + (angleStep / 2f);
+        float angleDeg;
+        if (IsLooping)
+        {
+            sectorIndex = (sectorIndex % sectorsCount + sectorsCount) % sectorsCount;
+            float angleStep = 360f / sectorsCount;
+            angleDeg = (sectorIndex * angleStep) + (angleStep / 2f);
+        }
+        else
+        {
+            sectorIndex = Mathf.Clamp(sectorIndex, 0, sectorsCount - 1);
+            float angleStep = arcAngleDegrees / sectorsCount;
+            float startAngle = arcCenterAngle - (arcAngleDegrees / 2f);
+            angleDeg = startAngle + (sectorIndex * angleStep) + (angleStep / 2f);
+        }
+
         float angleRad = angleDeg * Mathf.Deg2Rad;
 
         // Déterminer le rayon moyen de la case entre le cercle de début et de fin du couloir
@@ -156,7 +207,7 @@ public class RadialCombatGrid : MonoBehaviour
         float rEnd = GetRingRadius(ringIndex + 1);
         float meanRadius = (rStart + rEnd) / 2f;
 
-        Vector3 offset = new Vector3(Mathf.Cos(angleRad) * meanRadius, 0.02f, Mathf.Sin(angleRad) * meanRadius); // Légèrement surélevé pour le rendu
+        Vector3 offset = new Vector3(Mathf.Cos(angleRad) * meanRadius, 0.02f, Mathf.Sin(angleRad) * meanRadius);
         return transform.position + offset;
     }
 
@@ -168,20 +219,6 @@ public class RadialCombatGrid : MonoBehaviour
         if (ringsCount <= 0) return innerRadius;
         float t = (float)ringIndex / ringsCount;
         return Mathf.Lerp(innerRadius, outerRadius, t);
-    }
-
-    /// <summary>
-    /// Projette un point sur le sol sous la grille.
-    /// </summary>
-    private Vector3 SnapToGround(Vector3 position)
-    {
-        RaycastHit hit;
-        Vector3 origin = new Vector3(position.x, position.y + 10f, position.z);
-        if (Physics.Raycast(origin, Vector3.down, out hit, 20f))
-        {
-            return hit.point;
-        }
-        return position;
     }
 
     /// <summary>
@@ -204,18 +241,15 @@ public class RadialCombatGrid : MonoBehaviour
             if (!cellWarningIndicators.ContainsKey(cell))
             {
                 GameObject indicator = new GameObject($"Warning_{cell.Ring}_{cell.Sector}");
-                indicator.transform.position = GetCellPosition(cell) + Vector3.up * 0.05f; // Légèrement surélevé
-                
-                // Placer l'indicateur à plat sur le sol
+                indicator.transform.position = GetCellPosition(cell) + Vector3.up * 0.05f;
                 indicator.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
                 SpriteRenderer sr = indicator.AddComponent<SpriteRenderer>();
                 sr.sprite = warningCellSprite;
                 sr.color = customColor ?? warningColor;
-                sr.sortingOrder = -2; // Rendu sous l'ombre du joueur et le joueur
+                sr.sortingOrder = -2;
 
-                // Adapter l'échelle à la taille de la case
-                float ringWidth = (outerRadius - innerRadius) / (ringsCount - 1);
+                float ringWidth = (outerRadius - innerRadius) / Mathf.Max(1, ringsCount);
                 indicator.transform.localScale = new Vector3(ringWidth * 0.8f, ringWidth * 0.8f, 1f);
 
                 cellWarningIndicators.Add(cell, sr);
@@ -249,26 +283,64 @@ public class RadialCombatGrid : MonoBehaviour
         cellWarningIndicators.Clear();
     }
 
+    public void ClearGridLines()
+    {
+        foreach (var lr in lineRenderers)
+        {
+            if (lr != null)
+            {
+                Destroy(lr.gameObject);
+            }
+        }
+        lineRenderers.Clear();
+    }
+
     private void DrawGrid()
     {
+        ClearGridLines();
+
         if (gridLineMaterial == null)
         {
             gridLineMaterial = new Material(Shader.Find("Sprites/Default"));
         }
 
-        // 1. Dessiner les cercles concentriques (r <= ringsCount pour dessiner la bordure externe fermante)
-        for (int r = 0; r <= ringsCount; r++)
+        if (IsLooping)
         {
-            float radius = GetRingRadius(r);
-            CreateCircleRenderer(radius);
-        }
+            // 1. Cercle complet : cercles concentriques 360°
+            for (int r = 0; r <= ringsCount; r++)
+            {
+                float radius = GetRingRadius(r);
+                CreateCircleRenderer(radius);
+            }
 
-        // 2. Dessiner les rayons de division angulaire
-        float angleStep = 360f / sectorsCount;
-        for (int s = 0; s < sectorsCount; s++)
+            // 2. Rayons de division angulaire 360°
+            float angleStep = 360f / sectorsCount;
+            for (int s = 0; s < sectorsCount; s++)
+            {
+                float angleDeg = s * angleStep;
+                CreateRadialLineRenderer(angleDeg);
+            }
+        }
+        else
         {
-            float angleDeg = s * angleStep;
-            CreateRadialLineRenderer(angleDeg);
+            // Arc de cercle (PartialArc)
+            float startAngle = arcCenterAngle - (arcAngleDegrees / 2f);
+            float endAngle = arcCenterAngle + (arcAngleDegrees / 2f);
+
+            // 1. Arcs concentriques
+            for (int r = 0; r <= ringsCount; r++)
+            {
+                float radius = GetRingRadius(r);
+                CreateArcRenderer(radius, startAngle, endAngle);
+            }
+
+            // 2. Lignes radiales de séparation (sectorsCount + 1 pour inclure les bordures latérales gauche et droite)
+            float angleStep = arcAngleDegrees / sectorsCount;
+            for (int s = 0; s <= sectorsCount; s++)
+            {
+                float angleDeg = startAngle + (s * angleStep);
+                CreateRadialLineRenderer(angleDeg);
+            }
         }
     }
 
@@ -286,6 +358,7 @@ public class RadialCombatGrid : MonoBehaviour
         lr.endWidth = lineWidth;
         lr.useWorldSpace = false;
         lr.loop = true;
+        lr.sortingOrder = -5;
 
         int segments = 60;
         lr.positionCount = segments;
@@ -293,6 +366,36 @@ public class RadialCombatGrid : MonoBehaviour
         {
             float angle = i * (2f * Mathf.PI / segments);
             Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0.01f, Mathf.Sin(angle) * radius);
+            lr.SetPosition(i, offset);
+        }
+
+        lineRenderers.Add(lr);
+    }
+
+    private void CreateArcRenderer(float radius, float startAngleDeg, float endAngleDeg)
+    {
+        GameObject arcObj = new GameObject($"GridArc_{radius}");
+        arcObj.transform.SetParent(transform);
+        arcObj.transform.localPosition = Vector3.zero;
+
+        LineRenderer lr = arcObj.AddComponent<LineRenderer>();
+        lr.material = gridLineMaterial;
+        lr.startColor = gridColor;
+        lr.endColor = gridColor;
+        lr.startWidth = lineWidth;
+        lr.endWidth = lineWidth;
+        lr.useWorldSpace = false;
+        lr.loop = false;
+        lr.sortingOrder = -5;
+
+        int segments = Mathf.Max(10, Mathf.RoundToInt((endAngleDeg - startAngleDeg) / 3f));
+        lr.positionCount = segments + 1;
+        for (int i = 0; i <= segments; i++)
+        {
+            float t = (float)i / segments;
+            float angleDeg = Mathf.Lerp(startAngleDeg, endAngleDeg, t);
+            float angleRad = angleDeg * Mathf.Deg2Rad;
+            Vector3 offset = new Vector3(Mathf.Cos(angleRad) * radius, 0.01f, Mathf.Sin(angleRad) * radius);
             lr.SetPosition(i, offset);
         }
 
@@ -312,6 +415,7 @@ public class RadialCombatGrid : MonoBehaviour
         lr.startWidth = lineWidth;
         lr.endWidth = lineWidth;
         lr.useWorldSpace = false;
+        lr.sortingOrder = -5;
 
         lr.positionCount = 2;
         float rad = angleDegrees * Mathf.Deg2Rad;
@@ -327,7 +431,6 @@ public class RadialCombatGrid : MonoBehaviour
 
     private Sprite GenerateCellWarningSprite()
     {
-        // Génère un disque de warning flou rouge
         int size = 32;
         Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
         Color[] colors = new Color[size * size];
@@ -366,10 +469,4 @@ public class RadialCombatGrid : MonoBehaviour
             BeatManager.Instance.OnBeat -= HandleBeatPulse;
         }
     }
-
-    // Accesseurs
-    public int SectorsCount => sectorsCount;
-    public int RingsCount => ringsCount;
-    public float InnerRadius => innerRadius;
-    public float OuterRadius => outerRadius;
 }

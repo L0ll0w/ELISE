@@ -46,6 +46,9 @@ public class PlayerPitfallRespawn : MonoBehaviour
     [Tooltip("Durée de transition pour reprendre l'échelle normale à la fin du stun (en secondes, 0 = instantané).")]
     [SerializeField] private float recoveryTime = 0.08f;
 
+    [Tooltip("Durée (en secondes) pendant laquelle la caméra glisse de façon fluide vers la plateforme AVANT que le joueur ne réapparaisse depuis le ciel.")]
+    [SerializeField] private float cameraGlideDuration = 0.45f;
+
     [Header("Cible Visuelle (Optionnel)")]
     [Tooltip("Transform visuel à écraser. Si vide, utilise le Transform de ce GameObject.")]
     [SerializeField] private Transform visualTransform;
@@ -68,6 +71,10 @@ public class PlayerPitfallRespawn : MonoBehaviour
     private Vector3 currentTargetScale;
     private readonly List<Vector3> safePositionHistory = new List<Vector3>();
     private Collider lastSafeCollider;
+
+    private Vector3 lastJumpTakeoffPosition;
+    private Collider lastJumpTakeoffCollider;
+    private bool wasJumpTriggered = false;
 
     public bool IsRespawning => isRespawning;
     public Vector3 LastSafePosition => lastSafePosition;
@@ -108,15 +115,51 @@ public class PlayerPitfallRespawn : MonoBehaviour
         }
 
         // Enregistrer la position initiale comme point de sauvegarde par défaut si grounded
-        if (playerMovement != null && playerMovement.CheckGrounded(out RaycastHit hit))
+        if (playerMovement != null)
         {
-            if (hit.collider != null && hit.collider.gameObject != null && !IsLiquidWaterOrHazard(hit.collider.gameObject))
+            playerMovement.OnJump -= HandlePlayerJump;
+            playerMovement.OnJump += HandlePlayerJump;
+
+            if (playerMovement.CheckGrounded(out RaycastHit hit))
             {
-                lastSafePosition = hit.point + Vector3.up * 0.05f;
-                lastSafeCollider = hit.collider;
-                safePositionHistory.Add(lastSafePosition);
+                if (hit.collider != null && hit.collider.gameObject != null && !IsLiquidWaterOrHazard(hit.collider.gameObject))
+                {
+                    lastSafePosition = hit.point + Vector3.up * 0.05f;
+                    lastSafeCollider = hit.collider;
+                    safePositionHistory.Add(lastSafePosition);
+                }
             }
         }
+    }
+
+    private void HandlePlayerJump()
+    {
+        if (isRespawning) return;
+
+        // Enregistrer la position EXACTE du joueur au moment de l'impulsion du saut
+        Vector3 currentPos = transform.position;
+        if (playerMovement != null && playerMovement.CheckGrounded(out RaycastHit hit))
+        {
+            if (hit.collider != null && !IsLiquidWaterOrHazard(hit.collider.gameObject))
+            {
+                currentPos = hit.point + Vector3.up * 0.05f;
+                lastJumpTakeoffCollider = hit.collider;
+            }
+            else
+            {
+                currentPos = lastSafePosition;
+                lastJumpTakeoffCollider = lastSafeCollider;
+            }
+        }
+        else
+        {
+            currentPos = lastSafePosition;
+            lastJumpTakeoffCollider = lastSafeCollider;
+        }
+
+        lastJumpTakeoffPosition = currentPos;
+        wasJumpTriggered = true;
+        Debug.Log($"[PlayerPitfallRespawn] Saut enregistré au point exact du décollage : {lastJumpTakeoffPosition:F2}");
     }
 
     private bool HasSolidGroundBelow()
@@ -295,6 +338,9 @@ public class PlayerPitfallRespawn : MonoBehaviour
                     lastSafePosition = groundPos;
                     lastSafeCollider = hit.collider;
 
+                    // Si le joueur touche à nouveau un sol stable, le saut précédent s'est terminé avec succès
+                    wasJumpTriggered = false;
+
                     if (safePositionHistory.Count == 0 || Vector3.Distance(safePositionHistory[safePositionHistory.Count - 1], groundPos) > 0.2f)
                     {
                         safePositionHistory.Add(groundPos);
@@ -309,74 +355,23 @@ public class PlayerPitfallRespawn : MonoBehaviour
     }
 
     /// <summary>
-    /// Calcule une position sûre reculée vers l'intérieur de la plateforme pour ne pas réapparaître au bord du précipice.
+    /// Calcule la position de réapparition : s'il s'agit d'un saut raté, réapparaît au point de départ du saut.
+    /// </summary>
+    /// <summary>
+    /// Calcule la position de réapparition : retourne exactement le point où le saut a débuté
+    /// si la chute provient d'un saut, ou la dernière position sûre au sol sinon.
     /// </summary>
     private Vector3 GetSafeInlandRespawnPosition()
     {
-        Vector3 basePos = lastSafePosition;
-
-        // 1. Si le sol était un nénuphar (WaterLilly), se diriger directement vers le centre du nénuphar
-        if (lastSafeCollider != null)
+        if (wasJumpTriggered && lastJumpTakeoffPosition != Vector3.zero)
         {
-            if (lastSafeCollider.GetComponent<WaterLilly>() != null || 
-                lastSafeCollider.GetComponentInParent<WaterLilly>() != null ||
-                lastSafeCollider.name.ToLower().Contains("lily") ||
-                lastSafeCollider.name.ToLower().Contains("nenuph"))
-            {
-                Vector3 center = lastSafeCollider.bounds.center;
-                center.y = lastSafePosition.y;
-                return Vector3.Lerp(lastSafePosition, center, 0.7f);
-            }
+            // Réapparaître pile à l'endroit exact où le saut vers le vide a débuté !
+            Debug.Log($"[PlayerPitfallRespawn] Réapparition au point exact du saut : {lastJumpTakeoffPosition:F2}");
+            return lastJumpTakeoffPosition;
         }
 
-        // 2. Si on a un historique de déplacement sur la plateforme, prendre une position de quelques fractions de seconde avant le bord
-        if (safePositionHistory.Count >= 4)
-        {
-            int index = Mathf.Max(0, safePositionHistory.Count - 4);
-            basePos = safePositionHistory[index];
-        }
-
-        // 3. Calcul de la direction opposée à la chute (recul vers l'intérieur)
-        Vector3 fallDir = transform.position - basePos;
-        fallDir.y = 0f;
-
-        Vector3 inlandDir = Vector3.zero;
-        if (fallDir.sqrMagnitude > 0.01f)
-        {
-            inlandDir = -fallDir.normalized;
-        }
-        else if (safePositionHistory.Count >= 2)
-        {
-            Vector3 moveDir = safePositionHistory[safePositionHistory.Count - 1] - safePositionHistory[0];
-            moveDir.y = 0f;
-            if (moveDir.sqrMagnitude > 0.01f)
-            {
-                inlandDir = -moveDir.normalized;
-            }
-        }
-
-        Vector3 targetInlandPos = basePos + inlandDir * edgeInlandOffset;
-
-        // 4. Vérification par Raycast que la position candidate atterrit bien sur du sol solide marchable
-        if (Physics.Raycast(targetInlandPos + Vector3.up * 2f, Vector3.down, out RaycastHit testHit, 5f, ~0, QueryTriggerInteraction.Ignore))
-        {
-            if (testHit.normal.y > 0.55f && !IsLiquidWaterOrHazard(testHit.collider.gameObject))
-            {
-                return testHit.point + Vector3.up * 0.05f;
-            }
-        }
-
-        // Si le recul dépasse de l'autre côté, tenter un recul plus court
-        Vector3 halfInlandPos = basePos + inlandDir * (edgeInlandOffset * 0.5f);
-        if (Physics.Raycast(halfInlandPos + Vector3.up * 2f, Vector3.down, out RaycastHit halfHit, 5f, ~0, QueryTriggerInteraction.Ignore))
-        {
-            if (halfHit.normal.y > 0.55f && !IsLiquidWaterOrHazard(halfHit.collider.gameObject))
-            {
-                return halfHit.point + Vector3.up * 0.05f;
-            }
-        }
-
-        return basePos;
+        // Sinon (chute sans saut), réapparaître à la dernière position sûre enregistrée au sol
+        return lastSafePosition;
     }
 
     /// <summary>
@@ -431,7 +426,7 @@ public class PlayerPitfallRespawn : MonoBehaviour
         Vector3 respawnGroundPos = GetSafeInlandRespawnPosition();
         lastSafePosition = respawnGroundPos;
 
-        // 2. Verrouiller immédiatement les commandes et figer la caméra sur la plateforme
+        // 2. Verrouiller immédiatement les commandes et déclencher le glissement fluide de la caméra vers la plateforme
         playerMovement.IsInputLocked = true;
         LockCameraOnPlatform(respawnGroundPos);
 
@@ -440,16 +435,26 @@ public class PlayerPitfallRespawn : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = true;
 
-        // 3. Calcul de la position dans le ciel directement au-dessus de la plateforme reculée
+        // Masquer temporairement le visuel du joueur pendant le glissement de la caméra vers la plateforme
+        SetSpriteVisible(false);
+
+        // 3. Attendre que la caméra glisse de manière fluide et cinématique vers la plateforme de réapparition
+        if (cameraGlideDuration > 0f)
+        {
+            yield return new WaitForSeconds(cameraGlideDuration);
+        }
+
+        // 4. Calcul de la position dans le ciel directement au-dessus de la plateforme reculée
         Vector3 skyPosition = respawnGroundPos + Vector3.up * skyDropHeight;
 
-        Debug.Log($"[PlayerPitfallRespawn] Téléportation vers le ciel : {skyPosition:F2} (Plateforme reculée du bord: {respawnGroundPos:F2})");
+        Debug.Log($"[PlayerPitfallRespawn] Glissement caméra terminé. Téléportation vers le ciel : {skyPosition:F2} (Plateforme reculée: {respawnGroundPos:F2})");
 
-        // Téléportation physique réelle et synchronisée
+        // Téléportation physique réelle et réapparition du visuel
         rb.position = skyPosition;
         transform.position = skyPosition;
         visualTransform.localScale = originalScale;
         Physics.SyncTransforms();
+        SetSpriteVisible(true);
 
         // Réactiver la physique avec chute verticale pure (bloquer X et Z pour atterrir pile sur la plateforme)
         rb.isKinematic = false;
@@ -540,8 +545,22 @@ public class PlayerPitfallRespawn : MonoBehaviour
         }
     }
 
+    private void SetSpriteVisible(bool visible)
+    {
+        SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>();
+        foreach (var sr in renderers)
+        {
+            sr.enabled = visible;
+        }
+    }
+
     private void OnDisable()
     {
+        SetSpriteVisible(true);
+        if (playerMovement != null)
+        {
+            playerMovement.OnJump -= HandlePlayerJump;
+        }
         if (isRespawning)
         {
             StopAllCoroutines();

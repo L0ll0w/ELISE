@@ -612,6 +612,7 @@ public class PlayerMovement : MonoBehaviour
         coyoteTimeCounter = 0f;
         lastJumpTime = Time.time;
         currentJumpForce = jumpForce;
+        OnJump?.Invoke();
 
         Vector3 vel = rb.linearVelocity;
         vel.y = force;
@@ -632,17 +633,47 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void OnDisable()
+    /// <summary>
+    /// Réinitialise complètement l'état aérien du joueur (saut, vélocités, animations) et le remet au sol.
+    /// </summary>
+    public void ResetAirborneState()
     {
-        // Stopper le Rigidbody immédiatement lors de la désactivation pour éviter que le joueur glisse indéfiniment
+        shouldJump = false;
+        jumpBufferCounter = 0f;
+        coyoteTimeCounter = 0f;
+        isBouncing = false;
+        isSlidingOnRoot = false;
+        currentJumpForce = jumpForce;
+        moveDirection = Vector3.zero;
+
         if (rb != null)
         {
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        if (animator != null)
+        {
+            animator.speed = 1f;
+            isJumpAnimHolding = false;
+            if (hasIsWalkingParam) animator.SetBool(isWalkingHash, false);
+            if (hasIsJumpingParam) animator.SetBool(isJumpingHash, false);
+        }
+    }
+
+    private void OnDisable()
+    {
+        // Stopper le Rigidbody immédiatement lors de la désactivation pour éviter que le joueur glisse ou tombe indéfiniment
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
         }
         moveDirection = Vector3.zero;
         shouldJump = false;
         isBouncing = false;
+        isSlidingOnRoot = false;
         currentJumpForce = jumpForce;
 
         // Forcer l'animation idle lors de la désactivation (cinématiques, dialogues, pause...)

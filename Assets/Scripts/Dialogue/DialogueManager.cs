@@ -71,10 +71,7 @@ public class DialogueManager : MonoBehaviour
     {
         get
         {
-            if (isDialogueActive || Time.frameCount == dialogueEndFrame) return false;
-            bool isCombatActive = (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive) ||
-                                  (CombatManager.Instance != null && CombatManager.Instance.IsCombatActive);
-            return !isCombatActive;
+            return !isDialogueActive;
         }
     }
     public RectTransform DialoguePanelRect => dialoguePanel != null ? dialoguePanel.GetComponent<RectTransform>() : null;
@@ -128,7 +125,7 @@ public class DialogueManager : MonoBehaviour
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas != null)
         {
-            canvas.sortingOrder = 9999;
+            canvas.sortingOrder = 99999;
             if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
             {
                 canvas.worldCamera = Camera.main;
@@ -149,10 +146,10 @@ public class DialogueManager : MonoBehaviour
 
         bool interact = false;
         #if ENABLE_INPUT_SYSTEM
-        if ((Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) ||
-            (Gamepad.current != null && (Gamepad.current.buttonWest.wasPressedThisFrame || Gamepad.current.buttonSouth.wasPressedThisFrame || Gamepad.current.buttonNorth.wasPressedThisFrame))) interact = true;
+        if ((Keyboard.current != null && (Keyboard.current.eKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame)) ||
+            (Gamepad.current != null && (Gamepad.current.buttonSouth.wasPressedThisFrame || Gamepad.current.buttonWest.wasPressedThisFrame))) interact = true;
         #else
-        if (Input.GetKeyDown(KeyCode.E) || Input.GetButtonDown("Submit") || Input.GetKeyDown(KeyCode.JoystickButton2) || Input.GetKeyDown(KeyCode.JoystickButton0)) interact = true;
+        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return) || Input.GetButtonDown("Submit") || Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.JoystickButton2)) interact = true;
         #endif
 
         // Empêche de consommer la touche d'interaction sur la même frame que l'ouverture
@@ -166,6 +163,18 @@ public class DialogueManager : MonoBehaviour
     {
         if (data == null || data.nodes == null || data.nodes.Length == 0) return;
         if (!CanStartDialogue) return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 99999;
+            if (Camera.main != null && (canvas.renderMode == RenderMode.ScreenSpaceCamera || canvas.renderMode == RenderMode.WorldSpace))
+            {
+                canvas.worldCamera = Camera.main;
+                canvas.planeDistance = 0.5f;
+            }
+        }
 
         activeDialogue = data;
         isDialogueActive = true;
@@ -452,12 +461,12 @@ public class DialogueManager : MonoBehaviour
         {
             if (gp.dpad.up.wasPressedThisFrame || gp.leftStick.up.wasPressedThisFrame) up = true;
             if (gp.dpad.down.wasPressedThisFrame || gp.leftStick.down.wasPressedThisFrame) down = true;
-            if (gp.buttonSouth.wasPressedThisFrame) confirm = true;
+            if (gp.buttonWest.wasPressedThisFrame || gp.buttonSouth.wasPressedThisFrame) confirm = true;
         }
         #else
         if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) up = true;
         if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) down = true;
-        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)) confirm = true;
+        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.JoystickButton2)) confirm = true;
         #endif
 
         if (up) SelectChoice(selectedChoiceIndex - 1);

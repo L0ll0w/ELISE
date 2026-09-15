@@ -322,10 +322,36 @@ public class MenuManager : MonoBehaviour
             return;
         }
 
+        // Tente un auto-remplissage si une référence clé est manquante
+        if (menuRoot == null || inventoryPanel == null || groupPanel == null || itemsContainer == null || groupMembersContainer == null)
+        {
+            AutoAssignUISlots();
+        }
+
         isMenuOpen = true;
         if (menuRoot != null)
         {
             menuRoot.SetActive(true);
+
+            // Assurer l'activation du Canvas et du CanvasGroup s'ils existent
+            Canvas canvas = menuRoot.GetComponent<Canvas>();
+            if (canvas == null) canvas = menuRoot.GetComponentInParent<Canvas>();
+            if (canvas != null)
+            {
+                canvas.enabled = true;
+                if (canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null)
+                {
+                    canvas.worldCamera = Camera.main;
+                }
+            }
+
+            CanvasGroup cg = menuRoot.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.alpha = 1f;
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
+            }
         }
 
         // Requête de pause globale
@@ -485,10 +511,10 @@ public class MenuManager : MonoBehaviour
     {
         if (container == null) return;
 
-        // Vider le conteneur
-        foreach (Transform child in container)
+        // Vider immédiatement le conteneur pour éviter les bugs de calcul de Layout
+        for (int i = container.childCount - 1; i >= 0; i--)
         {
-            Destroy(child.gameObject);
+            DestroyImmediate(container.GetChild(i).gameObject);
         }
 
         // Récupérer les objets de ce type
@@ -519,6 +545,13 @@ public class MenuManager : MonoBehaviour
                 InventorySlotUI targetSlot = slotUI;
                 button.onClick.AddListener(() => OnSlotClicked(targetSlot, item));
             }
+        }
+
+        // Force le recalcul immédiat de la disposition graphique du conteneur et du scroll view
+        RectTransform rect = container as RectTransform;
+        if (rect != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
         }
     }
 
@@ -553,10 +586,12 @@ public class MenuManager : MonoBehaviour
         {
             if (inventoryItemNameText != null)
             {
+                inventoryItemNameText.gameObject.SetActive(true);
                 inventoryItemNameText.text = item.itemName;
             }
             if (inventoryDescriptionText != null)
             {
+                inventoryDescriptionText.gameObject.SetActive(true);
                 inventoryDescriptionText.text = item.description;
             }
         }
@@ -564,10 +599,12 @@ public class MenuManager : MonoBehaviour
         {
             if (inventoryItemNameText != null)
             {
+                inventoryItemNameText.gameObject.SetActive(true);
                 inventoryItemNameText.text = "";
             }
             if (inventoryDescriptionText != null)
             {
+                inventoryDescriptionText.gameObject.SetActive(true);
                 inventoryDescriptionText.text = "Sélectionnez un objet pour voir sa description.";
             }
         }
@@ -579,8 +616,12 @@ public class MenuManager : MonoBehaviour
     public void ShowInventoryItemsTab()
     {
         if (scrollViewItems != null) scrollViewItems.SetActive(true);
-        if (scrollViewEquip != null) scrollViewEquip.SetActive(false);
-        if (scrollViewKeys != null) scrollViewKeys.SetActive(false);
+        if (scrollViewEquip != null && scrollViewEquip != scrollViewItems) scrollViewEquip.SetActive(false);
+        if (scrollViewKeys != null && scrollViewKeys != scrollViewItems && scrollViewKeys != scrollViewEquip) scrollViewKeys.SetActive(false);
+
+        if (itemsContainer != null) itemsContainer.gameObject.SetActive(true);
+        if (equipmentContainer != null && equipmentContainer != itemsContainer) equipmentContainer.gameObject.SetActive(false);
+        if (keysContainer != null && keysContainer != itemsContainer && keysContainer != equipmentContainer) keysContainer.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -588,9 +629,13 @@ public class MenuManager : MonoBehaviour
     /// </summary>
     public void ShowInventoryEquipmentsTab()
     {
-        if (scrollViewItems != null) scrollViewItems.SetActive(false);
+        if (scrollViewItems != null && scrollViewItems != scrollViewEquip) scrollViewItems.SetActive(false);
         if (scrollViewEquip != null) scrollViewEquip.SetActive(true);
-        if (scrollViewKeys != null) scrollViewKeys.SetActive(false);
+        if (scrollViewKeys != null && scrollViewKeys != scrollViewEquip && scrollViewKeys != scrollViewItems) scrollViewKeys.SetActive(false);
+
+        if (itemsContainer != null && itemsContainer != equipmentContainer) itemsContainer.gameObject.SetActive(false);
+        if (equipmentContainer != null) equipmentContainer.gameObject.SetActive(true);
+        if (keysContainer != null && keysContainer != equipmentContainer && keysContainer != itemsContainer) keysContainer.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -598,9 +643,13 @@ public class MenuManager : MonoBehaviour
     /// </summary>
     public void ShowInventoryKeysTab()
     {
-        if (scrollViewItems != null) scrollViewItems.SetActive(false);
-        if (scrollViewEquip != null) scrollViewEquip.SetActive(false);
+        if (scrollViewItems != null && scrollViewItems != scrollViewKeys) scrollViewItems.SetActive(false);
+        if (scrollViewEquip != null && scrollViewEquip != scrollViewKeys && scrollViewEquip != scrollViewItems) scrollViewEquip.SetActive(false);
         if (scrollViewKeys != null) scrollViewKeys.SetActive(true);
+
+        if (itemsContainer != null && itemsContainer != keysContainer) itemsContainer.gameObject.SetActive(false);
+        if (equipmentContainer != null && equipmentContainer != keysContainer) equipmentContainer.gameObject.SetActive(false);
+        if (keysContainer != null) keysContainer.gameObject.SetActive(true);
     }
 
     #endregion
@@ -618,10 +667,10 @@ public class MenuManager : MonoBehaviour
             return;
         }
 
-        // 1. Vider le conteneur actuel
-        foreach (Transform child in groupMembersContainer)
+        // 1. Vider le conteneur actuel immédiatement
+        for (int i = groupMembersContainer.childCount - 1; i >= 0; i--)
         {
-            Destroy(child.gameObject);
+            DestroyImmediate(groupMembersContainer.GetChild(i).gameObject);
         }
 
         // 2. Vérifier si GroupManager est disponible
@@ -725,6 +774,13 @@ public class MenuManager : MonoBehaviour
                 }
             }
         }
+
+        // Forcer le recalcul immédiat de la disposition graphique
+        RectTransform rect = groupMembersContainer as RectTransform;
+        if (rect != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+        }
     }
 
     /// <summary>
@@ -743,25 +799,30 @@ public class MenuManager : MonoBehaviour
         if (statPanel != null) statPanel.SetActive(true);
 
         // 2. Remplir les données graphiques et textuelles du profil
-        if (detailNameText != null) detailNameText.text = data.characterName;
+        if (detailNameText != null)
+        {
+            detailNameText.gameObject.SetActive(true);
+            detailNameText.text = data.characterName;
+        }
         if (detailPortraitImage != null)
         {
+            detailPortraitImage.gameObject.SetActive(true);
             detailPortraitImage.sprite = data.portrait;
             detailPortraitImage.enabled = data.portrait != null;
         }
 
         // Statistiques
-        if (levelText != null) levelText.text = $"Niveau : {data.level}";
-        if (hpText != null) hpText.text = $"PV : {data.currentHP}/{data.maxHP}";
-        if (mpText != null) mpText.text = $"PC : {data.currentMP}/{data.maxMP}";
-        if (strengthText != null) strengthText.text = $"Force : {data.strength}";
-        if (defenseText != null) defenseText.text = $"Défense : {data.defense}";
-        if (speedText != null) speedText.text = $"Vitesse : {data.speed}";
+        if (levelText != null) { levelText.gameObject.SetActive(true); levelText.text = $"Niveau : {data.level}"; }
+        if (hpText != null) { hpText.gameObject.SetActive(true); hpText.text = $"PV : {data.currentHP}/{data.maxHP}"; }
+        if (mpText != null) { mpText.gameObject.SetActive(true); mpText.text = $"PC : {data.currentMP}/{data.maxMP}"; }
+        if (strengthText != null) { strengthText.gameObject.SetActive(true); strengthText.text = $"Force : {data.strength}"; }
+        if (defenseText != null) { defenseText.gameObject.SetActive(true); defenseText.text = $"Défense : {data.defense}"; }
+        if (speedText != null) { speedText.gameObject.SetActive(true); speedText.text = $"Vitesse : {data.speed}"; }
 
         // Équipements
-        if (offensiveEquipText != null) offensiveEquipText.text = $"Arme : {(data.offensiveEquipment != null ? data.offensiveEquipment.itemName : "Aucun")}";
-        if (defensiveEquipText != null) defensiveEquipText.text = $"Armure : {(data.defensiveEquipment != null ? data.defensiveEquipment.itemName : "Aucun")}";
-        if (bonusEquipText != null) bonusEquipText.text = $"Accessoire : {(data.bonusEquipment != null ? data.bonusEquipment.itemName : "Aucun")}";
+        if (offensiveEquipText != null) { offensiveEquipText.gameObject.SetActive(true); offensiveEquipText.text = $"Arme : {(data.offensiveEquipment != null ? data.offensiveEquipment.itemName : "Aucun")}"; }
+        if (defensiveEquipText != null) { defensiveEquipText.gameObject.SetActive(true); defensiveEquipText.text = $"Armure : {(data.defensiveEquipment != null ? data.defensiveEquipment.itemName : "Aucun")}"; }
+        if (bonusEquipText != null) { bonusEquipText.gameObject.SetActive(true); bonusEquipText.text = $"Accessoire : {(data.bonusEquipment != null ? data.bonusEquipment.itemName : "Aucun")}"; }
 
         // Placer le focus EventSystem sur le bouton d'équipement offensif pour manette
         if (UnityEngine.EventSystems.EventSystem.current != null && offensiveEquipButton != null)
@@ -843,10 +904,10 @@ public class MenuManager : MonoBehaviour
 
         equipPanel.SetActive(true);
 
-        // Vider le conteneur
-        foreach (Transform child in equipItemsContainer)
+        // Vider le conteneur immédiatement
+        for (int i = equipItemsContainer.childCount - 1; i >= 0; i--)
         {
-            Destroy(child.gameObject);
+            DestroyImmediate(equipItemsContainer.GetChild(i).gameObject);
         }
 
         GameObject firstSelected = null;
@@ -1002,6 +1063,13 @@ public class MenuManager : MonoBehaviour
                     }
                 }
             }
+        }
+
+        // Force le recalcul immédiat de la disposition graphique de l'EquipPanel
+        RectTransform containerRect = equipItemsContainer as RectTransform;
+        if (containerRect != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
         }
 
         // Placer le focus EventSystem sur le premier élément (bouton Aucun) pour la manette
@@ -1278,6 +1346,23 @@ public class MenuManager : MonoBehaviour
             scrollViewKeys = FindGameObjectByName(sceneObjectsArray, new string[] { "ScrollViewKeys", "Scroll View Keys", "KeysScrollView", "Keys Scroll View" });
         }
 
+        // Fallbacks automatiques sur les ScrollRect content des Scroll Views
+        if (itemsContainer == null && scrollViewItems != null)
+        {
+            ScrollRect sr = scrollViewItems.GetComponentInChildren<ScrollRect>(true);
+            if (sr != null && sr.content != null) itemsContainer = sr.content;
+        }
+        if (equipmentContainer == null && scrollViewEquip != null)
+        {
+            ScrollRect sr = scrollViewEquip.GetComponentInChildren<ScrollRect>(true);
+            if (sr != null && sr.content != null) equipmentContainer = sr.content;
+        }
+        if (keysContainer == null && scrollViewKeys != null)
+        {
+            ScrollRect sr = scrollViewKeys.GetComponentInChildren<ScrollRect>(true);
+            if (sr != null && sr.content != null) keysContainer = sr.content;
+        }
+
         // Configuration Groupe UI
         if (groupMembersContainer == null)
         {
@@ -1288,6 +1373,12 @@ public class MenuManager : MonoBehaviour
         {
             groupListContainer = FindGameObjectByName(sceneObjectsArray, new string[] { "GroupListContainer", "Group List Container", "GroupList", "Group List" });
         }
+        if (groupMembersContainer == null && groupListContainer != null)
+        {
+            ScrollRect sr = groupListContainer.GetComponentInChildren<ScrollRect>(true);
+            if (sr != null && sr.content != null) groupMembersContainer = sr.content;
+        }
+
         if (notePanel == null)
         {
             notePanel = FindGameObjectByName(sceneObjectsArray, new string[] { "NotePanel", "Note Panel", "Notes" });
@@ -1299,6 +1390,13 @@ public class MenuManager : MonoBehaviour
         if (statPanel == null)
         {
             statPanel = FindGameObjectByName(sceneObjectsArray, new string[] { "StatPanel", "Stat Panel", "Stats", "StatPanel" });
+        }
+
+        // Configuration Equip Panel Container Fallback
+        if (equipItemsContainer == null && equipPanel != null)
+        {
+            ScrollRect sr = equipPanel.GetComponentInChildren<ScrollRect>(true);
+            if (sr != null && sr.content != null) equipItemsContainer = sr.content;
         }
 
         // UI Fiche Personnage Details

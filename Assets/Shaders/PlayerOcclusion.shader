@@ -9,6 +9,7 @@ Shader "Custom/PlayerOcclusion"
         _OccludedColor ("Behind Scenery Silhouette Color", Color) = (0, 0.8, 1, 0.6) // Cyan semi-transparent by default
         
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.1
+        [HideInInspector] _CullMode ("Cull Mode", Float) = 0
     }
 
     SubShader
@@ -23,7 +24,7 @@ Shader "Custom/PlayerOcclusion"
             "RenderPipeline"="UniversalPipeline"
         }
 
-        Cull Off
+        Cull [_CullMode]
         Lighting Off
 
         // ------------------------------------------------------------------

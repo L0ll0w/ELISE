@@ -66,15 +66,15 @@ public abstract class Interactable : MonoBehaviour
         {
             bool interact = false;
             
-            // Écoute de l'input avec l'Input System ou fallback classique
+            // Écoute de l'input avec l'Input System ou fallback classique (Touche X sur manette, E au clavier)
             #if ENABLE_INPUT_SYSTEM
             if ((Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) ||
-                (Gamepad.current != null && (Gamepad.current.buttonWest.wasPressedThisFrame || Gamepad.current.buttonSouth.wasPressedThisFrame || Gamepad.current.buttonNorth.wasPressedThisFrame)))
+                (Gamepad.current != null && Gamepad.current.buttonWest.wasPressedThisFrame))
             {
                 interact = true;
             }
             #else
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetButtonDown("Submit") || Input.GetKeyDown(KeyCode.JoystickButton2) || Input.GetKeyDown(KeyCode.JoystickButton0))
+            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.JoystickButton2))
             {
                 interact = true;
             }

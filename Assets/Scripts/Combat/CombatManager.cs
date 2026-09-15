@@ -63,6 +63,7 @@ public class CombatManager : MonoBehaviour
 
     private CombatState currentState;
     private GameObject activeEnemy;
+    private Transform customCenterMarker;
     private List<Transform> allies = new List<Transform>();
     private List<int> allyHP = new List<int>();
     private List<int> allyMaxHP = new List<int>();
@@ -122,7 +123,7 @@ public class CombatManager : MonoBehaviour
     /// Démarre la séquence de combat au tour par tour directement dans le monde.
     /// </summary>
     /// <param name="enemy">Le GameObject de l'ennemi.</param>
-    public void StartCombat(GameObject enemy)
+    public void StartCombat(GameObject enemy, Transform customCombatCenter = null)
     {
         if (enemy == null)
         {
@@ -133,11 +134,12 @@ public class CombatManager : MonoBehaviour
         // Si le système de combat rythmique est présent, on lui délègue le combat !
         if (RhythmCombatManager.Instance != null)
         {
-            RhythmCombatManager.Instance.StartCombat(enemy);
+            RhythmCombatManager.Instance.StartCombat(enemy, customCombatCenter);
             return;
         }
 
         activeEnemy = enemy;
+        customCenterMarker = customCombatCenter;
         StartCoroutine(StartCombatRoutine());
     }
 
@@ -163,6 +165,29 @@ public class CombatManager : MonoBehaviour
         {
             PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
             if (pm != null) leader = pm.transform;
+        }
+
+        // Si le joueur est en l'air lors du déclenchement du combat, le remettre immédiatement au sol et réinitialiser sa physique
+        if (leader != null)
+        {
+            leader.position = SnapToGround(leader.position);
+
+            Rigidbody playerRb = leader.GetComponent<Rigidbody>();
+            if (playerRb == null) playerRb = leader.GetComponentInChildren<Rigidbody>();
+            if (playerRb != null)
+            {
+                playerRb.linearVelocity = Vector3.zero;
+                playerRb.angularVelocity = Vector3.zero;
+                playerRb.isKinematic = true;
+            }
+
+            PlayerMovement playerMovement = leader.GetComponent<PlayerMovement>();
+            if (playerMovement == null) playerMovement = leader.GetComponentInChildren<PlayerMovement>();
+            if (playerMovement != null)
+            {
+                playerMovement.ResetAirborneState();
+                playerMovement.enabled = false;
+            }
         }
 
         // Désactiver CinemachineHelper et détacher la caméra de son suivi automatique
@@ -204,9 +229,21 @@ public class CombatManager : MonoBehaviour
         monsterHP = monsterMaxHP;
         monsterName = activeEnemy.name;
 
-        // 4. Recherche de Zone Libre (Safe Center)
-        Vector3 initialCenter = activeEnemy.transform.position;
-        combatCenter = FindSafeCombatCenter(initialCenter);
+        // 4. Déterminer le centre du combat
+        Transform targetMarker = customCenterMarker;
+        if (targetMarker == null && activeEnemy != null)
+        {
+            EnemyTouchTrigger touchTrigger = activeEnemy.GetComponent<EnemyTouchTrigger>();
+            if (touchTrigger == null) touchTrigger = activeEnemy.GetComponentInParent<EnemyTouchTrigger>();
+            if (touchTrigger == null) touchTrigger = activeEnemy.GetComponentInChildren<EnemyTouchTrigger>();
+            if (touchTrigger != null && touchTrigger.CombatCenterMarker != null)
+            {
+                targetMarker = touchTrigger.CombatCenterMarker;
+            }
+        }
+
+        Vector3 initialCenter = (targetMarker != null) ? targetMarker.position : activeEnemy.transform.position;
+        combatCenter = SnapToGround(initialCenter);
 
         // Direction du combat (le monstre fait face à la position d'origine du joueur)
         Vector3 leaderPos = leader != null ? leader.position : Vector3.zero;
@@ -340,71 +377,7 @@ public class CombatManager : MonoBehaviour
 
     #endregion
 
-    #region Algorithme de Recherche et Positionnement
-
-    private Vector3 FindSafeCombatCenter(Vector3 initialCenter)
-    {
-        // Si la position initiale est libre d'obstacles ET repose entièrement sur le sol ferme
-        if (!Physics.CheckSphere(initialCenter, arenaRadius, obstacleLayers) && IsGroundValidForArena(initialCenter, arenaRadius))
-        {
-            return initialCenter;
-        }
-
-        // Recherche en cercles concentriques extérieurs d'une zone dégagée et hors du vide
-        int steps = 12;
-        float stepDistance = 1.5f;
-        int maxRings = 6;
-
-        for (int ring = 1; ring <= maxRings; ring++)
-        {
-            float radius = ring * stepDistance;
-            for (int i = 0; i < steps; i++)
-            {
-                float angle = i * (2f * Mathf.PI / steps);
-                Vector3 offset = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-                Vector3 candidate = initialCenter + offset;
-
-                if (!Physics.CheckSphere(candidate, arenaRadius, obstacleLayers) && IsGroundValidForArena(candidate, arenaRadius))
-                {
-                    Debug.Log($"[CombatManager] Zone de combat libre et sécurisée trouvée à {candidate} après {ring} cercles de recherche.");
-                    return candidate;
-                }
-            }
-        }
-
-        Debug.LogWarning("[CombatManager] Impossible de trouver une zone de combat 100% libre et hors du vide. Utilisation de la position initiale.");
-        return initialCenter;
-    }
-
-    /// <summary>
-    /// Vérifie que le centre et la circonférence de l'arène reposent sur du sol solide (pas de falaise/vide).
-    /// </summary>
-    private bool IsGroundValidForArena(Vector3 center, float checkRadius)
-    {
-        LayerMask groundLayers = ~0 & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
-
-        // 1. Vérifier le centre
-        Vector3 centerRayOrigin = center + Vector3.up * 5f;
-        if (!Physics.Raycast(centerRayOrigin, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
-        {
-            return false;
-        }
-
-        // 2. Vérifier 8 points sur le périmètre de l'arène
-        int samplePoints = 8;
-        float sampleRadius = checkRadius * 0.8f;
-        for (int i = 0; i < samplePoints; i++)
-        {
-            float angle = i * (2f * Mathf.PI / samplePoints);
-            Vector3 samplePos = center + new Vector3(Mathf.Cos(angle) * sampleRadius, 5f, Mathf.Sin(angle) * sampleRadius);
-            if (!Physics.Raycast(samplePos, Vector3.down, 15f, groundLayers, QueryTriggerInteraction.Ignore))
-            {
-                return false; // Un point de l'arène tombe dans le vide !
-            }
-        }
-
-        return true;
-    }
+    #region Positionnement au Sol
 
     private Vector3 SnapToGround(Vector3 position)
     {
@@ -488,7 +461,7 @@ public class CombatManager : MonoBehaviour
             Vector3 enemyPos = activeEnemy.transform.position;
 
             targetCamPosition = groupCenter - combatDirection * cameraMonsterTurnDistance + Vector3.up * cameraMonsterTurnHeight;
-            targetCamRotation = Quaternion.LookRotation((enemyPos + Vector3.up * 1f) - targetCamPosition);
+            targetCamRotation = Quaternion.LookRotation((enemyPos + Vector3.up * 1f) - targetCamPosition) * Quaternion.Euler(cameraMonsterTurnPitch, 0f, 0f);
             targetCamFOV = cameraMonsterTurnFOV;
         }
 

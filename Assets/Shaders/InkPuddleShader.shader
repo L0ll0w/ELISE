@@ -14,6 +14,7 @@ Shader "Custom/InkPuddleShader"
         [HDR] _GlowColor ("Wet Edge Glow Color", Color) = (1.0, 1.0, 1.0, 1.0)
         _GlowPower ("Glow Power (Falloff)", Range(0.1, 5.0)) = 1.5
         _GlowIntensity ("Glow Intensity", Range(0.0, 5.0)) = 2.0
+        [HideInInspector] _CullMode ("Cull Mode", Float) = 0
     }
 
     SubShader

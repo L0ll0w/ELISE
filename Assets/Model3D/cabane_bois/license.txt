@@ -1,0 +1,11 @@
+Model Information:
+* title:	Cabane Bois
+* source:	https://sketchfab.com/3d-models/cabane-bois-f131d103d4a14de3961b70a65f3ea995
+* author:	piwici7944 (https://sketchfab.com/piwici7944)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Cabane Bois" (https://sketchfab.com/3d-models/cabane-bois-f131d103d4a14de3961b70a65f3ea995) by piwici7944 (https://sketchfab.com/piwici7944) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
