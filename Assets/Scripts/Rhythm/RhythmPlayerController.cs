@@ -13,6 +13,12 @@ public class RhythmPlayerController : MonoBehaviour
     [Tooltip("Vitesse de déplacement visuel (Lerp) vers la case cible.")]
     [SerializeField] private float lerpSpeed = 15f;
 
+    [Tooltip("Délai minimum (cooldown) entre chaque déplacement de case en secondes pour éviter le spam.")]
+    [SerializeField] private float moveCooldown = 0.2f;
+
+    [Tooltip("Si activé, maintenir une direction permet d'avancer de case en case au rythme du cooldown. Sinon, nécessite de relâcher la touche/stick.")]
+    [SerializeField] private bool allowHoldToRepeat = false;
+
     [Tooltip("Effet visuel (prefab de particules) lors d'un déplacement.")]
     [SerializeField] private ParticleSystem moveParticlePrefab;
 
@@ -37,6 +43,21 @@ public class RhythmPlayerController : MonoBehaviour
     private float landingSquashTimer = 0f;
     private Vector3 jumpVisualOffset = Vector3.zero;
 
+    // Cooldown de déplacement entre les cases
+    private float moveCooldownTimer = 0f;
+
+    public float MoveCooldown
+    {
+        get => moveCooldown;
+        set => moveCooldown = Mathf.Max(0f, value);
+    }
+
+    public bool AllowHoldToRepeat
+    {
+        get => allowHoldToRepeat;
+        set => allowHoldToRepeat = value;
+    }
+
     public bool IsJumping => isJumping;
     private Vector3 targetPosition;
     private Vector3 groundPosition;
@@ -53,6 +74,14 @@ public class RhythmPlayerController : MonoBehaviour
 
     private PlayerInput playerInput;
     private InputAction moveAction;
+
+    private static readonly int idleHash = Animator.StringToHash("idle");
+    private static readonly int walkHash = Animator.StringToHash("walk");
+    private static readonly int jumpHash = Animator.StringToHash("jump");
+    private static readonly int danceHash = Animator.StringToHash("dance");
+    private static readonly int faceDanceHash = Animator.StringToHash("facedance");
+    private static readonly int isJumpingHash = Animator.StringToHash("isJumping");
+    private static readonly int isWalkingHash = Animator.StringToHash("isWalking");
 
     private void Awake()
     {
@@ -79,6 +108,7 @@ public class RhythmPlayerController : MonoBehaviour
         currentRing = startRing;
         currentSector = startSector;
         isInputEnabled = true;
+        moveCooldownTimer = 0f;
 
         // Calculer le décalage de hauteur du pivot du joueur par rapport au sol (0.47f par défaut pour le prefab Player)
         float yOffset = 0.47f;
@@ -130,6 +160,13 @@ public class RhythmPlayerController : MonoBehaviour
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         animator = GetComponentInChildren<Animator>();
 
+        if (animator != null)
+        {
+            animator.Play(danceHash);
+            animator.SetBool(isWalkingHash, false);
+            animator.SetBool(isJumpingHash, false);
+        }
+
         // Orienter immédiatement le joueur vers le boss
         OrientTowardsCenter();
     }
@@ -154,6 +191,7 @@ public class RhythmPlayerController : MonoBehaviour
         {
             hasReleasedHorizontal = true;
             hasReleasedVertical = true;
+            moveCooldownTimer = 0f;
         }
     }
 
@@ -165,6 +203,12 @@ public class RhythmPlayerController : MonoBehaviour
         if (jumpCooldownTimer > 0f)
         {
             jumpCooldownTimer -= Time.deltaTime;
+        }
+
+        // Gestion du cooldown anti-spam de déplacement entre les cases
+        if (moveCooldownTimer > 0f)
+        {
+            moveCooldownTimer -= Time.deltaTime;
         }
 
         // Gérer le saut visuel (offset Y) avec une courbe asymétrique dynamique et retombée lourde (Snappy Landing)
@@ -240,6 +284,24 @@ public class RhythmPlayerController : MonoBehaviour
             }
         }
 
+        // Maintenir en continu l'état d'animation approprié pendant le combat (dance en combat normal, facedance pendant le jugement)
+        if (animator != null && !isShootingAnimation && (DialogueManager.Instance == null || !DialogueManager.Instance.IsDialogueActive))
+        {
+            AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+            int currentHash = stateInfo.shortNameHash;
+
+            bool isJudgment = RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsInJudgment;
+            int targetAnimHash = isJudgment ? faceDanceHash : danceHash;
+
+            // Pendant le jugement, le joueur doit toujours être en facedance. En combat normal, en dance.
+            if (currentHash == idleHash || currentHash == walkHash || currentHash == jumpHash || (isJudgment && currentHash == danceHash))
+            {
+                animator.Play(targetAnimHash);
+            }
+            animator.SetBool(isJumpingHash, false);
+            animator.SetBool(isWalkingHash, false);
+        }
+
         if (!isInputEnabled) return;
         if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive) return;
 
@@ -253,9 +315,20 @@ public class RhythmPlayerController : MonoBehaviour
             isJumping = true;
             jumpTimer = 0f;
             jumpCooldownTimer = jumpDuration + 0.05f; // Cooldown anti-spam
+
+            // En combat rythmique, le joueur conserve son animation de danse pendant le saut
             if (animator != null)
             {
-                animator.SetTrigger("Spawn"); // Même animation de saut court que pour les déplacements
+                animator.SetBool(isJumpingHash, false);
+                animator.SetBool(isWalkingHash, false);
+                animator.ResetTrigger("jump");
+                animator.ResetTrigger("Spawn");
+
+                AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+                if (stateInfo.shortNameHash != danceHash && !isShootingAnimation)
+                {
+                    animator.Play(danceHash);
+                }
             }
         }
     }
@@ -294,60 +367,82 @@ public class RhythmPlayerController : MonoBehaviour
             }
         }
 
-        // 1. Inputs Horizontaux (Gauche/Droite pour tourner autour du boss)
-        if (Mathf.Abs(h) > 0.5f)
-        {
-            if (hasReleasedHorizontal)
-            {
-                int previousSector = currentSector;
-                if (h > 0f)
-                {
-                    // Droite (sens anti-horaire pour aller vers la droite de l'écran)
-                    currentSector = (currentSector + 1) % grid.SectorsCount;
-                }
-                else
-                {
-                    // Gauche (sens horaire pour aller vers la gauche de l'écran)
-                    currentSector = (currentSector - 1 + grid.SectorsCount) % grid.SectorsCount;
-                }
+        bool inputH = Mathf.Abs(h) > 0.5f;
+        bool inputV = Mathf.Abs(v) > 0.5f;
 
-                OnMoveCell(previousSector, currentRing);
-                hasReleasedHorizontal = false;
+        // Réinitialiser les états de relâchement si les inputs reviennent au centre
+        if (!inputH) hasReleasedHorizontal = true;
+        if (!inputV) hasReleasedVertical = true;
+
+        // Si le cooldown anti-spam est actif, aucun nouveau déplacement n'est autorisé
+        if (moveCooldownTimer > 0f) return;
+
+        // Déterminer la priorité d'axe pour éviter les déplacements diagonaux accidentels simultanés
+        bool checkHorizontalFirst = Mathf.Abs(h) >= Mathf.Abs(v);
+
+        if (checkHorizontalFirst)
+        {
+            if (TryMoveHorizontal(h) || TryMoveVertical(v))
+            {
+                moveCooldownTimer = moveCooldown;
             }
         }
         else
         {
-            hasReleasedHorizontal = true;
-        }
-
-        // 2. Inputs Verticaux (Haut/Bas pour changer de cercle)
-        if (Mathf.Abs(v) > 0.5f)
-        {
-            if (hasReleasedVertical)
+            if (TryMoveVertical(v) || TryMoveHorizontal(h))
             {
-                int previousRing = currentRing;
-                if (v > 0f)
-                {
-                    // Aller vers le cercle intérieur (se rapprocher du boss)
-                    currentRing = Mathf.Max(currentRing - 1, 0);
-                }
-                else
-                {
-                    // Aller vers le cercle extérieur (s'éloigner du boss, stick en arrière)
-                    currentRing = Mathf.Min(currentRing + 1, grid.RingsCount - 1);
-                }
-
-                if (currentRing != previousRing)
-                {
-                    OnMoveCell(currentSector, previousRing);
-                }
-                hasReleasedVertical = false;
+                moveCooldownTimer = moveCooldown;
             }
+        }
+    }
+
+    private bool TryMoveHorizontal(float h)
+    {
+        if (Mathf.Abs(h) <= 0.5f) return false;
+        if (!hasReleasedHorizontal && !allowHoldToRepeat) return false;
+
+        int previousSector = currentSector;
+        if (h > 0f)
+        {
+            // Droite (sens anti-horaire pour aller vers la droite de l'écran)
+            currentSector = (currentSector + 1) % grid.SectorsCount;
         }
         else
         {
-            hasReleasedVertical = true;
+            // Gauche (sens horaire pour aller vers la gauche de l'écran)
+            currentSector = (currentSector - 1 + grid.SectorsCount) % grid.SectorsCount;
         }
+
+        OnMoveCell(previousSector, currentRing);
+        hasReleasedHorizontal = false;
+        return true;
+    }
+
+    private bool TryMoveVertical(float v)
+    {
+        if (Mathf.Abs(v) <= 0.5f) return false;
+        if (!hasReleasedVertical && !allowHoldToRepeat) return false;
+
+        int previousRing = currentRing;
+        if (v > 0f)
+        {
+            // Aller vers le cercle intérieur (se rapprocher du boss)
+            currentRing = Mathf.Max(currentRing - 1, 0);
+        }
+        else
+        {
+            // Aller vers le cercle extérieur (s'éloigner du boss, stick en arrière)
+            currentRing = Mathf.Min(currentRing + 1, grid.RingsCount - 1);
+        }
+
+        if (currentRing != previousRing)
+        {
+            OnMoveCell(currentSector, previousRing);
+            hasReleasedVertical = false;
+            return true;
+        }
+
+        return false;
     }
 
     private void OnMoveCell(int oldSector, int oldRing)
@@ -355,12 +450,6 @@ public class RhythmPlayerController : MonoBehaviour
         // Mettre à jour la cible physique
         targetPosition = grid.GetCellPosition(currentRing, currentSector);
         targetPosition.y += groundYOffset;
-
-        // Déclencher l'animation de saut court de l'animateur si disponible
-        if (animator != null)
-        {
-            animator.SetTrigger("Spawn"); // Réutilisation du trigger de bump/saut de spawn pour simuler un saut rapide
-        }
 
         // Lancer les particules
         if (moveParticlePrefab != null)
@@ -381,6 +470,13 @@ public class RhythmPlayerController : MonoBehaviour
     {
         if (spriteRenderer != null && grid != null)
         {
+            bool isJudgment = RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsInJudgment;
+            if (isJudgment)
+            {
+                spriteRenderer.flipX = false;
+                return;
+            }
+
             Camera mainCam = Camera.main;
             Vector3 targetPos = grid.transform.position;
             Vector3 playerPos = transform.position;

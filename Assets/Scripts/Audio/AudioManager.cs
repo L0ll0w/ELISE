@@ -53,6 +53,18 @@ public class AudioManager : MonoBehaviour
     private float savedZoneMusicTime = 0f;
     private bool isMusicPausedForCombat = false;
 
+    [System.Serializable]
+    private struct PausedAudioSourceData
+    {
+        public AudioSource source;
+        public float savedTime;
+        public float savedVolume;
+        public AudioClip clip;
+    }
+
+    private readonly System.Collections.Generic.List<PausedAudioSourceData> pausedExternalSources = new System.Collections.Generic.List<PausedAudioSourceData>();
+    private readonly System.Collections.Generic.List<Coroutine> externalFadeCoroutines = new System.Collections.Generic.List<Coroutine>();
+
     public float MasterVolume
     {
         get => masterVolume;
@@ -158,6 +170,7 @@ public class AudioManager : MonoBehaviour
     /// </summary>
     public void PauseZoneMusicForCombat(float fadeDuration = 0.8f)
     {
+        // 1. Pause de la musique de zone gérée par l'AudioManager
         AudioSource active = ActiveAudioSource;
         if (active != null && active.isPlaying)
         {
@@ -169,13 +182,18 @@ public class AudioManager : MonoBehaviour
             if (crossfadeCoroutine != null) StopCoroutine(crossfadeCoroutine);
             crossfadeCoroutine = StartCoroutine(FadeOutCurrentMusicRoutine(fadeDuration, pauseInsteadOfStop: true));
         }
+
+        // 2. Pause de toutes les sources audio environnementales / de musique actives dans la scène (ex: Player P, ambiances de scène)
+        PauseExternalAudioSources(fadeDuration);
     }
 
     /// <summary>
     /// Restaure la musique de zone mise en pause après la fin du combat.
+    /// Restaure également toutes les sources audio environnementales externes mises en pause.
     /// </summary>
     public void ResumeZoneMusicAfterCombat(float fadeDuration = 0.8f)
     {
+        // 1. Reprise de la musique de zone AudioManager
         if (isMusicPausedForCombat && savedZoneMusic != null)
         {
             Debug.Log($"[AudioManager] Reprise de la musique de zone '{savedZoneMusic.name}' après le combat.");
@@ -184,6 +202,137 @@ public class AudioManager : MonoBehaviour
 
             if (crossfadeCoroutine != null) StopCoroutine(crossfadeCoroutine);
             crossfadeCoroutine = StartCoroutine(ResumeMusicRoutine(savedZoneMusic, savedZoneMusicTime, fadeDuration));
+        }
+
+        // 2. Reprise des sources environnementales externes
+        ResumeExternalAudioSources(fadeDuration);
+    }
+
+    private void PauseExternalAudioSources(float fadeDuration)
+    {
+        // Stopper les coroutines de fondu externe en cours
+        foreach (var c in externalFadeCoroutines)
+        {
+            if (c != null) StopCoroutine(c);
+        }
+        externalFadeCoroutines.Clear();
+        pausedExternalSources.Clear();
+
+        AudioSource[] allSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
+        AudioSource beatManagerSource = BeatManager.Instance != null ? BeatManager.Instance.AudioSource : null;
+        GameObject beatManagerObj = BeatManager.Instance != null ? BeatManager.Instance.gameObject : null;
+
+        foreach (var src in allSources)
+        {
+            if (src == null) continue;
+
+            // Ne pas toucher aux AudioSources internes de l'AudioManager
+            if (src == audioSourceA || src == audioSourceB || src == sfxSource) continue;
+
+            // Ne pas toucher à l'AudioSource du BeatManager (musique du combat en rythme)
+            if (src == beatManagerSource || (beatManagerObj != null && src.gameObject == beatManagerObj)) continue;
+
+            // Vérifier si cette source est active et joue un son (musique ou boucle d'ambiance)
+            if (src.isPlaying && src.clip != null)
+            {
+                PausedAudioSourceData data = new PausedAudioSourceData
+                {
+                    source = src,
+                    savedTime = src.time,
+                    savedVolume = src.volume > 0f ? src.volume : 1f,
+                    clip = src.clip
+                };
+                pausedExternalSources.Add(data);
+
+                Debug.Log($"[AudioManager] Source audio environnementale '{src.gameObject.name}' ({src.clip.name}) mise en pause pour le combat à {src.time:F1}s.");
+                Coroutine coroutine = StartCoroutine(FadeOutAndPauseExternalSource(src, fadeDuration));
+                externalFadeCoroutines.Add(coroutine);
+            }
+        }
+    }
+
+    private IEnumerator FadeOutAndPauseExternalSource(AudioSource src, float duration)
+    {
+        if (src == null) yield break;
+        float startVol = src.volume;
+        float elapsed = 0f;
+
+        while (elapsed < duration && src != null)
+        {
+            elapsed += Time.deltaTime;
+            src.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            yield return null;
+        }
+
+        if (src != null)
+        {
+            src.Pause();
+            src.volume = 0f;
+        }
+    }
+
+    private void ResumeExternalAudioSources(float fadeDuration)
+    {
+        // Stopper les coroutines de fondu en cours
+        foreach (var c in externalFadeCoroutines)
+        {
+            if (c != null) StopCoroutine(c);
+        }
+        externalFadeCoroutines.Clear();
+
+        if (pausedExternalSources.Count == 0) return;
+
+        foreach (var data in pausedExternalSources)
+        {
+            if (data.source != null)
+            {
+                Debug.Log($"[AudioManager] Reprise de la source audio environnementale '{data.source.gameObject.name}' (clip: {(data.clip != null ? data.clip.name : "null")}) à {data.savedTime:F1}s.");
+                Coroutine coroutine = StartCoroutine(FadeInAndResumeExternalSource(data, fadeDuration));
+                externalFadeCoroutines.Add(coroutine);
+            }
+        }
+
+        pausedExternalSources.Clear();
+    }
+
+    private IEnumerator FadeInAndResumeExternalSource(PausedAudioSourceData data, float duration)
+    {
+        AudioSource src = data.source;
+        if (src == null) yield break;
+
+        src.gameObject.SetActive(true);
+        src.enabled = true;
+        src.volume = 0f;
+
+        if (src.clip == null && data.clip != null)
+        {
+            src.clip = data.clip;
+        }
+
+        if (data.clip != null)
+        {
+            src.time = Mathf.Clamp(data.savedTime, 0f, Mathf.Max(0f, data.clip.length - 0.1f));
+        }
+
+        src.UnPause();
+        if (!src.isPlaying)
+        {
+            src.Play();
+        }
+
+        float targetVol = data.savedVolume;
+        float elapsed = 0f;
+
+        while (elapsed < duration && src != null)
+        {
+            elapsed += Time.deltaTime;
+            src.volume = Mathf.Lerp(0f, targetVol, elapsed / duration);
+            yield return null;
+        }
+
+        if (src != null)
+        {
+            src.volume = targetVol;
         }
     }
 

@@ -18,6 +18,13 @@ public class DamageNumberPopup : MonoBehaviour
     public static DamageNumberPopup Create(Vector3 position, int amount, bool isPlayerDamage = false, TMP_FontAsset fontAsset = null)
     {
         GameObject popupObj = new GameObject("DamageNumberPopup");
+
+        int bulletLayer = LayerMask.NameToLayer("Bullet");
+        if (bulletLayer != -1)
+        {
+            popupObj.layer = bulletLayer;
+        }
+
         popupObj.transform.position = position + new Vector3(Random.Range(-0.25f, 0.25f), Random.Range(0.2f, 0.4f), Random.Range(-0.1f, 0.1f));
 
         DamageNumberPopup popup = popupObj.AddComponent<DamageNumberPopup>();

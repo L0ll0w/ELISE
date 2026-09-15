@@ -155,4 +155,5 @@ public class BeatManager : MonoBehaviour
 
     public float Bpm => bpm;
     public bool IsPlaying => isPlaying;
+    public AudioSource AudioSource => audioSource != null ? audioSource : GetComponent<AudioSource>();
 }

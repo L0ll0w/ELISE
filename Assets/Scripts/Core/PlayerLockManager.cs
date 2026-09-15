@@ -12,8 +12,20 @@ public static class PlayerLockManager
     /// </summary>
     /// <param name="isLocked">Vrai pour geler le joueur, faux pour lui rendre les commandes.</param>
     /// <param name="hideFollowers">Si vrai, masque les membres du groupe pendant le gel (ex: au début d'un combat).</param>
-    public static void SetPlayerLocked(bool isLocked, bool hideFollowers = false)
+    /// <param name="force">Si vrai, force le déverrouillage même si un combat semble actif (ex: fin officielle d'un combat).</param>
+    public static void SetPlayerLocked(bool isLocked, bool hideFollowers = false, bool force = false)
     {
+        bool isCombatActive = (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive) ||
+                              (CombatManager.Instance != null && CombatManager.Instance.IsCombatActive);
+
+        // Si on tente de déverrouiller le joueur (ex: fin de dialogue ou fermeture de menu de pause)
+        // alors qu'un combat est toujours actif, ne pas réactiver PlayerMovement ni GroupManager,
+        // et ne pas écraser l'animation de combat avec "idle" !
+        if (!isLocked && isCombatActive && !force)
+        {
+            return;
+        }
+
         // 1. Gestion du groupe (GroupManager)
         if (GroupManager.Instance != null)
         {

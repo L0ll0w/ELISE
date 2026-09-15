@@ -64,6 +64,29 @@ public class CinematicTriggerZone : MonoBehaviour
     protected CinemachineHelper cameraHelper;
     protected PlayerMovement playerMovement;
 
+    protected Vector3 savedPreCinematicOffset;
+    protected Quaternion savedPreCinematicRotation = Quaternion.identity;
+    protected float savedPreCinematicFOV = 40f;
+    protected bool hasSavedPreCinematicState = false;
+
+    protected void SavePreCinematicState()
+    {
+        if (virtualCamera != null)
+        {
+            savedPreCinematicRotation = virtualCamera.transform.rotation;
+            savedPreCinematicFOV = virtualCamera.Lens.FieldOfView;
+            if (playerMovement != null)
+            {
+                savedPreCinematicOffset = virtualCamera.transform.position - playerMovement.transform.position;
+            }
+            else if (cameraHelper != null)
+            {
+                savedPreCinematicOffset = cameraHelper.OriginalFollowOffset;
+            }
+            hasSavedPreCinematicState = true;
+        }
+    }
+
     private void Awake()
     {
         // S'assurer que le collider est bien configuré en Trigger
@@ -127,6 +150,8 @@ public class CinematicTriggerZone : MonoBehaviour
             Debug.LogError("[CinematicTriggerZone] Aucune CinemachineCamera trouvée dans la scène !");
             yield break;
         }
+
+        SavePreCinematicState();
 
         if (cameraHelper != null)
         {
@@ -228,7 +253,8 @@ public class CinematicTriggerZone : MonoBehaviour
 
         // Calcul des valeurs cibles
         float targetYaw = zoomYaw >= 0f ? zoomYaw : startRot.eulerAngles.y;
-        Quaternion targetRot = Quaternion.Euler(zoomPitch, targetYaw, 0f);
+        float targetPitch = zoomPitch >= 0f ? zoomPitch : startRot.eulerAngles.x;
+        Quaternion targetRot = Quaternion.Euler(targetPitch, targetYaw, 0f);
         
         // Tourner le décalage de la caméra selon la rotation Y ciblée
         Vector3 localOffset = new Vector3(0f, zoomHeight, -zoomOutDistance);
@@ -270,10 +296,29 @@ public class CinematicTriggerZone : MonoBehaviour
         Quaternion startRot = virtualCamera.transform.rotation;
         float startFOV = virtualCamera.Lens.FieldOfView;
 
-        // Calcul des valeurs cibles d'origine
-        Vector3 targetOffset = cameraHelper != null ? cameraHelper.OriginalFollowOffset : new Vector3(0f, 4f, -10f);
-        Quaternion targetRot = cameraHelper != null ? cameraHelper.OriginalLocalRotation : Quaternion.Euler(20f, 0f, 0f);
-        float targetFOV = cameraHelper != null ? cameraHelper.OriginalFOV : 40f;
+        Vector3 targetOffset;
+        Quaternion targetRot;
+        float targetFOV;
+
+        Vector3 playerPos = playerMovement != null ? playerMovement.transform.position : Vector3.zero;
+
+        if (cameraHelper != null)
+        {
+            cameraHelper.GetCalculatedFollowOffsetAndRotation(playerPos, out targetOffset, out targetRot);
+            targetFOV = cameraHelper.OriginalFOV;
+        }
+        else
+        {
+            targetOffset = (hasSavedPreCinematicState && savedPreCinematicOffset.sqrMagnitude > 0.01f)
+                ? savedPreCinematicOffset
+                : new Vector3(0f, 4f, -10f);
+
+            targetRot = (hasSavedPreCinematicState && savedPreCinematicRotation != Quaternion.identity)
+                ? savedPreCinematicRotation
+                : startRot;
+
+            targetFOV = hasSavedPreCinematicState ? savedPreCinematicFOV : 40f;
+        }
 
         float elapsed = 0f;
         float duration = Mathf.Max(0.05f, transitionOutDuration);
@@ -287,9 +332,8 @@ public class CinematicTriggerZone : MonoBehaviour
             float normalizedTime = Mathf.Clamp01(elapsed / duration);
             float t = transitionCurve.Evaluate(normalizedTime);
 
-            // Calculer la position cible dynamique du joueur (au cas où il ait bougé très légèrement)
-            Vector3 playerPos = playerMovement != null ? playerMovement.transform.position : Vector3.zero;
-            Vector3 targetPos = playerPos + targetOffset;
+            Vector3 currentTargetPos = playerMovement != null ? playerMovement.transform.position : Vector3.zero;
+            Vector3 targetPos = currentTargetPos + targetOffset;
 
             Vector3 currentPos = Vector3.Lerp(startPos, targetPos, t);
             virtualCamera.transform.position = currentPos;
@@ -299,14 +343,29 @@ public class CinematicTriggerZone : MonoBehaviour
             yield return null;
         }
 
-        // Réactiver le helper en mode instantané à l'arrivée (vu que nous sommes déjà parfaitement calés)
+        Vector3 finalPlayerPos = playerMovement != null ? playerMovement.transform.position : Vector3.zero;
+        Vector3 finalCameraPos = finalPlayerPos + targetOffset;
+        virtualCamera.transform.position = finalCameraPos;
+        virtualCamera.transform.rotation = targetRot;
+        virtualCamera.Lens.FieldOfView = targetFOV;
+
+        // Réactiver le helper et réaligner la cible Cinemachine sur le joueur sans aucun saut de cadrage
         if (cameraHelper != null)
         {
+            cameraHelper.ResetDynamicState();
             cameraHelper.enabled = true;
-            cameraHelper.UpdateCameraSettings(false); // Pas de smoothTransition car on est déjà placé
+            cameraHelper.SetTargetPlayer(playerMovement != null ? playerMovement.transform : null);
+            cameraHelper.UpdateCameraSettings(false);
+        }
+        else if (playerMovement != null)
+        {
+            virtualCamera.Follow = playerMovement.transform;
         }
 
-        // Réinitialiser le cache d'amorti/historique pour le retour au joueur
-        virtualCamera.ForceCameraPosition(virtualCamera.transform.position, virtualCamera.transform.rotation);
+        // Réinitialiser l'historique de position de Cinemachine pour éviter tout saut de cadre
+        virtualCamera.ForceCameraPosition(finalCameraPos, targetRot);
+
+        // Laisser 1 frame à Cinemachine et CinemachineHelper pour caler leur état 100% stable avant le déverrouillage du joueur
+        yield return null;
     }
 }

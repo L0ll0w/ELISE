@@ -55,6 +55,10 @@ public class ZoneMusicTrigger : MonoBehaviour
     {
         if (zoneMusicTrack == null) return;
 
+        // Ne pas déclencher de nouvelle musique de zone pendant un combat
+        if (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive) return;
+        if (CombatManager.Instance != null && CombatManager.Instance.IsCombatActive) return;
+
         // Détection du joueur (soit par le Tag "Player", soit par la présence du composant PlayerMovement)
         if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null || other.GetComponentInParent<PlayerMovement>() != null)
         {

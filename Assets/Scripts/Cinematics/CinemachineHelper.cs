@@ -76,6 +76,12 @@ public class CinemachineHelper : MonoBehaviour
     [Tooltip("Distance de sécurité minimale (en mètres) entre la caméra et le sol.")]
     [SerializeField] private float cameraTerrainSafetyMargin = 1.5f;
 
+    [Tooltip("Sensibilité/Vitesse de relèvement de la caméra lors de la détection d'obstacles (plus bas = plus doux et moins réactif).")]
+    [SerializeField] private float terrainClippingSensitivity = 1.5f;
+
+    [Tooltip("Hauteur maximale au-dessus du joueur (en mètres) pour qu'une surface soit considérée comme du sol (ignore les racines/structures en hauteur).")]
+    [SerializeField] private float maxGroundHeightAbovePlayer = 1.5f;
+
     [Tooltip("Masque de calque pour la détection du sol (Terrain et maillages 3D de décor).")]
     [SerializeField] private LayerMask groundLayerMask = ~0;
 
@@ -116,17 +122,78 @@ public class CinemachineHelper : MonoBehaviour
     private float currentZoomOutOffset = 0f;
     private float currentZoomOutFOVOffset = 0f;
     private float currentRoll = 0f;
+    private float smoothTerrainOffset = 0f;
+
+    public float CurrentYaw
+    {
+        get
+        {
+            if (faceFocalPoint && focalPointTarget != null)
+            {
+                Transform refTarget = dummyTarget != null ? dummyTarget : (targetPlayer != null ? targetPlayer : transform);
+                Vector3 dirToFocal = focalPointTarget.position - refTarget.position;
+                dirToFocal.y = 0f;
+
+                if (dirToFocal.sqrMagnitude > 0.01f)
+                {
+                    dirToFocal.Normalize();
+                    if (invertFocalDirection) dirToFocal = -dirToFocal;
+                    return Mathf.Atan2(dirToFocal.x, dirToFocal.z) * Mathf.Rad2Deg;
+                }
+            }
+            return yawAngle;
+        }
+    }
 
     public Vector3 OriginalFollowOffset
     {
         get
         {
             Vector3 baseOffset = new Vector3(offsetX, height, -distance);
-            return Quaternion.Euler(0f, yawAngle, 0f) * baseOffset;
+            return Quaternion.Euler(0f, CurrentYaw, 0f) * baseOffset;
         }
     }
 
-    public Quaternion OriginalLocalRotation => Quaternion.Euler(pitchAngle, yawAngle, 0f);
+    public Quaternion OriginalLocalRotation => Quaternion.Euler(pitchAngle, CurrentYaw, 0f);
+    private bool isCameraLockedToPlatform = false;
+    private Vector3 lockedPlatformPosition;
+
+    public bool IsCameraLockedToPlatform => isCameraLockedToPlatform;
+
+    /// <summary>
+    /// Fige le cadrage de la caméra sur la plateforme pendant la chute dans le vide et la réapparition du ciel.
+    /// </summary>
+    public void LockCameraToPlatform(Vector3 platformWorldPos)
+    {
+        if (isCameraLockedToPlatform) return; // Déjà verrouillée, ne pas écraser la position de la plateforme à chaque frame !
+
+        isCameraLockedToPlatform = true;
+        lockedPlatformPosition = platformWorldPos;
+        if (dummyTarget != null)
+        {
+            dummyTarget.SetParent(null);
+            dummyTarget.position = platformWorldPos;
+        }
+    }
+
+    /// <summary>
+    /// Libère le cadrage de la caméra pour reprendre le suivi normal du joueur.
+    /// </summary>
+    public void UnlockCameraFromPlatform()
+    {
+        if (!isCameraLockedToPlatform) return; // Déjà déverrouillée
+
+        isCameraLockedToPlatform = false;
+        if (dummyTarget != null && targetPlayer != null)
+        {
+            dummyTarget.SetParent(targetPlayer);
+            dummyTarget.localPosition = Vector3.zero;
+            lastPlayerPos = targetPlayer.position;
+            currentLookAhead = Vector3.zero;
+            currentVerticalSpeed = 0f;
+        }
+    }
+
     public float OriginalFOV => defaultFOV > 0f ? defaultFOV : (originalFOV > 0f ? originalFOV : 40f);
 
     public float Distance
@@ -204,8 +271,8 @@ public class CinemachineHelper : MonoBehaviour
     private void SyncOriginalSettingsFromFields()
     {
         Vector3 baseOffset = new Vector3(offsetX, height, -distance);
-        originalFollowOffset = Quaternion.Euler(0f, yawAngle, 0f) * baseOffset;
-        originalLocalRotation = Quaternion.Euler(pitchAngle, yawAngle, 0f);
+        originalFollowOffset = Quaternion.Euler(0f, CurrentYaw, 0f) * baseOffset;
+        originalLocalRotation = Quaternion.Euler(pitchAngle, CurrentYaw, 0f);
         originalFOV = defaultFOV > 0f ? defaultFOV : 40f;
     }
 
@@ -317,6 +384,9 @@ public class CinemachineHelper : MonoBehaviour
             }
         }
 
+        // Exclure le layer Ignore Raycast
+        groundLayerMask &= ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
+
         UpdateCameraSettings();
     }
 
@@ -327,23 +397,38 @@ public class CinemachineHelper : MonoBehaviour
             return;
         }
 
-        if (dummyTarget.parent != targetPlayer)
+        Vector3 playerPos;
+
+        if (isCameraLockedToPlatform)
         {
-            dummyTarget.SetParent(targetPlayer);
+            if (dummyTarget.parent != null)
+            {
+                dummyTarget.SetParent(null);
+            }
+            dummyTarget.position = lockedPlatformPosition;
+            playerPos = lockedPlatformPosition;
+        }
+        else
+        {
+            if (dummyTarget.parent != targetPlayer)
+            {
+                dummyTarget.SetParent(targetPlayer);
+                dummyTarget.localPosition = Vector3.zero;
+            }
+            playerPos = targetPlayer.position;
         }
 
-        Vector3 playerPos = targetPlayer.position;
         float deltaTime = Time.deltaTime;
         
         // 1. Calcul de la vitesse et de la pente
         if (deltaTime > 0f)
         {
-            float instantVerticalSpeed = (playerPos.y - lastPlayerPos.y) / deltaTime;
+            float instantVerticalSpeed = isCameraLockedToPlatform ? 0f : ((playerPos.y - lastPlayerPos.y) / deltaTime);
             currentVerticalSpeed = Mathf.Lerp(currentVerticalSpeed, instantVerticalSpeed, deltaTime * slopeSensitivity);
         }
 
         // 2. Calcul du Look-Ahead (horizontal en coordonnées Monde)
-        Vector3 moveDelta = playerPos - lastPlayerPos;
+        Vector3 moveDelta = isCameraLockedToPlatform ? Vector3.zero : (playerPos - lastPlayerPos);
         moveDelta.y = 0f;
 
         if (moveDelta.magnitude > 2f)
@@ -413,14 +498,17 @@ public class CinemachineHelper : MonoBehaviour
             currentZoomOutFOVOffset = Mathf.Lerp(currentZoomOutFOVOffset, targetZoomOutFOV, deltaTime * zoomOutReturnSpeed);
         }
 
-        // Convertir le vecteur d'anticipation Monde en espace local du joueur pour que dummyTarget.position soit exactement : playerPos + currentLookAhead
-        if (targetPlayer != null)
+        if (!isCameraLockedToPlatform)
         {
-            dummyTarget.localPosition = targetPlayer.InverseTransformDirection(currentLookAhead);
-        }
-        else
-        {
-            dummyTarget.localPosition = currentLookAhead;
+            // Convertir le vecteur d'anticipation Monde en espace local du joueur pour que dummyTarget.position soit exactement : playerPos + currentLookAhead
+            if (targetPlayer != null)
+            {
+                dummyTarget.localPosition = targetPlayer.InverseTransformDirection(currentLookAhead);
+            }
+            else
+            {
+                dummyTarget.localPosition = currentLookAhead;
+            }
         }
 
         Vector3 targetFollowPos = dummyTarget.position;
@@ -436,7 +524,11 @@ public class CinemachineHelper : MonoBehaviour
         float targetHeight = height;
         float currentDistance = distance;
 
-        if (adaptToSlope)
+        // L'adaptation aux pentes ne doit s'appliquer que si le joueur est sur le sol (pas en pleine chute libre)
+        PlayerMovement pmComponent = targetPlayer != null ? targetPlayer.GetComponent<PlayerMovement>() : null;
+        bool isPlayerGrounded = pmComponent == null || pmComponent.IsGrounded();
+
+        if (adaptToSlope && isPlayerGrounded)
         {
             float pitchOffset = 0f;
             float heightOffset = 0f;
@@ -457,18 +549,36 @@ public class CinemachineHelper : MonoBehaviour
             targetHeight += heightOffset;
         }
 
-        // 5. Évitement de collision sol (3D Raycast & Terrain)
+        // 5. Évitement de collision sol avec lissage très doux et faible sensibilité
         if (preventTerrainClipping && followComponent != null)
         {
             Vector3 estimatedCamPos = dummyTarget.position + Quaternion.Euler(0f, yawAngle, 0f) * new Vector3(offsetX, targetHeight, -currentDistance);
             float terrainHeightAtCam = GetHeightAtPosition(estimatedCamPos);
             float minCamWorldY = terrainHeightAtCam + cameraTerrainSafetyMargin;
+            float rawObstacleOffset = 0f;
 
             if (estimatedCamPos.y < minCamWorldY)
             {
-                targetHeight = minCamWorldY - dummyTarget.position.y;
-                targetPitch = Mathf.Atan2(targetHeight, currentDistance) * Mathf.Rad2Deg;
+                // Seuil de tolérance (0.2m) pour ignorer les micro-bosses du sol
+                float deltaY = minCamWorldY - estimatedCamPos.y;
+                if (deltaY > 0.2f)
+                {
+                    rawObstacleOffset = deltaY;
+                }
             }
+
+            // Interpolation très douce avec la sensibilité personnalisée (1.5f) pour éliminer tout à-coup violent
+            smoothTerrainOffset = Mathf.Lerp(smoothTerrainOffset, rawObstacleOffset, deltaTime * terrainClippingSensitivity);
+
+            if (smoothTerrainOffset > 0.01f)
+            {
+                targetHeight += smoothTerrainOffset;
+            }
+        }
+        else if (smoothTerrainOffset > 0.001f)
+        {
+            smoothTerrainOffset = Mathf.Lerp(smoothTerrainOffset, 0f, deltaTime * terrainClippingSensitivity);
+            targetHeight += smoothTerrainOffset;
         }
 
         // 6. Orientation Yaw (Focal Point ou Yaw personnalisé)
@@ -496,20 +606,46 @@ public class CinemachineHelper : MonoBehaviour
             float activeDistance = currentDistance + currentZoomOutOffset;
             Vector3 baseOffset = new Vector3(offsetX, targetHeight, -activeDistance);
             Vector3 targetOffset = Quaternion.Euler(0f, targetYaw, 0f) * baseOffset;
-
-            followComponent.FollowOffset = Vector3.Lerp(followComponent.FollowOffset, targetOffset, lerpFactor);
-
             Quaternion targetRot = Quaternion.Euler(targetPitch, targetYaw, currentRoll);
-            transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRot, rotLerpFactor);
 
-            if (defaultFOV > 0f)
+            if (isFirstFrameAfterEnable)
             {
-                float targetFOVValue = defaultFOV + currentZoomOutFOVOffset;
-                cinemachineCamera.Lens.FieldOfView = Mathf.Lerp(cinemachineCamera.Lens.FieldOfView, targetFOVValue, lerpFactor);
+                followComponent.FollowOffset = targetOffset;
+                transform.localRotation = targetRot;
+                if (defaultFOV > 0f) cinemachineCamera.Lens.FieldOfView = defaultFOV;
+                isFirstFrameAfterEnable = false;
+            }
+            else
+            {
+                followComponent.FollowOffset = Vector3.Lerp(followComponent.FollowOffset, targetOffset, lerpFactor);
+                transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRot, rotLerpFactor);
+
+                if (defaultFOV > 0f)
+                {
+                    float targetFOVValue = defaultFOV + currentZoomOutFOVOffset;
+                    cinemachineCamera.Lens.FieldOfView = Mathf.Lerp(cinemachineCamera.Lens.FieldOfView, targetFOVValue, lerpFactor);
+                }
             }
         }
 
         lastPlayerPos = playerPos;
+    }
+
+    private Terrain cachedTerrain;
+    private bool hasCheckedTerrain = false;
+
+    private Terrain GetActiveTerrain()
+    {
+        if (!hasCheckedTerrain)
+        {
+            cachedTerrain = Terrain.activeTerrain;
+            if (cachedTerrain == null)
+            {
+                cachedTerrain = FindFirstObjectByType<Terrain>();
+            }
+            hasCheckedTerrain = true;
+        }
+        return cachedTerrain;
     }
 
     private float GetHeightAtPosition(Vector3 position)
@@ -517,31 +653,41 @@ public class CinemachineHelper : MonoBehaviour
         float highestGroundY = -9999f;
         bool groundFound = false;
 
-        // 1. Raycast physique 3D pour supporter n'importe quel sol de niveau (MeshCollider, BoxCollider, etc.)
-        if (Physics.Raycast(position + Vector3.up * 50f, Vector3.down, out RaycastHit hit, 100f, groundLayerMask, QueryTriggerInteraction.Ignore))
+        float playerY = dummyTarget != null ? dummyTarget.position.y : position.y;
+        float maxAllowedGroundY = playerY + maxGroundHeightAbovePlayer;
+        float rayStartHeight = Mathf.Min(position.y + 10f, maxAllowedGroundY);
+
+        RaycastHit[] hits = Physics.RaycastAll(new Ray(new Vector3(position.x, rayStartHeight, position.z), Vector3.down), 30f, groundLayerMask, QueryTriggerInteraction.Ignore);
+
+        if (hits != null && hits.Length > 0)
         {
-            highestGroundY = hit.point.y;
-            groundFound = true;
+            foreach (RaycastHit hit in hits)
+            {
+                // Ignorer les surfaces situées au-dessus du joueur (racines suspendues, ponts, plafonds)
+                if (hit.point.y <= maxAllowedGroundY)
+                {
+                    if (hit.point.y > highestGroundY)
+                    {
+                        highestGroundY = hit.point.y;
+                        groundFound = true;
+                    }
+                }
+            }
         }
 
         // 2. Échantillonnage de Terrain Unity s'il y a un Terrain dans la scène
-        Terrain activeTerrain = Terrain.activeTerrain;
-        if (activeTerrain == null)
-        {
-            activeTerrain = FindFirstObjectByType<Terrain>();
-        }
-
+        Terrain activeTerrain = GetActiveTerrain();
         if (activeTerrain != null)
         {
             float terrainY = activeTerrain.SampleHeight(position) + activeTerrain.transform.position.y;
-            if (terrainY > highestGroundY)
+            if (terrainY <= maxAllowedGroundY && terrainY > highestGroundY)
             {
                 highestGroundY = terrainY;
                 groundFound = true;
             }
         }
 
-        return groundFound ? highestGroundY : 0f;
+        return groundFound ? highestGroundY : playerY;
     }
 
     public void SetTargetPlayer(Transform newTarget)
@@ -559,6 +705,66 @@ public class CinemachineHelper : MonoBehaviour
         {
             Debug.Log($"[CinemachineHelper] SetTargetPlayer called with {newTarget.name} at position {newTarget.position}");
         }
+    }
+
+    private bool isFirstFrameAfterEnable = true;
+
+    private void OnEnable()
+    {
+        ResetDynamicState();
+    }
+
+    public void ResetDynamicState()
+    {
+        isFirstFrameAfterEnable = true;
+        if (targetPlayer != null)
+        {
+            lastPlayerPos = targetPlayer.position;
+            if (dummyTarget != null)
+            {
+                dummyTarget.SetParent(targetPlayer);
+                dummyTarget.localPosition = Vector3.zero;
+            }
+        }
+        if (followComponent == null)
+        {
+            followComponent = GetComponent<CinemachineFollow>();
+            if (followComponent == null) followComponent = GetComponentInChildren<CinemachineFollow>();
+        }
+        if (followComponent != null)
+        {
+            followComponent.TrackerSettings.PositionDamping = Vector3.zero;
+        }
+        currentLookAhead = Vector3.zero;
+        currentVerticalSpeed = 0f;
+        currentZoomOutOffset = 0f;
+        currentZoomOutFOVOffset = 0f;
+        currentRoll = 0f;
+    }
+
+    public void GetCalculatedFollowOffsetAndRotation(Vector3 targetWorldPos, out Vector3 calculatedOffset, out Quaternion calculatedRotation)
+    {
+        float targetYaw = CurrentYaw;
+        float targetPitch = pitchAngle;
+        float targetHeight = height;
+        float currentDistance = distance;
+
+        if (preventTerrainClipping)
+        {
+            Vector3 estimatedCamPos = targetWorldPos + Quaternion.Euler(0f, targetYaw, 0f) * new Vector3(offsetX, targetHeight, -currentDistance);
+            float terrainHeightAtCam = GetHeightAtPosition(estimatedCamPos);
+            float minCamWorldY = terrainHeightAtCam + cameraTerrainSafetyMargin;
+
+            if (estimatedCamPos.y < minCamWorldY)
+            {
+                targetHeight = minCamWorldY - targetWorldPos.y;
+                targetPitch = Mathf.Atan2(targetHeight, currentDistance) * Mathf.Rad2Deg;
+            }
+        }
+
+        Vector3 baseOffset = new Vector3(offsetX, targetHeight, -currentDistance);
+        calculatedOffset = Quaternion.Euler(0f, targetYaw, 0f) * baseOffset;
+        calculatedRotation = Quaternion.Euler(targetPitch, targetYaw, 0f);
     }
 
     public void UpdateCameraSettings(bool smoothTransition = false)
@@ -609,37 +815,19 @@ public class CinemachineHelper : MonoBehaviour
         {
             followComponent.TrackerSettings.BindingMode = hasSavedOriginalSettings ? originalBindingMode : BindingMode.WorldSpace;
             
-            float targetYaw = yawAngle;
-            if (faceFocalPoint && focalPointTarget != null && targetPlayer != null)
-            {
-                Vector3 dirToFocal = focalPointTarget.position - targetPlayer.position;
-                dirToFocal.y = 0f;
-                if (dirToFocal.sqrMagnitude > 0.01f)
-                {
-                    dirToFocal.Normalize();
-                    if (invertFocalDirection) dirToFocal = -dirToFocal;
-                    targetYaw = Mathf.Atan2(dirToFocal.x, dirToFocal.z) * Mathf.Rad2Deg;
-                }
-            }
-
-            float currentPitch = pitchAngle;
-            float currentDist = distance;
-            float currentH = height;
-
-            Vector3 baseOffset = new Vector3(offsetX, currentH, -currentDist);
-            Vector3 targetOffset = Quaternion.Euler(0f, targetYaw, 0f) * baseOffset;
+            Vector3 currentTargetPos = dummyTarget != null ? dummyTarget.position : (targetPlayer != null ? targetPlayer.position : transform.position);
+            GetCalculatedFollowOffsetAndRotation(currentTargetPos, out Vector3 targetOffset, out Quaternion targetRot);
 
             if (smoothTransition)
             {
-                Vector3 currentTargetPos = dummyTarget != null ? dummyTarget.position : (targetPlayer != null ? targetPlayer.position : transform.position);
                 Vector3 calculatedOffset = transform.position - currentTargetPos;
 
                 followComponent.FollowOffset = (faceFocalPoint && focalPointTarget != null) ? targetOffset : calculatedOffset;
-                transform.localRotation = Quaternion.Euler(currentPitch, targetYaw, 0f);
+                transform.localRotation = targetRot;
             }
             else
             {
-                transform.localRotation = Quaternion.Euler(currentPitch, targetYaw, 0f);
+                transform.localRotation = targetRot;
                 followComponent.FollowOffset = targetOffset;
             }
 
@@ -650,12 +838,9 @@ public class CinemachineHelper : MonoBehaviour
         }
         else if (!smoothTransition)
         {
-            float targetYaw = (faceFocalPoint && focalPointTarget != null && targetPlayer != null) 
-                ? Mathf.Atan2((focalPointTarget.position - targetPlayer.position).x, (focalPointTarget.position - targetPlayer.position).z) * Mathf.Rad2Deg 
-                : yawAngle;
-
-            float currentPitch = pitchAngle;
-            transform.localRotation = Quaternion.Euler(currentPitch, targetYaw, 0f);
+            Vector3 currentTargetPos = targetPlayer != null ? targetPlayer.position : transform.position;
+            GetCalculatedFollowOffsetAndRotation(currentTargetPos, out _, out Quaternion targetRot);
+            transform.localRotation = targetRot;
             if (defaultFOV > 0f && cinemachineCamera != null)
             {
                 cinemachineCamera.Lens.FieldOfView = defaultFOV;

@@ -21,6 +21,7 @@ public class GrassComputeScript : MonoBehaviour
 
     // interactors
     ShaderInteractor[] interactors;
+    private Vector4[] interactorPositionsBuffer;
 
     // base data lists
     [SerializeField, HideInInspector]
@@ -308,8 +309,10 @@ public class GrassComputeScript : MonoBehaviour
         {
             return;
         }
-        // if the camera didnt move, we dont need to change the culling;
-        if (m_cachedCamRot == m_MainCamera.transform.rotation && m_cachedCamPos == m_MainCamera.transform.position && Application.isPlaying)
+        // if the camera didnt move significantly, we dont need to change the culling;
+        if (Application.isPlaying &&
+            (m_cachedCamPos - m_MainCamera.transform.position).sqrMagnitude < 0.04f &&
+            Quaternion.Angle(m_cachedCamRot, m_MainCamera.transform.rotation) < 1.5f)
         {
             return;
         }
@@ -413,7 +416,6 @@ public class GrassComputeScript : MonoBehaviour
         {
             m_InstantiatedComputeShader.SetFloat("_MinFadeDist", currentPresets.minFadeDistance);
             m_InstantiatedComputeShader.SetFloat("_MaxFadeDist", currentPresets.maxDrawDistance);
-            interactors = (ShaderInteractor[])FindObjectsOfType(typeof(ShaderInteractor));
         }
         else
         {
@@ -469,36 +471,13 @@ public class GrassComputeScript : MonoBehaviour
         m_InstantiatedComputeShader.SetFloat("_Time", Time.time);
         m_InstantiatedComputeShader.SetMatrix("_LocalToWorld", transform.localToWorldMatrix);
 
-        // Ensure interactors array is initialized
-        if (interactors == null)
-        {
-            interactors = (ShaderInteractor[])FindObjectsOfType(typeof(ShaderInteractor));
-        }
-
-        // Check if any interactor reference has been destroyed/is missing
-        bool needsRefresh = false;
-        for (int i = 0; i < interactors.Length; i++)
-        {
-            if (interactors[i] == null)
-            {
-                needsRefresh = true;
-                break;
-            }
-        }
-
-        // Re-query if any reference was missing/destroyed
-        if (needsRefresh)
-        {
-            interactors = (ShaderInteractor[])FindObjectsOfType(typeof(ShaderInteractor));
-        }
-
-        // Count how many valid (non-null) interactors we have now
+        var activeInteractors = ShaderInteractor.ActiveInteractors;
         int validCount = 0;
-        if (interactors != null)
+        if (activeInteractors != null)
         {
-            for (int i = 0; i < interactors.Length; i++)
+            for (int i = 0; i < activeInteractors.Count; i++)
             {
-                if (interactors[i] != null)
+                if (activeInteractors[i] != null)
                 {
                     validCount++;
                 }
@@ -507,22 +486,23 @@ public class GrassComputeScript : MonoBehaviour
 
         if (validCount > 0)
         {
-            Vector4[] positions = new Vector4[validCount];
-            int index = 0;
-            for (int i = 0; i < interactors.Length; i++)
+            if (interactorPositionsBuffer == null || interactorPositionsBuffer.Length != validCount)
             {
-                if (interactors[i] != null)
+                interactorPositionsBuffer = new Vector4[validCount];
+            }
+
+            int index = 0;
+            for (int i = 0; i < activeInteractors.Count; i++)
+            {
+                var inter = activeInteractors[i];
+                if (inter != null)
                 {
-                    positions[index] = new Vector4(
-                        interactors[i].transform.position.x,
-                        interactors[i].transform.position.y,
-                        interactors[i].transform.position.z,
-                        interactors[i].radius
-                    );
+                    Vector3 p = inter.transform.position;
+                    interactorPositionsBuffer[index] = new Vector4(p.x, p.y, p.z, inter.radius);
                     index++;
                 }
             }
-            m_InstantiatedComputeShader.SetVectorArray(shaderID, positions);
+            m_InstantiatedComputeShader.SetVectorArray(shaderID, interactorPositionsBuffer);
             m_InstantiatedComputeShader.SetFloat("_InteractorsLength", validCount);
         }
         else

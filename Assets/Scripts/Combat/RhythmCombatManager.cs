@@ -36,6 +36,9 @@ public class RhythmCombatManager : MonoBehaviour
 
     public enum CombatState { Transitioning, Active, Victory, Defeat }
 
+    public CombatState CurrentCombatState => currentState;
+    public bool IsInJudgment => currentState == CombatState.Victory;
+
     [Header("Configuration Rythmique")]
     [Tooltip("Musique de combat (Clip audio).")]
     [SerializeField] private AudioClip combatMusicClip;
@@ -50,6 +53,8 @@ public class RhythmCombatManager : MonoBehaviour
     [SerializeField] private EnemyCombatData defaultCombatData;
 
     [Header("Paramètres du Joueur")]
+    [Tooltip("Délai minimum (cooldown) entre chaque déplacement de case du joueur en secondes.")]
+    [SerializeField] private float playerMoveCooldown = 0.2f;
     [Tooltip("Prefab de particules lors d'une attaque réussie sur le beat.")]
     [SerializeField] private ParticleSystem attackSuccessParticles;
     [Tooltip("Prefab de particules quand le joueur se fait toucher.")]
@@ -58,6 +63,16 @@ public class RhythmCombatManager : MonoBehaviour
     [Header("Animations du Joueur")]
     [Tooltip("Le nom de l'état d'animation à jouer sur l'Animator du joueur pendant le combat rythmique (ex: dance).")]
     [SerializeField] private string combatAnimationStateName = "dance";
+
+    [Header("Masquage des Décors (Occlusion Caméra)")]
+    [Tooltip("Active le masquage automatique des éléments de décor entre la caméra et le joueur en combat.")]
+    [SerializeField] private bool enableCameraOcclusion = true;
+    [Tooltip("Mode de masquage des décors (DisableRenderer = masquage 100% garanti, ShadowsOnly = ombre conservée au sol).")]
+    [SerializeField] private CombatCameraOccluder.HideMode occlusionHideMode = CombatCameraOccluder.HideMode.DisableRenderer;
+    [Tooltip("Rayon du couloir de détection (en mètres) autour de la ligne de vue Caméra-Joueur.")]
+    [SerializeField] private float occlusionRadius = 0.8f;
+    [Tooltip("Masque de calques pour les objets de décor pouvant bloquer la vue.")]
+    [SerializeField] private LayerMask occlusionLayers = ~0;
 
     [Header("Configuration Caméra")]
     [Tooltip("Distance de la caméra par rapport au boss.")]
@@ -224,7 +239,9 @@ public class RhythmCombatManager : MonoBehaviour
     // État du combat
     private CombatState currentState = CombatState.Transitioning;
     private GameObject activeEnemy;
+    private Vector3 combatCenter;
     private RhythmPlayerController playerController;
+    private CombatCameraOccluder cameraOccluder;
     private EnemyCombatData activeCombatData;
     private GameObject activeVisualPrefab;
     private CinemachineBrain brain;
@@ -338,9 +355,35 @@ public class RhythmCombatManager : MonoBehaviour
     {
         if (currentState != CombatState.Active) return;
 
+        // Figer l'ennemi à sa position exacte au centre du combat (empêcher tout glissement par Rigidbody/physique)
+        if (activeEnemy != null)
+        {
+            Vector3 centerPoint = radialGrid != null ? radialGrid.transform.position : combatCenter;
+            activeEnemy.transform.position = centerPoint;
+
+            Rigidbody enemyRb = activeEnemy.GetComponent<Rigidbody>();
+            if (enemyRb == null) enemyRb = activeEnemy.GetComponentInChildren<Rigidbody>();
+            if (enemyRb != null)
+            {
+                enemyRb.linearVelocity = Vector3.zero;
+                enemyRb.angularVelocity = Vector3.zero;
+                if (!enemyRb.isKinematic)
+                {
+                    enemyRb.isKinematic = true;
+                }
+                enemyRb.constraints = RigidbodyConstraints.FreezeAll;
+            }
+        }
+
         // Suivi de caméra fluide derrière le joueur et orientation du boss
         UpdateCameraView(false);
         OrientBossTowardsPlayer();
+
+        // Masquage automatique des décors obstruant la vue
+        if (cameraOccluder != null)
+        {
+            cameraOccluder.UpdateOcclusion();
+        }
 
         // Positionnement 3D en temps réel du menu choices
         if (rpgMenuPanel != null && rpgMenuPanel.activeSelf)
@@ -478,30 +521,10 @@ public class RhythmCombatManager : MonoBehaviour
             originalMainCamFOV = Camera.main.fieldOfView;
         }
 
-        // 0. Détecter et effectuer un fondu de sortie sur la musique de fond actuelle (via AudioManager s'il existe)
+        // 0. Détecter et effectuer un fondu de sortie sur toute musique environnementale ou de zone
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PauseZoneMusicForCombat(0.8f);
-        }
-        else
-        {
-            previousAudioSource = null;
-            previousMusicClip = null;
-            AudioSource[] allAudioSources = FindObjectsByType<AudioSource>(FindObjectsSortMode.None);
-            AudioSource beatManagerSource = BeatManager.Instance != null ? BeatManager.Instance.GetComponent<AudioSource>() : null;
-
-            foreach (var source in allAudioSources)
-            {
-                if (source != null && source.isPlaying && source.clip != null && source != beatManagerSource)
-                {
-                    previousAudioSource = source;
-                    previousMusicClip = source.clip;
-                    previousMusicTime = source.time;
-                    previousMusicVolume = source.volume;
-                    StartCoroutine(FadeOutAudioSource(source, 0.8f));
-                    break;
-                }
-            }
         }
 
         Debug.Log("[RhythmCombatManager] Initialisation du combat rythmique radial...");
@@ -603,11 +626,26 @@ public class RhythmCombatManager : MonoBehaviour
 
         // 4. Recherche de Zone Libre et Repositionnement synchrone Ennemi + Grille + Joueur
         Vector3 initialCenter = activeEnemy.transform.position;
-        Vector3 combatCenter = FindSafeCombatCenter(initialCenter, 4.5f);
-        combatCenter = SnapToGround(combatCenter);
+        combatCenter = SnapToGround(FindSafeCombatCenter(initialCenter, 4.5f));
 
-        // Déplacer l'ennemi au centre de la zone sécurisée
+        // Déplacer l'ennemi au centre de la zone sécurisée et figer sa physique
         activeEnemy.transform.position = combatCenter;
+
+        Rigidbody enemyRb = activeEnemy.GetComponent<Rigidbody>();
+        if (enemyRb == null) enemyRb = activeEnemy.GetComponentInChildren<Rigidbody>();
+        if (enemyRb != null)
+        {
+            enemyRb.linearVelocity = Vector3.zero;
+            enemyRb.angularVelocity = Vector3.zero;
+            enemyRb.isKinematic = true;
+            enemyRb.constraints = RigidbodyConstraints.FreezeAll;
+        }
+
+        EnemyWander wander = activeEnemy.GetComponent<EnemyWander>();
+        if (wander != null)
+        {
+            wander.PauseWander();
+        }
 
         if (radialGrid == null)
         {
@@ -638,6 +676,7 @@ public class RhythmCombatManager : MonoBehaviour
         {
             playerController = leader.gameObject.AddComponent<RhythmPlayerController>();
         }
+        playerController.MoveCooldown = playerMoveCooldown;
         playerController.Initialize(radialGrid, 0, startSector);
 
         // Repositionner physiquement le joueur sur sa case de départ sur la grille réalignée
@@ -659,6 +698,19 @@ public class RhythmCombatManager : MonoBehaviour
 
         // 6. Orienter la caméra derrière le joueur vers le boss (instantanément au début)
         UpdateCameraView(true);
+
+        // Initialiser le masquage automatique des décors d'occlusion
+        if (Camera.main != null)
+        {
+            cameraOccluder = Camera.main.gameObject.GetComponent<CombatCameraOccluder>();
+            if (cameraOccluder == null)
+            {
+                cameraOccluder = Camera.main.gameObject.AddComponent<CombatCameraOccluder>();
+            }
+            cameraOccluder.Initialize(Camera.main.transform, playerController.transform, activeEnemy != null ? activeEnemy.transform : null, radialGrid, occlusionLayers, occlusionRadius, occlusionHideMode);
+            cameraOccluder.UpdateOcclusion();
+            Debug.Log("[RhythmCombatManager] Masquage automatique des décors activé sur la caméra " + Camera.main.name);
+        }
 
         // 7. Initialiser l'UI et la musique
         CreateCombatUI();
@@ -696,6 +748,10 @@ public class RhythmCombatManager : MonoBehaviour
 
         isGardenerInterventionActive = false;
         currentState = CombatState.Active;
+        if (!string.IsNullOrEmpty(danceAnimationStateName))
+        {
+            PlayPlayerAnimation(danceAnimationStateName);
+        }
         if (playerController != null) playerController.SetInputEnabled(true);
         logText.text = "ESQUIVEZ EN RYTHME ! Évitez les attaques de l'ennemi !";
     }
@@ -1133,6 +1189,12 @@ public class RhythmCombatManager : MonoBehaviour
             yield return StartCoroutine(MoveGardenerToPlayerAndRunDialogue(vicDiag));
         }
 
+        // Réaffirmer formellement l'animation facedance pour tout le déroulement du Jugement
+        if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+        {
+            PlayPlayerAnimation(faceDanceAnimationStateName);
+        }
+
         // Focus caméra serré sur l'ennemi qui attend son jugement
         if (activeEnemy != null)
         {
@@ -1149,6 +1211,11 @@ public class RhythmCombatManager : MonoBehaviour
         // 2. Affichage et choix dans le Menu de Verdict (Balance de la Justice)
         int verdictChoice = -1; // 0 = GRACIER (Gauche), 1 = CONDAMNER (Droite)
         yield return StartCoroutine(RunVerdictChoiceRoutine(res => verdictChoice = res));
+
+        if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+        {
+            PlayPlayerAnimation(faceDanceAnimationStateName);
+        }
 
         // 3. Traitement selon la sentence choisie
         if (verdictChoice == 1) // CONDAMNER
@@ -1171,6 +1238,10 @@ public class RhythmCombatManager : MonoBehaviour
             if (condDiag != null)
             {
                 yield return StartCoroutine(RunDirectDialogue(condDiag));
+                if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+                {
+                    PlayPlayerAnimation(faceDanceAnimationStateName);
+                }
             }
 
             if (activeEnemy != null)
@@ -1202,6 +1273,10 @@ public class RhythmCombatManager : MonoBehaviour
             if (sparedDiag != null)
             {
                 yield return StartCoroutine(RunDirectDialogue(sparedDiag));
+                if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+                {
+                    PlayPlayerAnimation(faceDanceAnimationStateName);
+                }
             }
 
             if (activeEnemy != null)
@@ -1857,6 +1932,19 @@ public class RhythmCombatManager : MonoBehaviour
             }
         }
         isGardenerInterventionActive = false;
+
+        // Rétablir systématiquement l'état approprié du joueur après l'intervention du Jardinier
+        if (currentState == CombatState.Victory)
+        {
+            if (!string.IsNullOrEmpty(faceDanceAnimationStateName))
+            {
+                PlayPlayerAnimation(faceDanceAnimationStateName);
+            }
+        }
+        else if (!string.IsNullOrEmpty(danceAnimationStateName))
+        {
+            PlayPlayerAnimation(danceAnimationStateName);
+        }
     }
 
     #endregion
@@ -1868,18 +1956,10 @@ public class RhythmCombatManager : MonoBehaviour
         // Fondu de sortie fluide de la musique de combat
         yield return StartCoroutine(FadeOutBeatManager(0.8f));
 
-        // Restauration fluide de la musique d'exploration originale
+        // Restauration fluide de la musique d'exploration / environnementale originale
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.ResumeZoneMusicAfterCombat(0.8f);
-        }
-        else if (previousAudioSource != null && previousMusicClip != null)
-        {
-            previousAudioSource.clip = previousMusicClip;
-            previousAudioSource.time = previousMusicTime;
-            previousAudioSource.gameObject.SetActive(true);
-            previousAudioSource.enabled = true;
-            StartCoroutine(FadeInAudioSource(previousAudioSource, previousMusicVolume, 0.8f));
         }
 
         yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f));
@@ -1953,6 +2033,14 @@ public class RhythmCombatManager : MonoBehaviour
             Destroy(activeEnemy);
         }
 
+        // Restauration et suppression du masquage des décors de combat
+        if (cameraOccluder != null)
+        {
+            cameraOccluder.RestoreAll();
+            Destroy(cameraOccluder);
+            cameraOccluder = null;
+        }
+
         // 5. Restauration complète de la caméra d'origine (distance, hauteur, orientation et Cinemachine)
         cameraDistance = originalCameraDistance;
         cameraHeight = originalCameraHeight;
@@ -2008,7 +2096,7 @@ public class RhythmCombatManager : MonoBehaviour
         }
 
         // 6. Réactiver les compagnons et le mouvement normal
-        PlayerLockManager.SetPlayerLocked(false);
+        PlayerLockManager.SetPlayerLocked(false, force: true);
 
         yield return new WaitForSeconds(0.2f);
         yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f));
@@ -3191,6 +3279,12 @@ public class RhythmCombatManager : MonoBehaviour
         tutorialPlayerTurnCount++;
         menuEnableTime = Time.time + menuInputSecurityDelay;
 
+        // S'assurer que le joueur reste en animation de danse lors de son tour
+        if (!string.IsNullOrEmpty(danceAnimationStateName))
+        {
+            PlayPlayerAnimation(danceAnimationStateName);
+        }
+
         // Désactiver les contrôles du joueur sur la grille
         if (playerController != null)
         {
@@ -3294,8 +3388,34 @@ public class RhythmCombatManager : MonoBehaviour
 
         if (EventSystem.current != null)
         {
-            Button defaultBtn = attackButton != null ? attackButton : customFightButton;
-            if (defaultBtn != null) EventSystem.current.SetSelectedGameObject(defaultBtn.gameObject);
+            bool isTutorial = activeCombatData != null && activeCombatData.IsGardenerTutorial;
+            Button targetBtn = null;
+
+            // En tuto tour 1, seule l'action PARLER est disponible -> pré-sélectionner le bouton PARLER
+            if (isTutorial && tutorialPlayerTurnCount == 1)
+            {
+                targetBtn = talkButton != null ? talkButton : customTalkButton;
+            }
+
+            // Si le bouton sélectionné n'est pas valide ou pas interactable, prendre le premier bouton interactable
+            if (targetBtn == null || !targetBtn.interactable)
+            {
+                Button fightBtn = attackButton != null ? attackButton : customFightButton;
+                Button talkBtn = talkButton != null ? talkButton : customTalkButton;
+                Button compBtn = companionsButton != null ? companionsButton : customCompanionButton;
+                Button fleeBtn = fleeButton != null ? fleeButton : customEscapeButton;
+
+                if (fightBtn != null && fightBtn.interactable) targetBtn = fightBtn;
+                else if (talkBtn != null && talkBtn.interactable) targetBtn = talkBtn;
+                else if (compBtn != null && compBtn.interactable) targetBtn = compBtn;
+                else if (fleeBtn != null && fleeBtn.interactable) targetBtn = fleeBtn;
+                else targetBtn = fightBtn;
+            }
+
+            if (targetBtn != null)
+            {
+                EventSystem.current.SetSelectedGameObject(targetBtn.gameObject);
+            }
         }
     }
 

@@ -189,20 +189,39 @@ public class GroupManager : MonoBehaviour
             }
         }
 
-        // 2. Enregistrement de l'historique du chemin (Trail)
-        if (Vector3.Distance(leader.position, trail[0]) > minMoveDistance)
+        // 2. Enregistrement de l'historique du chemin (Trail) uniquement si des compagnons sont actifs
+        if (activeFollowers.Count > 0)
         {
-            // On insère au début de la liste pour que trail[0] soit le point le plus récent après la position actuelle
-            trail.Insert(0, leader.position);
-            
-            // Nettoyage de l'historique pour ne pas saturer la mémoire
-            // On n'a besoin du trail que pour couvrir la distance totale du groupe
-            float maxTrailLength = activeFollowers.Count * spacing + 2f;
-            TrimTrail(maxTrailLength);
-        }
+            if (trail.Count == 0)
+            {
+                trail.Add(leader.position);
+            }
 
-        // 3. Déplacement des compagnons
-        UpdateFollowersPosition();
+            float minMoveDistSqr = minMoveDistance * minMoveDistance;
+            if ((leader.position - trail[0]).sqrMagnitude > minMoveDistSqr)
+            {
+                // On insère au début de la liste pour que trail[0] soit le point le plus récent après la position actuelle
+                trail.Insert(0, leader.position);
+                
+                // Nettoyage de l'historique pour ne pas saturer la mémoire
+                float maxTrailLength = activeFollowers.Count * spacing + 2f;
+                TrimTrail(maxTrailLength);
+            }
+
+            // 3. Déplacement des compagnons
+            UpdateFollowersPosition();
+        }
+        else
+        {
+            if (trail.Count > 0)
+            {
+                trail[0] = leader.position;
+            }
+            else
+            {
+                trail.Add(leader.position);
+            }
+        }
 
         lastLeaderPosition = leader.position;
 

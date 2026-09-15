@@ -13,6 +13,16 @@ public class FallingProjectile : MonoBehaviour
 
     public void Initialize(Vector3 start, Vector3 end, float time, GameObject impact = null)
     {
+        int bulletLayer = LayerMask.NameToLayer("Bullet");
+        if (bulletLayer != -1)
+        {
+            gameObject.layer = bulletLayer;
+            foreach (Transform t in GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.layer = bulletLayer;
+            }
+        }
+
         startPos = start;
         endPos = end;
         duration = time;

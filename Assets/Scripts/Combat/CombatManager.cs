@@ -146,6 +146,12 @@ public class CombatManager : MonoBehaviour
         currentState = CombatState.Transitioning;
         Debug.Log("[CombatManager] Initialisation du combat au tour par tour...");
 
+        // 0. Mettre en pause la musique environnementale
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PauseZoneMusicForCombat(fadeDuration);
+        }
+
         // 1. Fondu au noir
         yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f, fadeDuration));
 
@@ -213,6 +219,16 @@ public class CombatManager : MonoBehaviour
         // Positionner le monstre
         Vector3 rawMonsterPos = combatCenter + combatDirection * monsterOffset;
         activeEnemy.transform.position = SnapToGround(rawMonsterPos);
+
+        Rigidbody enemyRb = activeEnemy.GetComponent<Rigidbody>();
+        if (enemyRb == null) enemyRb = activeEnemy.GetComponentInChildren<Rigidbody>();
+        if (enemyRb != null)
+        {
+            enemyRb.linearVelocity = Vector3.zero;
+            enemyRb.angularVelocity = Vector3.zero;
+            enemyRb.isKinematic = true;
+            enemyRb.constraints = RigidbodyConstraints.FreezeAll;
+        }
 
         // Positionner les alliés
         int count = allies.Count;
@@ -304,12 +320,18 @@ public class CombatManager : MonoBehaviour
         }
 
         // 5. Réactiver les contrôles du joueur et le suivi du groupe
-        PlayerLockManager.SetPlayerLocked(false);
+        PlayerLockManager.SetPlayerLocked(false, force: true);
 
         yield return new WaitForSeconds(0.2f);
 
         // 6. Fondu de retour au jeu
         yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f, fadeDuration));
+
+        // 7. Restauration de la musique environnementale
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.ResumeZoneMusicAfterCombat(fadeDuration);
+        }
 
         currentState = CombatState.Transitioning; // Arrêt complet
         activeEnemy = null;

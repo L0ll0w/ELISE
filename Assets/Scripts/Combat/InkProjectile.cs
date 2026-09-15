@@ -27,11 +27,22 @@ public class InkProjectile : MonoBehaviour
 
     private void EnsureVisuals()
     {
+        int bulletLayer = LayerMask.NameToLayer("Bullet");
+        if (bulletLayer != -1)
+        {
+            gameObject.layer = bulletLayer;
+        }
+
         if (GetComponent<MeshFilter>() == null)
         {
             // Balle fuselée et écrasée (style cartouche d'encre)
             GameObject bulletMesh = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bulletMesh.transform.SetParent(transform, false);
+
+            if (bulletLayer != -1)
+            {
+                bulletMesh.layer = bulletLayer;
+            }
 
             // Écrasé en diamètre X/Y et allongé sur l'axe Z (forme de balle de pistolet)
             bulletMesh.transform.localScale = new Vector3(0.18f, 0.18f, 0.75f);

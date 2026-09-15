@@ -1,0 +1,11 @@
+Model Information:
+* title:	Watering can
+* source:	https://sketchfab.com/3d-models/watering-can-6a013499dced4847900edfa5d16f47dd
+* author:	Frewill (https://sketchfab.com/firewill)
+
+Model License:
+* license type:	CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+* requirements:	Author must be credited. Modified versions must have the same license. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Watering can" (https://sketchfab.com/3d-models/watering-can-6a013499dced4847900edfa5d16f47dd) by Frewill (https://sketchfab.com/firewill) licensed under CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)

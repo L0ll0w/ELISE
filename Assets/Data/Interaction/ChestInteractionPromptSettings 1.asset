@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ChestInteractionPromptSettings 1
   m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptSettings
   indicatorSprite: {fileID: 21300000, guid: c2d02b1e582d4e54fb99d1d286a3decc, type: 3}
+  indicatorMaterial: {fileID: 2100000, guid: 315e22ed17544d64da338a8cf0d17e19, type: 2}
   indicatorOffset: {x: -0.5, y: -0.4, z: -0.8}
   indicatorScale: {x: 1.5, y: 1.5, z: 1.5}
   maxRotationAngle: 15

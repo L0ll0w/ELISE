@@ -183,6 +183,8 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
             yield break;
         }
 
+        SavePreCinematicState();
+
         if (cameraHelper != null)
         {
             cameraHelper.SaveOriginalSettings();
@@ -355,68 +357,17 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
             yield return StartCoroutine(RunDialogue(secondDialogueData));
         }
 
-        // 6. ANIMATION : Le jardinier se retourne et s'enfuit vers la droite
+        // 6. ANIMATION : Le jardinier se retourne et s'enfuit bien vers la droite de l'écran (la caméra reste totalement fixe)
         if (gardenerTransform != null)
         {
-            // Retourner sur l'animation Levitate au moment où il s'en va
-            if (gardenerAnimator != null)
-            {
-                gardenerAnimator.Play("levitate");
-            }
-
-            // Se tourner vers la droite (direction de fuite)
-            if (gardenerSprite != null)
-            {
-                gardenerSprite.flipX = true; // flipX inversé (true = regarde à droite)
-            }
-
-            Vector3 exitPos = new Vector3(
-                gardenerTransform.position.x + gardenerExitDistance,
-                gardenerTransform.position.y,
-                gardenerTransform.position.z
-            );
-
-            // Démarrer la fuite (on attend 1 seconde pour le laisser démarrer sa course avant de ramener la caméra)
-            StartCoroutine(MoveGardenerRoutine(gardenerTransform, exitPos, gardenerMoveSpeed, gardenerSprite));
-            yield return new WaitForSeconds(1.0f);
+            yield return StartCoroutine(MoveGardenerExitRoutine(gardenerTransform, gardenerMoveSpeed, gardenerSprite, gardenerAnimator));
         }
 
-        // 7. Transition de retour vers la caméra du joueur
+        // 7. Transition de retour fluide de la caméra vers le joueur (une fois le jardinier sorti et téléporté)
         yield return StartCoroutine(TransitionCameraBack());
 
-        // 8. Réactiver le joueur et détruire/désactiver le jardinier si besoin (on le détruit après sa fuite pour nettoyer la scène)
+        // 8. Réactiver le joueur
         UnlockPlayer();
-
-        // Nettoyage : Détruire ou repositionner le jardinier s'il s'est enfui
-        if (gardenerTransform != null)
-        {
-            if (gardenerPostCinematicTarget != null)
-            {
-                // Attendre la fin de la course de fuite (durée de fuite = 15m / 4m/s = 3.75s)
-                // On a déjà attendu 1.0s de fuite + la transition de retour caméra (transitionOutDuration, 2.0s par défaut).
-                // On attend encore 2 secondes pour être sûr qu'il est hors écran et a fini sa course.
-                yield return new WaitForSeconds(2.0f);
-
-                if (gardenerTransform != null)
-                {
-                    gardenerTransform.position = gardenerPostCinematicTarget.position;
-                    gardenerTransform.rotation = gardenerPostCinematicTarget.rotation;
-
-                    if (gardenerAnimator != null)
-                    {
-                        gardenerAnimator.Play("idle");
-                    }
-                    if (gardenerSprite != null)
-                    {
-                        gardenerSprite.flipX = false; // Réinitialiser le regard vers la gauche par défaut
-                    }
-                }
-            }
-            else
-            {
-                Destroy(gardenerTransform.gameObject, 3f);
-            }
-        }
 
         if (StoryStateManager.Instance != null && !string.IsNullOrEmpty(flagToSetOnComplete))
         {
@@ -471,38 +422,136 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
     }
 
     /// <summary>
-    /// Coroutine déplaçant de manière fluide le Transform vers la cible.
+    /// Fait fuir le jardinier en ligne droite vers la droite de l'écran (sans aucune diagonale).
+    /// La caméra reste totalement fixe pendant son départ.
+    /// Dès qu'il sort du champ de vision de la caméra, il est immédiatement téléporté à sa prochaine cinématique.
     /// </summary>
-    private IEnumerator MoveGardenerRoutine(Transform gardener, Vector3 target, float speed, SpriteRenderer sprite)
+    private IEnumerator MoveGardenerExitRoutine(Transform gardener, float speed, SpriteRenderer sprite, Animator anim)
     {
-        Vector3 startPosition = gardener.position;
-        float distance = Vector3.Distance(startPosition, target);
-        
-        if (distance > 0.05f)
+        if (gardener == null) yield break;
+
+        if (anim != null)
         {
-            float duration = distance / speed;
-            float elapsed = 0f;
+            anim.Play("levitate");
+        }
 
-            while (elapsed < duration)
+        if (sprite != null)
+        {
+            sprite.flipX = true; // Regard vers la droite (direction de fuite)
+        }
+
+        Camera mainCam = Camera.main;
+        Vector3 screenRight;
+        if (mainCam != null)
+        {
+            screenRight = mainCam.transform.right;
+        }
+        else if (virtualCamera != null)
+        {
+            screenRight = virtualCamera.transform.right;
+        }
+        else
+        {
+            screenRight = Vector3.right;
+        }
+
+        screenRight.y = 0f;
+        screenRight = screenRight.sqrMagnitude > 0.001f ? screenRight.normalized : Vector3.right;
+
+        Vector3 startPosition = gardener.position;
+        float elapsed = 0f;
+        float exitSpeed = Mathf.Max(speed, 5.5f); // Vitesse dynamique assurant un départ franc et vif
+        bool isOffScreen = false;
+        float maxTimeout = 5.0f; // Sécurité anti-blocage
+
+        while (elapsed < maxTimeout && !isOffScreen)
+        {
+            elapsed += Time.deltaTime;
+            Vector3 currentPos = startPosition + screenRight * (exitSpeed * elapsed);
+
+            if (enableGardenerLevitation)
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / duration);
-                
-                // Calculer la position de base
-                Vector3 basePos = Vector3.Lerp(startPosition, target, t);
+                currentPos.y += Mathf.Sin(elapsed * gardenerLevitationSpeed) * gardenerLevitationAmount;
+            }
 
-                // Ajouter l'oscillation de lévitation sur Y si activée
-                if (enableGardenerLevitation)
+            gardener.position = currentPos;
+
+            // Détection de la sortie d'écran par la droite
+            if (mainCam != null)
+            {
+                Vector3 viewportPos = mainCam.WorldToViewportPoint(gardener.position);
+                // Le jardinier est entièrement sorti de l'écran par la droite dès que viewport.x > 1.12
+                if (viewportPos.x > 1.12f)
                 {
-                    basePos.y += Mathf.Sin(elapsed * gardenerLevitationSpeed) * gardenerLevitationAmount;
+                    isOffScreen = true;
                 }
+            }
+            else
+            {
+                if (Vector3.Distance(startPosition, currentPos) >= gardenerExitDistance)
+                {
+                    isOffScreen = true;
+                }
+            }
 
-                gardener.position = basePos;
-                yield return null;
+            yield return null;
+        }
+
+        // Téléportation immédiate à la prochaine cinématique dès qu'il quitte l'écran
+        TeleportGardenerToNextCinematic(gardener, sprite, anim);
+    }
+
+    private void TeleportGardenerToNextCinematic(Transform gardener, SpriteRenderer sprite, Animator anim)
+    {
+        if (gardener == null) return;
+
+        // Si le point cible n'a pas été assigné manuellement dans l'inspecteur, le rechercher automatiquement
+        if (gardenerPostCinematicTarget == null)
+        {
+            GameObject pt = GameObject.Find("pointtp");
+            if (pt != null)
+            {
+                gardenerPostCinematicTarget = pt.transform;
+            }
+            else
+            {
+                GardenerSecondCinematicTriggerZone secondZone = FindFirstObjectByType<GardenerSecondCinematicTriggerZone>();
+                if (secondZone != null)
+                {
+                    gardenerPostCinematicTarget = secondZone.transform;
+                }
             }
         }
 
-        gardener.position = target;
+        gardener.SetParent(null, true);
+
+        if (gardenerPostCinematicTarget != null)
+        {
+            gardener.position = gardenerPostCinematicTarget.position;
+            gardener.rotation = gardenerPostCinematicTarget.rotation;
+
+            Vector3 euler = gardener.eulerAngles;
+            euler.z = 0f;
+            gardener.eulerAngles = euler;
+
+            if (anim == null) anim = gardener.GetComponent<Animator>() ?? gardener.GetComponentInChildren<Animator>();
+            if (anim != null)
+            {
+                anim.Play("idle");
+            }
+
+            if (sprite == null) sprite = gardener.GetComponent<SpriteRenderer>() ?? gardener.GetComponentInChildren<SpriteRenderer>();
+            if (sprite != null)
+            {
+                sprite.flipX = false; // Regard vers la gauche par défaut (vers le joueur qui arrivera)
+            }
+
+            Debug.Log($"[GardenerCinematicTriggerZone] Jardinier téléporté avec succès à sa prochaine cinématique : {gardenerPostCinematicTarget.position}");
+        }
+        else
+        {
+            Destroy(gardener.gameObject, 1f);
+        }
     }
 
     /// <summary>

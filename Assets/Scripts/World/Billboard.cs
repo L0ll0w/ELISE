@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Micro-script de Billboard pour aligner un sprite 2.5D avec la caméra ou une cible (ex: le Joueur).
-/// Gère intelligemment les Rigidbodies pour préserver l'interpolation physique sans provoquer de saccades.
+/// Micro-script de Billboard hautement optimisé pour aligner un sprite 2.5D avec la caméra ou une cible (ex: le Joueur).
+/// Gère intelligemment la mise en cache de la caméra et s'interrompt si l'objet est masqué par le Culling.
 /// </summary>
 [ExecuteAlways]
 [DefaultExecutionOrder(9999)]
@@ -34,20 +34,45 @@ public class Billboard : MonoBehaviour
     [SerializeField] private Camera targetCamera;
 
     private Rigidbody rb;
+    private Renderer objRenderer;
+    private Camera cachedMainCam;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        objRenderer = GetComponent<Renderer>();
+        CachePlayerIfNeeded();
     }
 
     private void OnEnable()
     {
         rb = GetComponent<Rigidbody>();
+        if (objRenderer == null) objRenderer = GetComponent<Renderer>();
+        CachePlayerIfNeeded();
+    }
+
+    private void Start()
+    {
+        CachePlayerIfNeeded();
+    }
+
+    private void CachePlayerIfNeeded()
+    {
+        if (targetTransform == null && (mode == BillboardMode.LookAtTarget || mode == BillboardMode.LookAtTargetY))
+        {
+            GameObject player = GameObject.FindWithTag("Player");
+            if (player != null)
+            {
+                targetTransform = player.transform;
+            }
+        }
     }
 
     private void FixedUpdate()
     {
-        // En mode jeu, si le GameObject possède un Rigidbody physique actif, la rotation doit être appliquée en FixedUpdate
+        // Ne pas calculer si le renderer est masqué par le culling
+        if (objRenderer != null && !objRenderer.enabled) return;
+
         if (Application.isPlaying && rb != null && !rb.isKinematic)
         {
             UpdateRotation(true);
@@ -56,11 +81,25 @@ public class Billboard : MonoBehaviour
 
     private void LateUpdate()
     {
-        // Si pas de Rigidbody physique actif ou en mode édition dans Unity Editor, utiliser LateUpdate
+        // Ne pas calculer si le renderer est masqué par le culling
+        if (objRenderer != null && !objRenderer.enabled) return;
+
         if (!Application.isPlaying || rb == null || rb.isKinematic)
         {
             UpdateRotation(false);
         }
+    }
+
+    private Camera GetActiveCamera()
+    {
+        if (!useMainCamera) return targetCamera;
+
+        if (cachedMainCam == null)
+        {
+            cachedMainCam = OcclusionCullingManager.MainCamera;
+        }
+
+        return cachedMainCam;
     }
 
     private void UpdateRotation(bool usePhysics)
@@ -73,11 +112,7 @@ public class Billboard : MonoBehaviour
         {
             if (targetTransform == null)
             {
-                GameObject player = GameObject.FindWithTag("Player");
-                if (player != null)
-                {
-                    targetTransform = player.transform;
-                }
+                CachePlayerIfNeeded();
             }
 
             if (targetTransform == null) return;
@@ -97,7 +132,7 @@ public class Billboard : MonoBehaviour
         else
         {
             // --- 2. GESTION DES MODES CAMERA ---
-            Camera activeCamera = useMainCamera ? Camera.main : targetCamera;
+            Camera activeCamera = GetActiveCamera();
 
             #if UNITY_EDITOR
             if (activeCamera == null && !Application.isPlaying)

@@ -173,6 +173,12 @@ public class GiantWateringCan : Interactable
             }
         }
 
+        // Arrêter le ParticleSystem s'il est en train de jouer avant de modifier la durée
+        if (waterParticles.isPlaying || waterParticles.isEmitting)
+        {
+            waterParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
         // 3. Configuration esthétique poussée du ParticleSystem
         var main = waterParticles.main;
         main.duration = 1.0f;

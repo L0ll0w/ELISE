@@ -11,6 +11,9 @@ public class InteractionPromptSettings : ScriptableObject
     [Tooltip("The sprite to display when the player is in range.")]
     public Sprite indicatorSprite;
     
+    [Tooltip("Optional custom material for the indicator sprite renderer (e.g. Sprite Unlit, Glow, Outline shader, etc.).")]
+    public Material indicatorMaterial;
+    
     [Tooltip("Visual offset of the indicator relative to this object's center.")]
     public Vector3 indicatorOffset = new Vector3(0.5f, 1f, 0f);
     

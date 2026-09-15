@@ -69,12 +69,12 @@ public abstract class Interactable : MonoBehaviour
             // Écoute de l'input avec l'Input System ou fallback classique
             #if ENABLE_INPUT_SYSTEM
             if ((Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) ||
-                (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame))
+                (Gamepad.current != null && (Gamepad.current.buttonWest.wasPressedThisFrame || Gamepad.current.buttonSouth.wasPressedThisFrame || Gamepad.current.buttonNorth.wasPressedThisFrame)))
             {
                 interact = true;
             }
             #else
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetButtonDown("Submit") || Input.GetKeyDown(KeyCode.JoystickButton0))
+            if (Input.GetKeyDown(KeyCode.E) || Input.GetButtonDown("Submit") || Input.GetKeyDown(KeyCode.JoystickButton2) || Input.GetKeyDown(KeyCode.JoystickButton0))
             {
                 interact = true;
             }
@@ -122,6 +122,10 @@ public abstract class Interactable : MonoBehaviour
 
         indicatorSR = indicatorInstance.AddComponent<SpriteRenderer>();
         indicatorSR.sprite = settings.indicatorSprite;
+        if (settings.indicatorMaterial != null)
+        {
+            indicatorSR.material = settings.indicatorMaterial;
+        }
         
         // Start with an invisible color
         Color initialColor = indicatorSR.color;
@@ -193,7 +197,7 @@ public abstract class Interactable : MonoBehaviour
             Vector3 basePosition = transform.position;
             Vector3 topRightOffset = Vector3.zero;
 
-            Camera mainCam = Camera.main;
+            Camera mainCam = OcclusionCullingManager.MainCamera;
             if (mainCam != null)
             {
                 Vector3 cameraRight = mainCam.transform.right;
@@ -260,7 +264,7 @@ public abstract class Interactable : MonoBehaviour
     }
 
     /// <summary>
-    /// Vérifie si l'interaction est possible (ex: jeu non en pause).
+    /// Vérifie si l'interaction est possible (ex: jeu non en pause, pas de combat actif).
     /// </summary>
     protected virtual bool CanInteract()
     {
@@ -268,6 +272,15 @@ public abstract class Interactable : MonoBehaviour
         {
             return false;
         }
+
+        // Bloquer l'interaction avec le décor et les PNJ pendant le combat
+        bool isCombatActive = (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive) ||
+                              (CombatManager.Instance != null && CombatManager.Instance.IsCombatActive);
+        if (isCombatActive)
+        {
+            return false;
+        }
+
         return true;
     }
 

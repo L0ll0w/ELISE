@@ -129,6 +129,16 @@ public class EnemyWander : MonoBehaviour
         if (isPausedForCombat || IsGlobalCombatActive())
         {
             UpdateAnimation(Vector3.zero, 0f);
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                if (!rb.isKinematic)
+                {
+                    rb.isKinematic = true;
+                }
+            }
             return;
         }
 

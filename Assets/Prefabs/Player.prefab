@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 2312799354640814545}
   - component: {fileID: 8812799354640814545}
   - component: {fileID: 6712014955664794177}
+  - component: {fileID: 3141592653589793238}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -309,6 +310,30 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3141592653589793238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3845768016215529046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f60718293a4b5c6d7e8f90, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerPitfallRespawn
+  maxFallDistanceBelowSafeGround: 5
+  fallThresholdY: -15
+  safePositionRecordInterval: 0.2
+  skyDropHeight: 8
+  initialFallSpeed: -3
+  edgeInlandOffset: 1.5
+  stunDuration: 1.5
+  stunScaleY: 0.5
+  recoveryTime: 0.08
+  visualTransform: {fileID: 0}
+  impactParticles: {fileID: 0}
+  impactAudio: {fileID: 0}
 --- !u!1 &6189537654949726503
 GameObject:
   m_ObjectHideFlags: 0

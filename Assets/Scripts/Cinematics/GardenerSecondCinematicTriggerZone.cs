@@ -120,6 +120,8 @@ public class GardenerSecondCinematicTriggerZone : CinematicTriggerZone
             yield break;
         }
 
+        SavePreCinematicState();
+
         if (cameraHelper != null)
         {
             cameraHelper.SaveOriginalSettings();

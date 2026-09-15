@@ -26,6 +26,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BottomFade: 0.08
+    - _Cull: 2
     - _DepthFoamDistance: 0.2
     - _DisplacementAmount: 0.08
     - _DisplacementFrequency: 4

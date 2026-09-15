@@ -93,10 +93,18 @@ public class CylindricalWaterfall : MonoBehaviour
         }
     }
 
+    private static Material sharedParticleMaterial;
+
     private void InitComponents()
     {
         meshFilter = GetComponent<MeshFilter>();
         meshRenderer = GetComponent<MeshRenderer>();
+
+        if (meshRenderer != null)
+        {
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+        }
 
         if (waterfallMaterial == null)
         {
@@ -205,10 +213,30 @@ public class CylindricalWaterfall : MonoBehaviour
     private void UpdateMaterialAndParticles()
     {
         if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
-        if (meshRenderer != null && waterfallMaterial != null && meshRenderer.sharedMaterial != waterfallMaterial)
+        if (meshRenderer != null)
         {
-            meshRenderer.sharedMaterial = waterfallMaterial;
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+
+            if (waterfallMaterial != null && meshRenderer.sharedMaterial != waterfallMaterial)
+            {
+                meshRenderer.sharedMaterial = waterfallMaterial;
+            }
         }
+    }
+
+    private Material GetOrCreateParticleMaterial()
+    {
+        if (sharedParticleMaterial == null)
+        {
+            Shader sprShader = Shader.Find("Sprites/Default");
+            if (sprShader != null)
+            {
+                sharedParticleMaterial = new Material(sprShader);
+                sharedParticleMaterial.name = "WaterfallParticles_SharedMat";
+            }
+        }
+        return sharedParticleMaterial;
     }
 
     private void SetupSplashParticles()
@@ -232,12 +260,13 @@ public class CylindricalWaterfall : MonoBehaviour
         main.loop = true;
         main.startLifetime = new ParticleSystem.MinMaxCurve(0.8f, 1.4f);
         main.startSpeed = new ParticleSystem.MinMaxCurve(2.0f, 4.0f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.8f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.2f);
         main.startColor = splashColor;
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.simulationSpace = ParticleSystemSimulationSpace.Local;
+        main.maxParticles = 120;
 
         var emission = splashParticleSystem.emission;
-        emission.rateOverTime = splashEmissionRate;
+        emission.rateOverTime = Mathf.Clamp(splashEmissionRate, 10f, 60f);
 
         var shape = splashParticleSystem.shape;
         shape.shapeType = ParticleSystemShapeType.Circle;
@@ -261,7 +290,7 @@ public class CylindricalWaterfall : MonoBehaviour
         var renderer = splashParticleSystem.GetComponent<ParticleSystemRenderer>();
         if (renderer != null)
         {
-            renderer.material = new Material(Shader.Find("Sprites/Default"));
+            renderer.sharedMaterial = GetOrCreateParticleMaterial();
         }
 
         if (!splashParticleSystem.isPlaying)
@@ -293,10 +322,11 @@ public class CylindricalWaterfall : MonoBehaviour
         main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.8f);
         main.startSize = new ParticleSystem.MinMaxCurve(1.8f, 3.5f);
         main.startColor = new Color(splashColor.r, splashColor.g, splashColor.b, 0.35f);
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.simulationSpace = ParticleSystemSimulationSpace.Local;
+        main.maxParticles = 50;
 
         var emission = mistParticleSystem.emission;
-        emission.rateOverTime = mistEmissionRate;
+        emission.rateOverTime = Mathf.Clamp(mistEmissionRate, 5f, 25f);
 
         var shape = mistParticleSystem.shape;
         shape.shapeType = ParticleSystemShapeType.Circle;
@@ -320,7 +350,7 @@ public class CylindricalWaterfall : MonoBehaviour
         var renderer = mistParticleSystem.GetComponent<ParticleSystemRenderer>();
         if (renderer != null)
         {
-            renderer.material = new Material(Shader.Find("Sprites/Default"));
+            renderer.sharedMaterial = GetOrCreateParticleMaterial();
         }
 
         if (!mistParticleSystem.isPlaying)

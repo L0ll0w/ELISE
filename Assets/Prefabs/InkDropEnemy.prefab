@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1864213998230415261}
   - component: {fileID: 6496102732413876659}
   - component: {fileID: 928236033906603663}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: InkDropEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}

@@ -57,10 +57,13 @@ public class CharacterShadow : MonoBehaviour
     private GameObject shadowObject;
     private SpriteRenderer shadowRenderer;
     private Collider playerCollider;
+    private Collider[] playerColliders;
+    private static readonly RaycastHit[] shadowHitsBuffer = new RaycastHit[16];
 
     private void Start()
     {
         playerCollider = GetComponent<Collider>();
+        playerColliders = GetComponentsInChildren<Collider>();
         
         // Ignore Raycast layer
         groundLayers &= ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
@@ -125,22 +128,40 @@ public class CharacterShadow : MonoBehaviour
             origin = playerCollider.bounds.center;
         }
 
+#if UNITY_EDITOR
         // Ligne d'aide au débogage visible dans la vue Scène de Unity
         Debug.DrawRay(origin, Vector3.down * maxRaycastDistance, Color.red);
+#endif
 
         Ray ray = new Ray(origin, Vector3.down);
-        RaycastHit[] hits = Physics.RaycastAll(ray, maxRaycastDistance, groundLayers);
+        int hitCount = Physics.RaycastNonAlloc(ray, shadowHitsBuffer, maxRaycastDistance, groundLayers, QueryTriggerInteraction.Ignore);
         
         RaycastHit closestHit = default;
         bool foundValidHit = false;
         float closestDistance = float.MaxValue;
 
-        foreach (var hit in hits)
+        for (int i = 0; i < hitCount; i++)
         {
+            RaycastHit hit = shadowHitsBuffer[i];
+
             // Ignorer si c'est le collider du joueur ou un de ses enfants
-            if (hit.collider == playerCollider || (playerCollider != null && hit.collider.transform.IsChildOf(transform)))
+            if (hit.collider == playerCollider)
             {
                 continue;
+            }
+
+            if (playerColliders != null)
+            {
+                bool isChildCollider = false;
+                for (int c = 0; c < playerColliders.Length; c++)
+                {
+                    if (hit.collider == playerColliders[c])
+                    {
+                        isChildCollider = true;
+                        break;
+                    }
+                }
+                if (isChildCollider) continue;
             }
 
             // Ignorer les triggers
