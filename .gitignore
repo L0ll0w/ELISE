@@ -52,6 +52,3 @@ sysinfo.txt
 .DS_Store
 Thumbs.db
 Desktop.ini
-
-# Large files (>100MB)
-Assets/Model3D/Flowers/flower6/scene.bin
