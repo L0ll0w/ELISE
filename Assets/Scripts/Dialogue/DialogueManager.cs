@@ -382,12 +382,16 @@ public class DialogueManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(currentNode.nextNodeID))
         {
-            if (activeDialogue.TryGetNode(currentNode.nextNodeID, out DialogueNode nextNode))
+            if (activeDialogue != null && activeDialogue.TryGetNode(currentNode.nextNodeID, out DialogueNode nextNode))
             {
                 DisplayNode(nextNode);
             }
             else
             {
+                if (StoryStateManager.Instance != null)
+                {
+                    StoryStateManager.Instance.SetFlag(currentNode.nextNodeID, true);
+                }
                 EndDialogue();
             }
         }
@@ -503,9 +507,20 @@ public class DialogueManager : MonoBehaviour
         ChoiceData chosen = activeChoices[selectedChoiceIndex];
         ClearChoices();
 
-        if (!string.IsNullOrEmpty(chosen.nextNodeID) && activeDialogue.TryGetNode(chosen.nextNodeID, out DialogueNode nextNode))
+        if (!string.IsNullOrEmpty(chosen.nextNodeID))
         {
-            DisplayNode(nextNode);
+            if (activeDialogue != null && activeDialogue.TryGetNode(chosen.nextNodeID, out DialogueNode nextNode))
+            {
+                DisplayNode(nextNode);
+            }
+            else
+            {
+                if (StoryStateManager.Instance != null)
+                {
+                    StoryStateManager.Instance.SetFlag(chosen.nextNodeID, true);
+                }
+                EndDialogue();
+            }
         }
         else
         {

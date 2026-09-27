@@ -101,13 +101,28 @@ public abstract class Interactable : MonoBehaviour
         CleanupIndicator();
     }
 
-    private void CleanupIndicator()
+    protected virtual void CleanupIndicator()
     {
         if (indicatorInstance != null)
         {
             Destroy(indicatorInstance);
             indicatorInstance = null;
             indicatorSR = null;
+        }
+    }
+
+    protected virtual void HideIndicator()
+    {
+        currentAlpha = 0f;
+        if (indicatorSR != null)
+        {
+            Color color = indicatorSR.color;
+            color.a = 0f;
+            indicatorSR.color = color;
+        }
+        if (indicatorInstance != null && indicatorInstance.activeSelf)
+        {
+            indicatorInstance.SetActive(false);
         }
     }
 

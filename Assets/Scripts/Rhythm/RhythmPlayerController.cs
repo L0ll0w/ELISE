@@ -59,6 +59,13 @@ public class RhythmPlayerController : MonoBehaviour
     }
 
     public bool IsJumping => isJumping;
+    public bool IsInputEnabled => isInputEnabled;
+
+    /// <summary>
+    /// Déclenché au moment exact où le joueur retombe et termine son saut au sol.
+    /// </summary>
+    public event Action OnLanded;
+
     private Vector3 targetPosition;
     private Vector3 groundPosition;
     
@@ -231,6 +238,7 @@ public class RhythmPlayerController : MonoBehaviour
                 isJumping = false;
                 jumpVisualOffset = Vector3.zero;
                 landingSquashTimer = 0.08f; // Déclencher l'effet d'impact à la réception au sol
+                OnLanded?.Invoke();
             }
             else
             {
@@ -543,6 +551,14 @@ public class RhythmPlayerController : MonoBehaviour
     public void TriggerInvincibility()
     {
         invincibilityTimer = invincibilityDuration;
+    }
+
+    /// <summary>
+    /// Remplace la position cible au sol du joueur (ex: pour se positionner directement sur une pale).
+    /// </summary>
+    public void OverrideTargetPosition(Vector3 customPos)
+    {
+        targetPosition = customPos;
     }
 
     // Accesseurs

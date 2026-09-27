@@ -1,0 +1,11 @@
+Model Information:
+* title:	Kid's Xylophone
+* source:	https://sketchfab.com/3d-models/kids-xylophone-b9c057311d0c44eab7a4556eccdba708
+* author:	pamruta (https://sketchfab.com/pamruta)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Kid's Xylophone" (https://sketchfab.com/3d-models/kids-xylophone-b9c057311d0c44eab7a4556eccdba708) by pamruta (https://sketchfab.com/pamruta) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

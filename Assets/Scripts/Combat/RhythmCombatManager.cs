@@ -37,6 +37,7 @@ public class RhythmCombatManager : MonoBehaviour
     public enum CombatState { Transitioning, Active, Victory, Defeat }
 
     public CombatState CurrentCombatState => currentState;
+    public CombatState CurrentState => currentState;
     public bool IsInJudgment => currentState == CombatState.Victory;
 
     [Header("Configuration Rythmique")]
@@ -241,6 +242,60 @@ public class RhythmCombatManager : MonoBehaviour
     [Range(0f, 1f)]
     [Tooltip("Volume de la musique de combat.")]
     [SerializeField] private float combatMusicVolume = 0.5f;
+
+    [Tooltip("Si vrai, coupe la musique de combat.")]
+    [SerializeField] private bool muteCombatMusic = false;
+
+    [Header("Mode Énigme / Sans Menu")]
+    [Tooltip("Si vrai, désactive le menu de combat et maintient le joueur indéfiniment en phase de déplacement/esquive sur la grille.")]
+    [SerializeField] private bool isEndlessMovementPhase = false;
+
+    [Tooltip("Si vrai, masque complètement l'UI du menu de combat.")]
+    [SerializeField] private bool hideCombatMenuUI = false;
+
+    public bool IsEndlessMovementPhase
+    {
+        get => isEndlessMovementPhase;
+        set => isEndlessMovementPhase = value;
+    }
+
+    public bool HideCombatMenuUI
+    {
+        get => hideCombatMenuUI;
+        set => hideCombatMenuUI = value;
+    }
+
+    public bool MuteCombatMusic
+    {
+        get => muteCombatMusic;
+        set
+        {
+            muteCombatMusic = value;
+            if (BeatManager.Instance != null)
+            {
+                BeatManager.Instance.Volume = muteCombatMusic ? 0f : combatMusicVolume;
+            }
+        }
+    }
+
+    public RhythmPlayerController PlayerController => playerController;
+
+    public RadialCombatGrid RadialGrid
+    {
+        get
+        {
+            if (radialGrid == null)
+            {
+                radialGrid = FindFirstObjectByType<RadialCombatGrid>();
+                if (radialGrid == null)
+                {
+                    GameObject gridObj = new GameObject("RadialCombatGrid");
+                    radialGrid = gridObj.AddComponent<RadialCombatGrid>();
+                }
+            }
+            return radialGrid;
+        }
+    }
 
     // État du combat
     private CombatState currentState = CombatState.Transitioning;
@@ -448,7 +503,7 @@ public class RhythmCombatManager : MonoBehaviour
         // Mise à jour du volume de la musique en direct depuis l'inspecteur
         if (BeatManager.Instance != null)
         {
-            BeatManager.Instance.Volume = combatMusicVolume;
+            BeatManager.Instance.Volume = muteCombatMusic ? 0f : combatMusicVolume;
         }
 
         // Positionnement 3D en temps réel des barres de vie des joueurs
@@ -710,8 +765,9 @@ public class RhythmCombatManager : MonoBehaviour
             radialGrid.Configure(activeCombatData.GridShape, activeCombatData.SectorsCount, activeCombatData.RingsCount, activeCombatData.ArcAngleDegrees, activeCombatData.ArcCenterAngle);
         }
 
-        // Déplacer la grille au centre
+        // Déplacer la grille au centre (rotation monde fixe Quaternion.identity)
         radialGrid.transform.position = combatCenter;
+        radialGrid.transform.rotation = Quaternion.identity;
         radialGrid.SetGridActive(true);
 
         // 5. Calculer le secteur et le ring de départ du joueur
@@ -835,7 +891,7 @@ public class RhythmCombatManager : MonoBehaviour
     {
         if (currentState != CombatState.Active) return;
 
-        if (currentPhase != CombatPhase.DodgePhase || isGardenerInterventionActive) return;
+        if (currentPhase != CombatPhase.DodgePhase || isGardenerInterventionActive || isEndlessMovementPhase) return;
 
         // A. Évaluer et appliquer les dégâts des alertes qui devaient frapper à ce beat
         ApplyTelegraphDamage(beatIndex);
@@ -845,6 +901,11 @@ public class RhythmCombatManager : MonoBehaviour
         int duration = activeCombatData != null ? activeCombatData.DodgePhaseDuration : 16;
         if (dodgeBeatsCount >= duration)
         {
+            if (isEndlessMovementPhase)
+            {
+                dodgeBeatsCount = 0;
+                return;
+            }
             if (activeCombatData != null && activeCombatData.IsGardenerTutorial)
             {
                 if (!hasPlayedFirstDodgeTutorial)
@@ -2020,6 +2081,11 @@ public class RhythmCombatManager : MonoBehaviour
 
     #endregion
 
+    public void EndCombat(bool victory = true)
+    {
+        StartCoroutine(EndCombatRoutine(victory));
+    }
+
     private IEnumerator EndCombatRoutine(bool victory)
     {
         currentState = CombatState.Transitioning;
@@ -2283,6 +2349,7 @@ public class RhythmCombatManager : MonoBehaviour
     private IEnumerator FadeInBeatManager(float targetVol, float duration)
     {
         if (BeatManager.Instance == null) yield break;
+        if (muteCombatMusic) targetVol = 0f;
         BeatManager.Instance.Volume = 0f;
         float elapsed = 0f;
         while (elapsed < duration)
@@ -2378,13 +2445,21 @@ public class RhythmCombatManager : MonoBehaviour
 
     private Vector3 SnapToGround(Vector3 position, float maxVerticalDelta = 3.0f)
     {
-        // Récupérer et désactiver temporairement les colliders de l'ennemi et du joueur pour éviter l'auto-collision
+        // Récupérer et désactiver temporairement les colliders de l'ennemi, du marqueur et du joueur pour éviter l'auto-collision
         Collider[] enemyColliders = activeEnemy != null ? activeEnemy.GetComponentsInChildren<Collider>() : new Collider[0];
         bool[] enemyColStates = new bool[enemyColliders.Length];
         for (int i = 0; i < enemyColliders.Length; i++)
         {
             enemyColStates[i] = enemyColliders[i].enabled;
             enemyColliders[i].enabled = false;
+        }
+
+        Collider[] markerColliders = customCenterMarker != null ? customCenterMarker.GetComponentsInChildren<Collider>() : new Collider[0];
+        bool[] markerColStates = new bool[markerColliders.Length];
+        for (int i = 0; i < markerColliders.Length; i++)
+        {
+            markerColStates[i] = markerColliders[i].enabled;
+            markerColliders[i].enabled = false;
         }
 
         Collider[] playerColliders = playerController != null ? playerController.GetComponentsInChildren<Collider>() : new Collider[0];
@@ -2409,14 +2484,16 @@ public class RhythmCombatManager : MonoBehaviour
         }
 
         LayerMask groundLayers = ~0 & ~(1 << LayerMask.NameToLayer("Ignore Raycast"));
-        Vector3 origin = new Vector3(position.x, position.y + 2.5f, position.z);
+        Vector3 origin = new Vector3(position.x, position.y + 3.0f, position.z);
         Vector3 finalPos = position;
         
-        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 6.0f, groundLayers, QueryTriggerInteraction.Ignore);
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 10.0f, groundLayers, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (var hit in hits)
         {
+            if (hit.collider != null && hit.collider.isTrigger) continue;
+
             if (Mathf.Abs(hit.point.y - position.y) <= maxVerticalDelta)
             {
                 finalPos = hit.point;
@@ -2428,6 +2505,10 @@ public class RhythmCombatManager : MonoBehaviour
         for (int i = 0; i < enemyColliders.Length; i++)
         {
             enemyColliders[i].enabled = enemyColStates[i];
+        }
+        for (int i = 0; i < markerColliders.Length; i++)
+        {
+            markerColliders[i].enabled = markerColStates[i];
         }
         for (int i = 0; i < playerColliders.Length; i++)
         {

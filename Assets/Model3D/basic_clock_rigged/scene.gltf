@@ -1,0 +1,587 @@
+{
+  "accessors": [
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        0.1925515979528427,
+        1.049851894378662,
+        1.049851894378662
+      ],
+      "min": [
+        -0.1925518661737442,
+        -1.0498512983322144,
+        -1.049851417541504
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 19404,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        0.9936336874961853,
+        0.9935659766197205
+      ],
+      "min": [
+        0.006366311572492123,
+        0.006434006616473198
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 12936,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        0.9899809956550598,
+        0.992926299571991
+      ],
+      "min": [
+        0.01711343415081501,
+        0.01922566071152687
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 25872,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        1.0412731170654297,
+        1.041273593902588
+      ],
+      "min": [
+        -0.04127323627471924,
+        -0.04127311706542969
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5125,
+      "count": 5220,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 10,
+      "max": [
+        100.00001525878906,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        100.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        99.99998474121094,
+        0.0,
+        0.05652816593647003,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "min": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.9999998211860657,
+        0.0,
+        -0.09688833355903625,
+        -0.35000020265579224,
+        -3.5762786865234375e-07,
+        1.0
+      ],
+      "type": "MAT4"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5123,
+      "count": 1617,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 4,
+      "byteOffset": 25872,
+      "componentType": 5126,
+      "count": 1617,
+      "max": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "min": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "VEC4"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Blender3D (https://sketchfab.com/Blender3D)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/basic-clock-rigged-edc8c38a80f5419092f72e8febf3598b",
+      "title": "Basic Clock Rigged"
+    },
+    "generator": "Sketchfab-12.66.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 12936,
+      "byteStride": 8,
+      "name": "shortBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 20880,
+      "byteOffset": 12936,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 38808,
+      "byteOffset": 33816,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 38808,
+      "byteOffset": 72624,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 51744,
+      "byteOffset": 111432,
+      "byteStride": 16,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 640,
+      "byteOffset": 163176,
+      "name": "floatBufferViews"
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 163816,
+      "uri": "scene.bin"
+    }
+  ],
+  "extensionsUsed": [
+    "KHR_materials_clearcoat"
+  ],
+  "images": [
+    {
+      "uri": "textures/Scene_-_Root_baseColor.png"
+    },
+    {
+      "uri": "textures/Scene_-_Root_metallicRoughness.png"
+    },
+    {
+      "uri": "textures/Scene_-_Root_normal.jpeg"
+    },
+    {
+      "uri": "textures/Scene_-_Root_clearcoat.png"
+    }
+  ],
+  "materials": [
+    {
+      "alphaMode": "BLEND",
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_clearcoat": {
+          "clearcoatFactor": 1.0,
+          "clearcoatRoughnessFactor": 1.0,
+          "clearcoatRoughnessTexture": {
+            "index": 1
+          },
+          "clearcoatTexture": {
+            "index": 3
+          }
+        }
+      },
+      "name": "Scene_-_Root",
+      "normalTexture": {
+        "index": 2
+      },
+      "occlusionTexture": {
+        "index": 1
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 1
+        }
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "clock__0",
+      "primitives": [
+        {
+          "attributes": {
+            "JOINTS_0": 8,
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3,
+            "TEXCOORD_1": 4,
+            "TEXCOORD_2": 5,
+            "WEIGHTS_0": 9
+          },
+          "indices": 6,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "clock.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4
+      ],
+      "matrix": [
+        100.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.629206793918314e-05,
+        -99.99999999999868,
+        0.0,
+        0.0,
+        99.99999999999868,
+        -1.629206793918314e-05,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Rotation_system"
+    },
+    {
+      "children": [
+        5,
+        16,
+        15
+      ],
+      "name": "Object_4"
+    },
+    {
+      "children": [
+        6
+      ],
+      "name": "_rootJoint"
+    },
+    {
+      "children": [
+        7,
+        9,
+        11,
+        13
+      ],
+      "name": "main_hand_00",
+      "rotation": [
+        0.7071068286895752,
+        0.0,
+        0.0,
+        0.7071067094802856
+      ],
+      "translation": [
+        0.09688833355903625,
+        -2.942979335784912e-07,
+        2.1457672971791908e-07
+      ]
+    },
+    {
+      "children": [
+        8
+      ],
+      "name": "clock_01",
+      "translation": [
+        -0.1534164994955063,
+        0.3499999940395355,
+        0.0
+      ]
+    },
+    {
+      "name": "clock_end_06",
+      "translation": [
+        0.0,
+        0.30000001192092896,
+        0.0
+      ]
+    },
+    {
+      "children": [
+        10
+      ],
+      "name": "minute_hand_02",
+      "rotation": [
+        -0.7071068286895752,
+        0.0,
+        0.0,
+        0.7071067094802856
+      ],
+      "translation": [
+        0.0,
+        0.0,
+        6.332993507385254e-08
+      ]
+    },
+    {
+      "name": "minute_hand_end_07",
+      "translation": [
+        0.0,
+        0.30000001192092896,
+        0.0
+      ]
+    },
+    {
+      "children": [
+        12
+      ],
+      "name": "second_hand_03",
+      "rotation": [
+        0.9659258723258972,
+        0.0,
+        0.0,
+        0.25881895422935486
+      ],
+      "translation": [
+        0.0,
+        8.940698137394065e-08,
+        0.0
+      ]
+    },
+    {
+      "name": "second_hand_end_08",
+      "translation": [
+        0.0,
+        0.30000001192092896,
+        -1.8768873682616007e-17
+      ]
+    },
+    {
+      "children": [
+        14
+      ],
+      "name": "hour_hand_04",
+      "translation": [
+        0.0,
+        0.0,
+        -7.972120386057213e-08
+      ]
+    },
+    {
+      "name": "hour_hand_end_05",
+      "translation": [
+        0.0,
+        0.30000001192092896,
+        0.0
+      ]
+    },
+    {
+      "matrix": [
+        100.00001192092894,
+        -3.5762791839033525e-06,
+        -3.049318983720006e-20,
+        0.0,
+        3.0870989809302774e-20,
+        1.7158666919184775e-12,
+        -100.0,
+        0.0,
+        3.5762783312520527e-06,
+        99.99998807907103,
+        1.7158664873712295e-12,
+        0.0,
+        6.258487701416016e-07,
+        5.960465045973251e-06,
+        0.0,
+        1.0
+      ],
+      "name": "Object_15"
+    },
+    {
+      "mesh": 0,
+      "name": "Object_16",
+      "skin": 0
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9729,
+      "minFilter": 9987,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "skins": [
+    {
+      "inverseBindMatrices": 7,
+      "joints": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "skeleton": 5
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
+    },
+    {
+      "sampler": 0,
+      "source": 2
+    },
+    {
+      "sampler": 0,
+      "source": 3
+    }
+  ]
+}

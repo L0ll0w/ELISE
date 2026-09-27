@@ -207,8 +207,8 @@ public class RadialCombatGrid : MonoBehaviour
         float rEnd = GetRingRadius(ringIndex + 1);
         float meanRadius = (rStart + rEnd) / 2f;
 
-        Vector3 offset = new Vector3(Mathf.Cos(angleRad) * meanRadius, 0.02f, Mathf.Sin(angleRad) * meanRadius);
-        return transform.position + offset;
+        Vector3 localOffset = new Vector3(Mathf.Cos(angleRad) * meanRadius, 0.02f, Mathf.Sin(angleRad) * meanRadius);
+        return transform.position + transform.rotation * localOffset;
     }
 
     /// <summary>
