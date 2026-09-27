@@ -422,6 +422,14 @@ public class PlayerPitfallRespawn : MonoBehaviour
     {
         isRespawning = true;
 
+        // Si le joueur portait un objet lors de la chute dans le vide, l'objet est lâché et réapparaît à son point de TP un peu après le joueur
+        if (CarriableItem.CurrentlyCarriedItem != null)
+        {
+            CarriableItem itemToRespawn = CarriableItem.CurrentlyCarriedItem;
+            itemToRespawn.Drop();
+            itemToRespawn.TriggerRespawnFromSky(0.8f);
+        }
+
         // 1. Calcul de la position sûre reculée à l'intérieur de la plateforme
         Vector3 respawnGroundPos = GetSafeInlandRespawnPosition();
         lastSafePosition = respawnGroundPos;

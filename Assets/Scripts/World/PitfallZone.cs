@@ -20,7 +20,7 @@ public class PitfallZone : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // Détecter le joueur directement ou via ses parents/enfants
+        // 1. Détecter le joueur directement ou via ses parents/enfants
         PlayerPitfallRespawn respawn = other.GetComponent<PlayerPitfallRespawn>();
         if (respawn == null)
         {
@@ -36,6 +36,27 @@ public class PitfallZone : MonoBehaviour
             }
 
             respawn.TriggerPitfallRespawn();
+            return;
+        }
+
+        // 2. Détecter un objet portable/ramassable tombant dans le vide
+        CarriableItem item = other.GetComponent<CarriableItem>();
+        if (item == null)
+        {
+            item = other.GetComponentInParent<CarriableItem>();
+        }
+
+        if (item != null)
+        {
+            if (item.IsCarried)
+            {
+                item.Drop();
+                item.TriggerRespawnFromSky(0.8f);
+            }
+            else
+            {
+                item.TriggerRespawnFromSky(0f);
+            }
         }
     }
 }

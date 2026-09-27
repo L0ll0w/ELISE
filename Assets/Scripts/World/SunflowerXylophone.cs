@@ -52,6 +52,9 @@ public class SunflowerXylophone : MonoBehaviour
     [Tooltip("Met automatiquement en pause le xylophone si un dialogue commence, puis reprend après la fin du dialogue.")]
     public bool pauseDuringDialogue = true;
 
+    [Tooltip("Si vrai, le xylophone ne se met en pause QUE si le dialogue est avec le Tournesol (et continue de jouer pour les autres PNJ).")]
+    public bool pauseOnlyForSunflowerDialogue = true;
+
     [Tooltip("Délai (en secondes) à attendre après la fin du dialogue avant de reprendre le xylophone.")]
     public float resumeDelayAfterDialogue = 1.0f;
 
@@ -130,12 +133,20 @@ public class SunflowerXylophone : MonoBehaviour
     [Tooltip("Liste des notes de la partition")]
     public List<MelodyNote> melody = new List<MelodyNote>();
 
+    [Header("Délais d'Interaction avec Objet Porté")]
+    [Tooltip("Délai de pause (en secondes) après l'interaction avant de jouer la note de l'objet.")]
+    public float delayBeforeItemNote = 1.0f;
+
+    [Tooltip("Délai de pause (en secondes) après avoir joué la note avant de reprendre la musique.")]
+    public float delayAfterItemNote = 1.0f;
+
     // État interne
     private bool isPlaying = false;
     private bool isPausedForDialogue = false;
     private bool wasDialogueActive = false;
     private Coroutine melodyCoroutine;
     private Coroutine resumeDialogueRoutine;
+    private Coroutine itemInteractionRoutine;
 
     private Vector3 leftInitialPos;
     private Vector3 rightInitialPos;
@@ -207,15 +218,16 @@ public class SunflowerXylophone : MonoBehaviour
         {
             bool isDialogueActive = DialogueManager.Instance.IsDialogueActive;
 
-            // Début du dialogue -> mettre en pause le xylophone immédiatement
+            // Début du dialogue -> mettre en pause le xylophone uniquement s'il s'agit du Tournesol
             if (isDialogueActive && !wasDialogueActive)
             {
-                if (isPlaying || (audioSource != null && audioSource.isPlaying))
+                bool shouldPause = !pauseOnlyForSunflowerDialogue || IsDialogueWithSunflower();
+                if (shouldPause && (isPlaying || (audioSource != null && audioSource.isPlaying)))
                 {
                     PauseMelodyForDialogue();
                 }
             }
-            // Fin du dialogue -> attendre le délai puis reprendre la musique
+            // Fin du dialogue -> attendre le délai puis reprendre la musique s'il était en pause
             else if (!isDialogueActive && wasDialogueActive)
             {
                 if (isPausedForDialogue)
@@ -227,6 +239,45 @@ public class SunflowerXylophone : MonoBehaviour
 
             wasDialogueActive = isDialogueActive;
         }
+    }
+
+    private bool IsDialogueWithSunflower()
+    {
+        // 1. Vérifier la distance avec le joueur : si le joueur est loin du tournesol, ce n'est pas son dialogue !
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null) playerObj = pm.gameObject;
+        }
+
+        if (playerObj != null)
+        {
+            float dist = Vector3.Distance(transform.position, playerObj.transform.position);
+            if (dist > 7.0f)
+            {
+                return false;
+            }
+        }
+
+        // 2. Si un composant DialogueTrigger est présent sur cet objet ou ses enfants/parents
+        DialogueTrigger dt = GetComponent<DialogueTrigger>();
+        if (dt == null) dt = GetComponentInParent<DialogueTrigger>();
+        if (dt == null) dt = GetComponentInChildren<DialogueTrigger>();
+
+        if (dt != null)
+        {
+            return true;
+        }
+
+        // 3. Fallback nom d'objet
+        string objName = gameObject.name.ToLower();
+        if (objName.Contains("devoveo") || objName.Contains("tournesol") || objName.Contains("sunflower") || objName.Contains("xylo"))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public void PauseMelodyForDialogue()
@@ -340,6 +391,11 @@ public class SunflowerXylophone : MonoBehaviour
 
     public void PlayNote(int keyIndex)
     {
+        PlayNote(keyIndex, null, null);
+    }
+
+    public void PlayNote(int keyIndex, AudioClip customClip = null, Color? flashColor = null)
+    {
         if (keyIndex < 0 || keys == null || keyIndex >= keys.Length) return;
 
         bool isHighPitch = keyIndex >= highPitchSplitIndex;
@@ -353,13 +409,75 @@ public class SunflowerXylophone : MonoBehaviour
         if (useLeft)
         {
             if (leftMalletRoutine != null) StopCoroutine(leftMalletRoutine);
-            leftMalletRoutine = StartCoroutine(AnimateMalletStrike(chosenMallet, keyIndex, baseRot, true));
+            leftMalletRoutine = StartCoroutine(AnimateMalletStrike(chosenMallet, keyIndex, baseRot, true, customClip, flashColor));
         }
         else
         {
             if (rightMalletRoutine != null) StopCoroutine(rightMalletRoutine);
-            rightMalletRoutine = StartCoroutine(AnimateMalletStrike(chosenMallet, keyIndex, baseRot, true));
+            rightMalletRoutine = StartCoroutine(AnimateMalletStrike(chosenMallet, keyIndex, baseRot, true, customClip, flashColor));
         }
+    }
+
+    /// <summary>
+    /// Joue la note et applique la couleur associées à un objet porté par le joueur quand il parle au Tournesol.
+    /// Effectue une pause de 1s au moment de l'interaction, joue la note, puis marque une pause de 1s avant de reprendre la musique.
+    /// </summary>
+    public void PlayNoteForCarriedItem(CarriableItem item)
+    {
+        if (item == null) return;
+
+        if (itemInteractionRoutine != null)
+        {
+            StopCoroutine(itemInteractionRoutine);
+        }
+        itemInteractionRoutine = StartCoroutine(PlayNoteForCarriedItemRoutine(item));
+    }
+
+    private IEnumerator PlayNoteForCarriedItemRoutine(CarriableItem item)
+    {
+        if (item == null) yield break;
+
+        Debug.Log($"[SunflowerXylophone] 🌻 Interaction avec '{item.gameObject.name}'. Pause de {delayBeforeItemNote}s avant la note...");
+
+        // 1. Stopper la mélodie du xylophone
+        StopMelody();
+
+        // 2. Pause au moment de l'interaction (1 seconde par défaut)
+        yield return new WaitForSeconds(delayBeforeItemNote);
+
+        // 3. Jouer la note correspondant à l'objet et attendre la fin de l'animation de frappe
+        int keyIndex = item.ItemKeyIndex;
+        AudioClip customClip = item.ItemNoteSound;
+        Color itemColor = item.ItemColor;
+
+        if (keys != null && keyIndex >= 0 && keyIndex < keys.Length)
+        {
+            bool isHighPitch = keyIndex >= highPitchSplitIndex;
+            bool useLeft = isHighPitch ? invertMallets : !invertMallets;
+            Transform chosenMallet = useLeft ? leftMallet : rightMallet;
+            if (chosenMallet == null) chosenMallet = leftMallet ?? rightMallet;
+
+            if (chosenMallet != null)
+            {
+                Quaternion baseRot = useLeft ? leftInitialRot : rightInitialRot;
+
+                if (useLeft && leftMalletRoutine != null) StopCoroutine(leftMalletRoutine);
+                if (!useLeft && rightMalletRoutine != null) StopCoroutine(rightMalletRoutine);
+
+                Coroutine strikeRoutine = StartCoroutine(AnimateMalletStrike(chosenMallet, keyIndex, baseRot, true, customClip, itemColor));
+                yield return strikeRoutine;
+            }
+        }
+
+        // 4. Pause après la frappe (1 seconde par défaut)
+        ReturnMalletsToRest();
+        Debug.Log($"[SunflowerXylophone] 🌻 Note jouée. Pause de {delayAfterItemNote}s avant de recommencer la mélodie de zéro...");
+        yield return new WaitForSeconds(delayAfterItemNote);
+
+        // 5. Recommencer la mélodie depuis le début (temps 0)
+        PlayMelody();
+
+        itemInteractionRoutine = null;
     }
 
     private IEnumerator PlayWavMelodyRoutine()
@@ -486,7 +604,7 @@ public class SunflowerXylophone : MonoBehaviour
         }
     }
 
-    private IEnumerator AnimateMalletStrike(Transform mallet, int keyIndex, Quaternion baseRotation, bool playSound)
+    private IEnumerator AnimateMalletStrike(Transform mallet, int keyIndex, Quaternion baseRotation, bool playSound, AudioClip customClip = null, Color? flashColor = null)
     {
         Transform targetKey = keys[keyIndex];
         if (targetKey == null) yield break;
@@ -528,10 +646,18 @@ public class SunflowerXylophone : MonoBehaviour
         // --- IMPACT ! ---
         if (playSound)
         {
-            PlaySoundForKey(keyIndex);
+            if (customClip != null)
+            {
+                if (audioSource != null) audioSource.PlayOneShot(customClip);
+                else AudioSource.PlayClipAtPoint(customClip, keyTargetPos);
+            }
+            else
+            {
+                PlaySoundForKey(keyIndex);
+            }
         }
 
-        TriggerKeyHitEffect(targetKey);
+        TriggerKeyHitEffect(targetKey, flashColor);
 
         // 3. Remontée
         elapsed = 0f;
@@ -548,7 +674,7 @@ public class SunflowerXylophone : MonoBehaviour
         mallet.rotation = baseRotation;
     }
 
-    private void TriggerKeyHitEffect(Transform targetKey)
+    private void TriggerKeyHitEffect(Transform targetKey, Color? flashColor = null)
     {
         if (targetKey == null) return;
 
@@ -557,10 +683,10 @@ public class SunflowerXylophone : MonoBehaviour
             StopCoroutine(existingRoutine);
         }
 
-        activeKeyBounceRoutines[targetKey] = StartCoroutine(AnimateKeyBounceAndScale(targetKey));
+        activeKeyBounceRoutines[targetKey] = StartCoroutine(AnimateKeyBounceAndScale(targetKey, flashColor));
     }
 
-    private IEnumerator AnimateKeyBounceAndScale(Transform targetKey)
+    private IEnumerator AnimateKeyBounceAndScale(Transform targetKey, Color? flashColor = null)
     {
         if (!defaultKeyLocalPositions.TryGetValue(targetKey, out Vector3 origLocalPos))
         {
@@ -574,6 +700,10 @@ public class SunflowerXylophone : MonoBehaviour
             defaultKeyLocalScales[targetKey] = origScale;
         }
 
+        SpriteRenderer keySR = targetKey.GetComponent<SpriteRenderer>();
+        if (keySR == null) keySR = targetKey.GetComponentInChildren<SpriteRenderer>();
+        Color origColor = keySR != null ? keySR.color : Color.white;
+
         Vector3 sunkenPos = origLocalPos - new Vector3(0, keySinkDepth, 0);
         Vector3 expandedScale = origScale * keyHitScaleMultiplier;
 
@@ -586,6 +716,12 @@ public class SunflowerXylophone : MonoBehaviour
             float t = elapsed / downTime;
             targetKey.localPosition = Vector3.Lerp(origLocalPos, sunkenPos, t);
             targetKey.localScale = Vector3.Lerp(origScale, expandedScale, t);
+
+            if (flashColor.HasValue && keySR != null)
+            {
+                keySR.color = Color.Lerp(origColor, flashColor.Value, t);
+            }
+
             yield return null;
         }
 
@@ -601,11 +737,22 @@ public class SunflowerXylophone : MonoBehaviour
             float t = elapsed / upTime;
             targetKey.localPosition = Vector3.Lerp(sunkenPos, origLocalPos, t);
             targetKey.localScale = Vector3.Lerp(expandedScale, origScale, t);
+
+            if (flashColor.HasValue && keySR != null)
+            {
+                keySR.color = Color.Lerp(flashColor.Value, origColor, t);
+            }
+
             yield return null;
         }
 
         targetKey.localPosition = origLocalPos;
         targetKey.localScale = origScale;
+
+        if (keySR != null)
+        {
+            keySR.color = origColor;
+        }
     }
 
     private void PlaySoundForKey(int keyIndex)

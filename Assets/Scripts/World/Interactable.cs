@@ -58,6 +58,24 @@ public abstract class Interactable : MonoBehaviour
         InitializeIndicator();
     }
 
+    private static readonly System.Collections.Generic.HashSet<Interactable> activeInteractablesInRange = new System.Collections.Generic.HashSet<Interactable>();
+
+    /// <summary>
+    /// Indique si le joueur est actuellement à portée d'interaction d'un PNJ ou élément du décor (autre qu'un objet porté).
+    /// </summary>
+    public static bool IsPlayerNearOtherInteractable()
+    {
+        activeInteractablesInRange.RemoveWhere(i => i == null || !i.enabled || !i.gameObject.activeInHierarchy);
+        foreach (var interactable in activeInteractablesInRange)
+        {
+            if (interactable.isPlayerInRange && interactable.CanInteract() && !(interactable is CarriableItem))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected virtual void Update()
     {
         bool isDialogueActive = DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive;
@@ -84,6 +102,12 @@ public abstract class Interactable : MonoBehaviour
             {
                 hasInteracted = true;
                 interactTime = Time.unscaledTime;
+
+                if (CarriableItem.CurrentlyCarriedItem != null)
+                {
+                    CarriableItem.CurrentlyCarriedItem.PreventDropThisFrame();
+                }
+
                 Interact();
             }
         }
@@ -93,6 +117,7 @@ public abstract class Interactable : MonoBehaviour
 
     protected virtual void OnDisable()
     {
+        activeInteractablesInRange.Remove(this);
         CleanupIndicator();
     }
 
@@ -182,6 +207,34 @@ public abstract class Interactable : MonoBehaviour
             if (Time.unscaledTime - interactTime >= settings.reappearDelay)
             {
                 hasInteracted = false;
+            }
+        }
+
+        // Verify player range distance to prevent stuck indicators when teleported or colliders toggled
+        if (isPlayerInRange)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj == null)
+            {
+                PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+                if (pm != null) playerObj = pm.gameObject;
+            }
+
+            if (playerObj != null)
+            {
+                float dist = Vector3.Distance(transform.position, playerObj.transform.position);
+                float maxDist = 6f;
+                if (interactionCollider != null)
+                {
+                    maxDist = Mathf.Max(6f, interactionCollider.bounds.extents.magnitude * 3f);
+                }
+
+                if (dist > maxDist)
+                {
+                    isPlayerInRange = false;
+                    hasInteracted = false;
+                    activeInteractablesInRange.Remove(this);
+                }
             }
         }
 
@@ -310,6 +363,7 @@ public abstract class Interactable : MonoBehaviour
         {
             isPlayerInRange = true;
             hasInteracted = false;
+            activeInteractablesInRange.Add(this);
         }
     }
 
@@ -319,6 +373,7 @@ public abstract class Interactable : MonoBehaviour
         {
             isPlayerInRange = false;
             hasInteracted = false;
+            activeInteractablesInRange.Remove(this);
         }
     }
 }

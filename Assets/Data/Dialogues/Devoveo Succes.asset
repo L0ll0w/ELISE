@@ -10,28 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
-  m_Name: Devoveo xylo
+  m_Name: Devoveo Succes
   m_EditorClassIdentifier: Assembly-CSharp::DialogueData
   nodes:
   - nodeID: 0
     characterName: ???
     portrait: {fileID: 0}
-    sentence: ...
+    sentence: ... ?
     choices: []
-    nextNodeID: 1
-  - nodeID: 1
-    characterName: 
-    portrait: {fileID: 0}
-    sentence: On dirait que le tournesol cherche une melodie
-    choices: []
-    nextNodeID: 2
-  - nodeID: 2
-    characterName: 
-    portrait: {fileID: 0}
-    sentence: Aider le tournesol ?
-    choices:
-    - text: Oui
-      nextNodeID: start_xylo_fight
-    - text: Non
-      nextNodeID: 3
     nextNodeID: 

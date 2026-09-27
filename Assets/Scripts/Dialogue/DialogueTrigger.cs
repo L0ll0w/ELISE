@@ -26,6 +26,26 @@ public class DialogueTrigger : Interactable
 
     protected override void Interact()
     {
+        if (CarriableItem.IsPlayerCarryingAnyItem())
+        {
+            CarriableItem carriedItem = CarriableItem.CurrentlyCarriedItem;
+            if (carriedItem != null)
+            {
+                carriedItem.PreventDropThisFrame();
+
+                SunflowerXylophone xylo = GetComponent<SunflowerXylophone>();
+                if (xylo == null) xylo = GetComponentInParent<SunflowerXylophone>();
+                if (xylo == null) xylo = GetComponentInChildren<SunflowerXylophone>();
+                if (xylo == null) xylo = FindFirstObjectByType<SunflowerXylophone>();
+
+                if (xylo != null)
+                {
+                    xylo.PlayNoteForCarriedItem(carriedItem);
+                    return;
+                }
+            }
+        }
+
         TriggerDialogue();
     }
 

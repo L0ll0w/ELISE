@@ -485,6 +485,12 @@ public class PlayerMovement : MonoBehaviour
                 continue;
             }
 
+            // Ignorer le collider de l'objet actuellement porté par le joueur
+            if (CarriableItem.CurrentlyCarriedItem != null && h.collider.transform.IsChildOf(CarriableItem.CurrentlyCarriedItem.transform))
+            {
+                continue;
+            }
+
             // Ignorer les triggers
             if (h.collider.isTrigger)
             {

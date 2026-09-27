@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
+  m_Name: Gardener Soluce
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  nodes:
+  - nodeID: 0
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: Il semblerait que Devoveo, sois triste depuis un moment...
+    choices: []
+    nextNodeID: 1
+  - nodeID: 1
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: "Il cherche cette melodie sans cesse jour et nuit depuis une eternit\xE9."
+    choices: []
+    nextNodeID: 2
+  - nodeID: 2
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: "Je me rappelle de notre premiere journ\xE9 de bonheur ensemble, il
+      ete mon seul ami..."
+    choices: []
+    nextNodeID: 3
+  - nodeID: 3
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: "J'avais pris ma camera pour filmer cette journ\xE9e, on avait fait
+      plein de pose rigolote"
+    choices: []
+    nextNodeID: 4
+  - nodeID: 4
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: 'Je l''es filmer jouer au Ballon, pendant que je faisait du Ukulele '
+    choices: []
+    nextNodeID: 5
+  - nodeID: 5
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: Devoveo a meme gagner un tropher pour le coucour annuel de biboquet.
+    choices: []
+    nextNodeID: 6
+  - nodeID: 6
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: Alors la nuit venue, je rangeais ma camera, admirant une derniere fois
+      le ballon
+    choices: []
+    nextNodeID: 7
+  - nodeID: 7
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: Qui nous avait apporter un peut de bonheur dans cette vie monotone...
+    choices: []
+    nextNodeID: 8
+  - nodeID: 8
+    characterName: Gardener
+    portrait: {fileID: 0}
+    sentence: 'Voila... tu sais tout. '
+    choices: []
+    nextNodeID: 9

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Gère le combat-énigme du Tournesol au Xylophone en utilisant le SYSTÈME DE COMBAT OFFICIEL DU JEU (RhythmCombatManager).
@@ -96,11 +97,15 @@ public class SunflowerXylophonePuzzle : MonoBehaviour
     // État interne
     private bool isPuzzleActive = false;
     private bool isEmergingAnimationActive = false;
+    private bool isQuittingPuzzle = false;
+    private bool isPuzzleSolved = false;
     private int currentSequenceIndex = 0;
     private int lastRecordedSector = -1;
     private Vector3[] originalKeyLocalPositions;
     private float activePlayerYOffset = 0.47f;
     private RhythmPlayerController subscribedPlayer;
+    private Vector3 originalSunflowerPosition;
+    private Quaternion originalSunflowerRotation;
 
     private void Awake()
     {
@@ -110,6 +115,12 @@ public class SunflowerXylophonePuzzle : MonoBehaviour
         if (xylophone == null) xylophone = GetComponent<SunflowerXylophone>();
         if (sunflowerEnemyObject == null && xylophone != null) sunflowerEnemyObject = xylophone.gameObject;
         if (sunflowerEnemyObject == null) sunflowerEnemyObject = gameObject;
+
+        if (sunflowerEnemyObject != null)
+        {
+            originalSunflowerPosition = sunflowerEnemyObject.transform.position;
+            originalSunflowerRotation = sunflowerEnemyObject.transform.rotation;
+        }
 
         CacheOriginalKeyPositions();
     }
@@ -186,7 +197,35 @@ public class SunflowerXylophonePuzzle : MonoBehaviour
             }
         }
 
-        // 2. Si l'énigme est active, surveiller le déplacement du joueur sur la grille de combat officielle
+        // 2. Si l'énigme est active, écouter les entrées pour quitter à tout moment (Échap ou Touche B / Est sur manette)
+        if (isPuzzleActive && !isQuittingPuzzle && !isPuzzleSolved)
+        {
+            bool quitRequested = false;
+
+            #if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                quitRequested = true;
+            }
+            else if (Gamepad.current != null && (Gamepad.current.buttonEast.wasPressedThisFrame || Gamepad.current.bButton.wasPressedThisFrame))
+            {
+                quitRequested = true;
+            }
+            #else
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton1))
+            {
+                quitRequested = true;
+            }
+            #endif
+
+            if (quitRequested)
+            {
+                QuitPuzzleCombat();
+                return;
+            }
+        }
+
+        // 3. Si l'énigme est active, surveiller le déplacement du joueur sur la grille de combat officielle
         if (isPuzzleActive && RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive)
         {
             RhythmPlayerController rPlayer = RhythmCombatManager.Instance.PlayerController;
@@ -230,6 +269,96 @@ public class SunflowerXylophonePuzzle : MonoBehaviour
     }
 
     /// <summary>
+    /// Interrompt le combat-énigme du Tournesol avec un fondu au noir et remet le monde dans son état initial d'exploration.
+    /// </summary>
+    public void QuitPuzzleCombat()
+    {
+        if (!isPuzzleActive || isQuittingPuzzle) return;
+        StartCoroutine(QuitPuzzleCombatRoutine());
+    }
+
+    private IEnumerator QuitPuzzleCombatRoutine()
+    {
+        isQuittingPuzzle = true;
+        Debug.Log("[SunflowerXylophonePuzzle] 🚪 Interruption de l'énigme demandée. Abandon du combat...");
+
+        // 1. Marquer le puzzle comme inactif et se désabonner des événements du joueur
+        isPuzzleActive = false;
+        UnregisterPlayerEvents();
+
+        // 2. Lancer le fondu au noir immédiat
+        if (UIFadeManager.Instance != null)
+        {
+            yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f, 0.35f));
+        }
+
+        // 3. PENDANT LE NOIR COMPLET : restaurer le xylophone de base, les pales et la position du Tournesol
+        RestoreOriginalKeyPositions();
+        SetKeysActive(false);
+
+        if (xylophone != null)
+        {
+            xylophone.SetXylophoneVisualsAndAudioActive(true);
+        }
+
+        if (sunflowerEnemyObject != null)
+        {
+            sunflowerEnemyObject.transform.position = originalSunflowerPosition;
+            sunflowerEnemyObject.transform.rotation = originalSunflowerRotation;
+            Rigidbody sRb = sunflowerEnemyObject.GetComponent<Rigidbody>();
+            if (sRb != null)
+            {
+                sRb.linearVelocity = Vector3.zero;
+                sRb.angularVelocity = Vector3.zero;
+            }
+        }
+
+        // 4. Stopper le combat rythmique officiel
+        if (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive)
+        {
+            RhythmCombatManager.Instance.IsEndlessMovementPhase = false;
+            RhythmCombatManager.Instance.HideCombatMenuUI = false;
+            RhythmCombatManager.Instance.MuteCombatMusic = false;
+            RhythmCombatManager.Instance.EndCombat(false);
+
+            // Attendre que la fin de combat soit complètement terminée
+            while (RhythmCombatManager.Instance.IsCombatActive)
+            {
+                yield return null;
+            }
+        }
+
+        // 5. Réafficher le xylophone de base et la position du Tournesol au cas où
+        if (xylophone != null)
+        {
+            xylophone.SetXylophoneVisualsAndAudioActive(true);
+        }
+        if (sunflowerEnemyObject != null)
+        {
+            sunflowerEnemyObject.transform.position = originalSunflowerPosition;
+            sunflowerEnemyObject.transform.rotation = originalSunflowerRotation;
+        }
+
+        // 6. S'assurer que le fondu au noir s'estompe (Fade In)
+        if (UIFadeManager.Instance != null)
+        {
+            yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f, 0.35f));
+        }
+
+        // 7. DÉVERROUILLER IMPÉRATIVEMENT LE JOUEUR ET SON SCRIPT MOVEMENT
+        PlayerLockManager.SetPlayerLocked(false, force: true);
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        if (pm != null)
+        {
+            pm.enabled = true;
+            pm.IsInputLocked = false;
+        }
+
+        isQuittingPuzzle = false;
+        Debug.Log("[SunflowerXylophonePuzzle] 🚪 Énigme quittée. Joueur déverrouillé et monde réinitialisé.");
+    }
+
+    /// <summary>
     /// Lance le combat rythmique officiel via RhythmCombatManager en mode déplacement continu sans menu UI.
     /// </summary>
     public void StartPuzzleCombat()
@@ -239,6 +368,8 @@ public class SunflowerXylophonePuzzle : MonoBehaviour
         Debug.Log("[SunflowerXylophonePuzzle] ⚔️ Lancement du combat rythmique officiel du Tournesol !");
 
         isPuzzleActive = true;
+        isQuittingPuzzle = false;
+        isPuzzleSolved = false;
         currentSequenceIndex = 0;
         lastRecordedSector = -1;
 
@@ -645,45 +776,154 @@ public class SunflowerXylophonePuzzle : MonoBehaviour
     /// </summary>
     private void OnPuzzleSolved()
     {
-        Debug.Log("[SunflowerXylophonePuzzle] 🎉 ÉNIGME RÉUSSIE ! Fin du combat !");
+        if (isPuzzleSolved) return;
+        isPuzzleSolved = true;
+        StartCoroutine(PuzzleVictoryRoutine());
+    }
 
+    private IEnumerator PuzzleVictoryRoutine()
+    {
+        Debug.Log("[SunflowerXylophonePuzzle] 🎉 ÉNIGME RÉUSSIE ! Lancement du dialogue de victoire en combat...");
+
+        // 1. Désactiver la touche Échap / B immédiatement
         isPuzzleActive = false;
         UnregisterPlayerEvents();
 
-        // Désactiver les pales du décor à la fin du combat et réinitialiser leurs positions
-        RestoreOriginalKeyPositions();
-        SetKeysActive(false);
+        // 2. Orienter le joueur et la caméra vers le Tournesol (comme lors d'une interaction)
+        if (sunflowerEnemyObject != null)
+        {
+            Vector3 dirToSunflower = sunflowerEnemyObject.transform.position - transform.position;
 
+            SpriteRenderer playerSR = null;
+            if (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.PlayerController != null)
+            {
+                playerSR = RhythmCombatManager.Instance.PlayerController.GetComponentInChildren<SpriteRenderer>();
+            }
+            if (playerSR == null)
+            {
+                PlayerMovement playerMov = FindFirstObjectByType<PlayerMovement>();
+                if (playerMov != null) playerSR = playerMov.GetComponentInChildren<SpriteRenderer>();
+            }
+
+            if (playerSR != null && Mathf.Abs(dirToSunflower.x) > 0.01f)
+            {
+                playerSR.flipX = dirToSunflower.x < 0f;
+            }
+
+            if (Camera.main != null)
+            {
+                Vector3 lookTarget = sunflowerEnemyObject.transform.position + Vector3.up * 1.0f;
+                Quaternion targetRot = Quaternion.LookRotation(lookTarget - Camera.main.transform.position);
+                float camBlend = 0f;
+                Quaternion startRot = Camera.main.transform.rotation;
+                while (camBlend < 0.35f)
+                {
+                    camBlend += Time.deltaTime;
+                    Camera.main.transform.rotation = Quaternion.Slerp(startRot, targetRot, camBlend / 0.35f);
+                    yield return null;
+                }
+                Camera.main.transform.rotation = targetRot;
+            }
+        }
+
+        // 3. Effet sonore de victoire
         if (victorySound != null)
         {
             AudioSource.PlayClipAtPoint(victorySound, transform.position);
         }
 
-        // Mettre fin au combat rythmique officiel (restaure la caméra, le joueur et l'environnement)
-        if (RhythmCombatManager.Instance != null)
+        // 4. JOUER LE DIALOGUE DE VICTOIRE TOUJOURS DANS LE COMBAT
+        if (victoryDialogue != null && DialogueManager.Instance != null)
         {
-            RhythmCombatManager.Instance.IsEndlessMovementPhase = false;
-            RhythmCombatManager.Instance.HideCombatMenuUI = false;
-            RhythmCombatManager.Instance.MuteCombatMusic = false;
-            RhythmCombatManager.Instance.EndCombat(true);
+            bool isDialogueDone = false;
+            DialogueManager.Instance.StartDialogue(victoryDialogue, () =>
+            {
+                isDialogueDone = true;
+            });
+
+            // Attendre la fin complète du dialogue de victoire
+            while (!isDialogueDone && DialogueManager.Instance.IsDialogueActive)
+            {
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.25f);
         }
 
-        // Définir le flag de victoire dans StoryStateManager
-        if (StoryStateManager.Instance != null && !string.IsNullOrEmpty(victoryFlag))
+        // 5. UNE FOIS LE DIALOGUE TERMINÉ : FONDU AU NOIR ET RESTAURATION DE L'ENVIRONNEMENT
+        if (UIFadeManager.Instance != null)
         {
-            StoryStateManager.Instance.SetFlag(victoryFlag, true);
+            yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(1f, 0.4f));
         }
 
-        // Réafficher le xylophone de base et relancer sa musique
+        // 6. PENDANT LE NOIR COMPLET : réinitialiser les pales, le xylophone et le Tournesol sans le détruire
+        RestoreOriginalKeyPositions();
+        SetKeysActive(false);
+
         if (xylophone != null)
         {
             xylophone.SetXylophoneVisualsAndAudioActive(true);
         }
 
-        // Lancer le dialogue de victoire s'il existe
-        if (victoryDialogue != null && DialogueManager.Instance != null)
+        if (sunflowerEnemyObject != null)
         {
-            DialogueManager.Instance.StartDialogue(victoryDialogue);
+            sunflowerEnemyObject.transform.position = originalSunflowerPosition;
+            sunflowerEnemyObject.transform.rotation = originalSunflowerRotation;
+            Rigidbody sRb = sunflowerEnemyObject.GetComponent<Rigidbody>();
+            if (sRb != null)
+            {
+                sRb.linearVelocity = Vector3.zero;
+                sRb.angularVelocity = Vector3.zero;
+            }
         }
+
+        if (StoryStateManager.Instance != null && !string.IsNullOrEmpty(victoryFlag))
+        {
+            StoryStateManager.Instance.SetFlag(victoryFlag, true);
+        }
+
+        // Stopper le combat rythmique officiel sans détruire le Tournesol (victory: false pour éviter le Destroy)
+        if (RhythmCombatManager.Instance != null && RhythmCombatManager.Instance.IsCombatActive)
+        {
+            RhythmCombatManager.Instance.IsEndlessMovementPhase = false;
+            RhythmCombatManager.Instance.HideCombatMenuUI = false;
+            RhythmCombatManager.Instance.MuteCombatMusic = false;
+            RhythmCombatManager.Instance.EndCombat(false);
+
+            while (RhythmCombatManager.Instance.IsCombatActive)
+            {
+                yield return null;
+            }
+        }
+
+        // S'assurer que le Tournesol et le xylophone sont actifs au sol
+        if (sunflowerEnemyObject != null)
+        {
+            sunflowerEnemyObject.transform.position = originalSunflowerPosition;
+            sunflowerEnemyObject.transform.rotation = originalSunflowerRotation;
+            sunflowerEnemyObject.SetActive(true);
+        }
+
+        if (xylophone != null)
+        {
+            xylophone.SetXylophoneVisualsAndAudioActive(true);
+        }
+
+        // 7. Fondu de retour (Fade In)
+        if (UIFadeManager.Instance != null)
+        {
+            yield return StartCoroutine(UIFadeManager.Instance.FadeRoutine(0f, 0.4f));
+        }
+
+        // 8. DÉVERROUILLER IMPÉRATIVEMENT LE JOUEUR ET SON SCRIPT MOVEMENT
+        PlayerLockManager.SetPlayerLocked(false, force: true);
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        if (pm != null)
+        {
+            pm.enabled = true;
+            pm.IsInputLocked = false;
+        }
+
+        isPuzzleSolved = false;
+        Debug.Log("[SunflowerXylophonePuzzle] 🎉 Énigme terminée avec succès, dialogue de victoire joué en combat, Tournesol conservé !");
     }
 }
