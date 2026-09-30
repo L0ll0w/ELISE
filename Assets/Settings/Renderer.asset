@@ -763,7 +763,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8b0e3a6af4fb4077bb34715e2331b313, type: 3}
   m_Name: GLBilateralFilterRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
   injectionPoint: 600
   cameraScope: 0
   properties:

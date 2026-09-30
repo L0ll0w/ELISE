@@ -163,6 +163,7 @@ public class CinematicSequence : MonoBehaviour
         }
 
         // Mise à jour de la caméra en direct dans l'onglet Game dès qu'on touche à un slider/champ dans l'Inspector !
+        // IMPORTANT : ne jamais exécuter en mode Play (incluant le build) même avec [ExecuteAlways]
         if (!Application.isPlaying && enableLivePreview)
         {
             PreviewCurrentShot();
@@ -194,15 +195,98 @@ public class CinematicSequence : MonoBehaviour
 
         if (playOnStart)
         {
-            PlaySequence();
+            StartCoroutine(PlaySequenceNextFrame());
         }
+    }
+
+    private void Update()
+    {
+        if (Application.isPlaying && isPlaying)
+        {
+            bool skipPressed = false;
+            #if ENABLE_INPUT_SYSTEM
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                skipPressed = UnityEngine.InputSystem.Keyboard.current.spaceKey.wasPressedThisFrame ||
+                              UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame;
+            }
+            if (!skipPressed && UnityEngine.InputSystem.Gamepad.current != null)
+            {
+                skipPressed = UnityEngine.InputSystem.Gamepad.current.buttonSouth.wasPressedThisFrame ||
+                              UnityEngine.InputSystem.Gamepad.current.startButton.wasPressedThisFrame;
+            }
+            #endif
+
+            if (skipPressed)
+            {
+                Debug.Log("[CinematicSequence] Séquence passée manuellement par le joueur (Espace/Échap).");
+                StopAllCoroutines();
+                if (fadeCanvasGroup != null)
+                {
+                    fadeCanvasGroup.alpha = 0f;
+                    fadeCanvasGroup.gameObject.SetActive(false);
+                }
+                if (topCinemaBar != null) topCinemaBar.sizeDelta = Vector2.zero;
+                if (bottomCinemaBar != null) bottomCinemaBar.sizeDelta = Vector2.zero;
+                if (cinemachineHelper != null) cinemachineHelper.enabled = true;
+                if (playerMovement != null) playerMovement.enabled = true;
+                isPlaying = false;
+                onSequenceComplete?.Invoke();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Attend une frame complète avant de démarrer la cinématique, garantissant que tous les
+    /// Awake/Start de la scène (CinemachineCamera, helpers, joueur...) sont terminés.
+    /// Cela corrige le problème de cinématique silencieuse dans les builds.
+    /// </summary>
+    private IEnumerator PlaySequenceNextFrame()
+    {
+        // Attendre que tous les objets de la scène aient terminé leur initialisation
+        yield return null;
+
+        // Re-tenter de trouver les références si elles étaient manquantes au Awake
+        if (cinemachineCamera == null)
+        {
+            InitReferences();
+            Debug.LogWarning($"[CinematicSequence] '{gameObject.name}' : CinemachineCamera introuvable au Awake, nouvelle tentative après 1 frame : {(cinemachineCamera != null ? "OK" : "TOUJOURS NULLE")}");
+        }
+
+        // Diagnostic : vérifier les shots
+        if (shots == null || shots.Count == 0)
+        {
+            Debug.LogError($"[CinematicSequence] '{gameObject.name}' : Aucun plan (shot) configuré ! La cinématique ne peut pas démarrer.");
+            if (fadeCanvasGroup != null) fadeCanvasGroup.gameObject.SetActive(false);
+            yield break;
+        }
+
+        for (int i = 0; i < shots.Count; i++)
+        {
+            if (shots[i].target == null)
+            {
+                Debug.LogError($"[CinematicSequence] '{gameObject.name}' : Le plan [{i}] '{shots[i].shotName}' n'a pas de cible (target) assignée ! Cinématique annulée.");
+                if (fadeCanvasGroup != null) fadeCanvasGroup.gameObject.SetActive(false);
+                yield break;
+            }
+        }
+
+        if (cinemachineCamera == null)
+        {
+            Debug.LogError($"[CinematicSequence] '{gameObject.name}' : Impossible de démarrer la cinématique — aucune CinemachineCamera trouvée dans la scène.");
+            if (fadeCanvasGroup != null) fadeCanvasGroup.gameObject.SetActive(false);
+            yield break;
+        }
+
+        Debug.Log($"[CinematicSequence] '{gameObject.name}' : Démarrage de la cinématique ({shots.Count} plan(s)).");
+        PlaySequence();
     }
 
     private void InitReferences()
     {
         if (cinemachineCamera == null)
         {
-            cinemachineCamera = FindFirstObjectByType<CinemachineCamera>();
+            cinemachineCamera = FindFirstObjectByType<CinemachineCamera>(FindObjectsInactive.Include);
         }
 
         if (cinemachineCamera != null)
@@ -216,7 +300,7 @@ public class CinematicSequence : MonoBehaviour
             cinemachineHelper.SaveOriginalSettings();
         }
 
-        playerMovement = FindFirstObjectByType<PlayerMovement>();
+        playerMovement = FindFirstObjectByType<PlayerMovement>(FindObjectsInactive.Include);
 
         // Création automatique d'un écran de fondu noir et de bandes noires si non assignés
         if ((fadeCanvasGroup == null || topCinemaBar == null) && Application.isPlaying)
@@ -321,6 +405,8 @@ public class CinematicSequence : MonoBehaviour
             CinematicShot currentShot = shots[i];
             onShotStart?.Invoke(i);
 
+            Debug.Log($"[CinematicSequence] Plan [{i}] '{currentShot.shotName}' : Démarrage (target={currentShot.target?.name ?? "NULL"}, durée={currentShot.duration}s, drift={currentShot.enableSlowDrift})");
+
             // 1. Placer ou transitionner la caméra vers le plan
             if (currentShot.transition == TransitionType.Cut || i == 0)
             {
@@ -334,15 +420,32 @@ public class CinematicSequence : MonoBehaviour
             // 2. Effectuer le fondu d'apparition (Fade In)
             if (currentShot.fadeInAtStart && fadeCanvasGroup != null)
             {
+                fadeCanvasGroup.gameObject.SetActive(true);
                 fadeCanvasGroup.alpha = 1f;
 
-                // Temps d'attente au noir complet configurable avant d'estomper le noir
-                if (currentShot.fadeInHoldDuration > 0f)
+                float hold = Mathf.Clamp(currentShot.fadeInHoldDuration, 0f, 1.5f);
+                float fadeDur = currentShot.fadeDuration;
+
+                // Sécurité durée excessive : un Fade In ne doit jamais bloquer l'écran au noir pendant 10s !
+                if (fadeDur > 3f)
                 {
-                    yield return new WaitForSeconds(currentShot.fadeInHoldDuration);
+                    Debug.LogWarning($"[CinematicSequence] Plan [{i}] '{currentShot.shotName}' : Durée de fade in excessive ({fadeDur}s) détectée ! Ajustée automatiquement à 1.5s pour éviter l'écran noir prolongé.");
+                    fadeDur = 1.5f;
+                }
+                else if (fadeDur < 0.1f)
+                {
+                    fadeDur = 1.2f;
                 }
 
-                yield return StartCoroutine(FadeRoutine(1f, 0f, currentShot.fadeDuration));
+                Debug.Log($"[CinematicSequence] Plan [{i}] '{currentShot.shotName}' : Fondu d'apparition (maintien noir : {hold:F2}s, durée fondu : {fadeDur:F2}s)...");
+
+                // Temps d'attente au noir complet configurable avant d'estomper le noir
+                if (hold > 0f)
+                {
+                    yield return new WaitForSeconds(hold);
+                }
+
+                yield return StartCoroutine(FadeRoutine(1f, 0f, fadeDur));
             }
 
             // 3. Maintenir le plan avec un micro-mouvement de travelling (Slow Drift) très élégant
@@ -452,6 +555,7 @@ public class CinematicSequence : MonoBehaviour
         if (!lastShotFadedOut && fadeCanvasGroup != null)
         {
             fadeCanvasGroup.alpha = 0f;
+            fadeCanvasGroup.gameObject.SetActive(false);
         }
 
         isPlaying = false;
@@ -476,9 +580,14 @@ public class CinematicSequence : MonoBehaviour
             follow.FollowOffset = rotatedOffset;
         }
 
-        cinemachineCamera.transform.position = shot.target.position + rotatedOffset;
-        cinemachineCamera.transform.rotation = Quaternion.Euler(shot.pitchAngle, shot.yawAngle, 0f);
+        Vector3 targetPos = shot.target.position + rotatedOffset;
+        Quaternion targetRot = Quaternion.Euler(shot.pitchAngle, shot.yawAngle, 0f);
+
+        cinemachineCamera.transform.position = targetPos;
+        cinemachineCamera.transform.rotation = targetRot;
         cinemachineCamera.Lens.FieldOfView = safeFOV;
+
+        cinemachineCamera.ForceCameraPosition(targetPos, targetRot);
     }
 
     private IEnumerator ApplyShotSmoothRoutine(CinematicShot shot)
@@ -535,7 +644,14 @@ public class CinematicSequence : MonoBehaviour
 
     private IEnumerator SlowDriftHoldRoutine(CinematicShot shot)
     {
-        if (cinemachineCamera == null || shot.target == null) yield break;
+        if (cinemachineCamera == null || shot.target == null)
+        {
+            // Fallback : si les références sont nulles, on attend quand même la durée du plan
+            // pour ne pas sauter silencieusement les plans suivants
+            Debug.LogWarning($"[CinematicSequence] SlowDriftHoldRoutine : caméra ou cible NULL pour '{shot.shotName}'. Fallback sur WaitForSeconds({shot.duration}).");
+            yield return new WaitForSeconds(shot.duration);
+            yield break;
+        }
 
         var follow = cinemachineCamera.GetComponent<CinemachineFollow>();
         if (follow == null) follow = cinemachineCamera.GetComponentInChildren<CinemachineFollow>();
@@ -573,17 +689,32 @@ public class CinematicSequence : MonoBehaviour
     {
         if (fadeCanvasGroup == null) yield break;
 
+        duration = Mathf.Max(0.05f, duration);
         float elapsed = 0f;
+
+        fadeCanvasGroup.gameObject.SetActive(true);
         fadeCanvasGroup.alpha = fromAlpha;
+
+        Debug.Log($"[CinematicSequence] Lancement du fondu de {fromAlpha:F2} vers {toAlpha:F2} (durée : {duration:F2}s)");
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            fadeCanvasGroup.alpha = Mathf.Lerp(fromAlpha, toAlpha, elapsed / duration);
+            float t = Mathf.Clamp01(elapsed / duration);
+            // Courbe SmoothStep pour un dévoilement progressif et naturel
+            fadeCanvasGroup.alpha = Mathf.Lerp(fromAlpha, toAlpha, Mathf.SmoothStep(0f, 1f, t));
             yield return null;
         }
 
         fadeCanvasGroup.alpha = toAlpha;
+
+        // Si l'écran est redevenu transparent (Fade In terminé), désactiver l'objet noir pour garantir visibilité totale
+        if (toAlpha <= 0.01f)
+        {
+            fadeCanvasGroup.gameObject.SetActive(false);
+        }
+
+        Debug.Log($"[CinematicSequence] Fondu terminé : alpha = {fadeCanvasGroup.alpha}, actif = {fadeCanvasGroup.gameObject.activeSelf}");
     }
 
     private IEnumerator AnimateCinemaBarsRoutine(bool show, float duration)

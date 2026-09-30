@@ -143,5 +143,5 @@ Shader "Custom/InkPuddleShader"
             ENDHLSL
         }
     }
-    FallBack "Packages/com.unity.render-pipelines.universal/FallbackError"
+    FallBack Off
 }

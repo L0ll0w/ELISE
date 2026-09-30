@@ -21600,8 +21600,8 @@ MonoBehaviour:
     enableSlowDrift: 1
     slowDriftAmount: 1.5
     fadeInAtStart: 1
-    fadeInHoldDuration: 1
-    fadeDuration: 10
+    fadeInHoldDuration: 0.5
+    fadeDuration: 1.5
     fadeOutAtEnd: 0
     fadeOutDuration: 1.2
   - shotName: Plan 2

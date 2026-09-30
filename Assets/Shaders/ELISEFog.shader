@@ -290,5 +290,5 @@ Shader "Custom/ELISEFog"
             ENDHLSL
         }
     }
-    FallBack "Packages/com.unity.render-pipelines.universal/FallbackError"
+    FallBack Off
 }

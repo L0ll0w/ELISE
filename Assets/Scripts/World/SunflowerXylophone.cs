@@ -49,6 +49,27 @@ public class SunflowerXylophone : MonoBehaviour
     [Tooltip("Jouer aussi le son de la lame individuelle lors de l'impact (décochez si le son du xylophone est déjà dans le fichier WAV)")]
     public bool playKeySoundsWithWav = false;
 
+    [Header("Atténuation Spatialisée (Son 3D selon la distance)")]
+    [Tooltip("Si vrai, le volume du xylophone diminue à mesure que le joueur s'éloigne et devient inaudible à grande distance.")]
+    public bool enableDistanceAttenuation = true;
+
+    [Tooltip("Volume maximal quand le joueur est tout proche du xylophone (0.0 à 1.0).")]
+    [Range(0f, 1f)]
+    public float maxAudioVolume = 1.0f;
+
+    [Tooltip("Distance (en mètres) jusqu'à laquelle le xylophone est entendu au volume maximal (100%).")]
+    public float minAudioDistance = 3.0f;
+
+    [Tooltip("Distance (en mètres) à partir de laquelle le xylophone est totalement inaudible (volume = 0%).")]
+    public float maxAudioDistance = 18.0f;
+
+    [Tooltip("Intensité de la spatialisation 3D (0.0 = son 2D partout, 1.0 = son 3D spatialisé).")]
+    [Range(0f, 1f)]
+    public float spatialBlend = 1.0f;
+
+    [Tooltip("Mode d'atténuation Unity (Linear = diminution régulière, Logarithmic = décrément progressif).")]
+    public AudioRolloffMode rolloffMode = AudioRolloffMode.Linear;
+
     [Header("Pause lors du Dialogue")]
     [Tooltip("Met automatiquement en pause le xylophone si un dialogue commence, puis reprend après la fin du dialogue.")]
     public bool pauseDuringDialogue = true;
@@ -297,15 +318,7 @@ public class SunflowerXylophone : MonoBehaviour
 
     private void Awake()
     {
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false;
-            }
-        }
+        ConfigureAudioSource();
 
         if (leftMallet != null)
         {
@@ -352,8 +365,93 @@ public class SunflowerXylophone : MonoBehaviour
         }
     }
 
+    private Transform cachedPlayerTransform;
+
+    private void ConfigureAudioSource()
+    {
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+            }
+        }
+
+        if (audioSource != null && enableDistanceAttenuation)
+        {
+            audioSource.spatialBlend = spatialBlend;
+            audioSource.minDistance = minAudioDistance;
+            audioSource.maxDistance = maxAudioDistance;
+            audioSource.rolloffMode = rolloffMode;
+        }
+    }
+
+    private void UpdateDistanceAttenuation()
+    {
+        if (audioSource == null) return;
+
+        if (!enableDistanceAttenuation)
+        {
+            audioSource.spatialBlend = 0f;
+            return;
+        }
+
+        audioSource.spatialBlend = spatialBlend;
+        audioSource.minDistance = minAudioDistance;
+        audioSource.maxDistance = maxAudioDistance;
+        audioSource.rolloffMode = rolloffMode;
+
+        if (!audioSource.isPlaying && !isPlaying) return;
+
+        if (cachedPlayerTransform == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj == null)
+            {
+                PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+                if (pm != null) playerObj = pm.gameObject;
+            }
+            if (playerObj != null) cachedPlayerTransform = playerObj.transform;
+        }
+
+        if (cachedPlayerTransform != null)
+        {
+            Vector3 selfPos = transform.position;
+            Vector3 playerPos = cachedPlayerTransform.position;
+            float distance = Vector2.Distance(new Vector2(selfPos.x, selfPos.z), new Vector2(playerPos.x, playerPos.z));
+
+            float volumeFactor = 1.0f;
+            if (distance <= minAudioDistance)
+            {
+                volumeFactor = 1.0f;
+            }
+            else if (distance >= maxAudioDistance)
+            {
+                volumeFactor = 0.0f;
+            }
+            else
+            {
+                float t = (distance - minAudioDistance) / Mathf.Max(0.001f, maxAudioDistance - minAudioDistance);
+                if (rolloffMode == AudioRolloffMode.Linear)
+                {
+                    volumeFactor = Mathf.Clamp01(1.0f - t);
+                }
+                else
+                {
+                    volumeFactor = Mathf.Clamp01(1.0f - Mathf.SmoothStep(0f, 1f, t));
+                }
+            }
+
+            audioSource.volume = maxAudioVolume * volumeFactor;
+        }
+    }
+
     private void Update()
     {
+        UpdateDistanceAttenuation();
+
         // Auto-pause et reprise lors des dialogues
         if (pauseDuringDialogue && DialogueManager.Instance != null)
         {
