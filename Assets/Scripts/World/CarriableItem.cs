@@ -54,19 +54,36 @@ public class CarriableItem : Interactable
     [SerializeField] private AudioClip pickUpSound;
     [SerializeField] private AudioClip dropSound;
 
-    [Header("Association Xylophone / Note & Couleur")]
+    [Header("Association Xylophone / Audio & Couleur")]
     [Tooltip("Index de la lame/note du xylophone associée à cet objet (0 = grave, 7 = aigu)")]
     [SerializeField] private int itemKeyIndex = 0;
 
     [Tooltip("Couleur associée à cet objet (utilisée pour le feedback visuel sur le xylophone)")]
     [SerializeField] private Color itemColor = Color.white;
 
-    [Tooltip("Clip audio optionnel pour jouer un son de note spécifique à cet objet (si vide, utilise le son de la lame du xylophone)")]
+    [Tooltip("Clip audio complet/morceau spécifique joué quand on montre cet objet au Tournesol.")]
+    [SerializeField] private AudioClip itemAudioClip;
+
+    [Tooltip("Clip audio optionnel pour jouer un son de note spécifique à cet objet (fallback)")]
     [SerializeField] private AudioClip itemNoteSound;
+
+    [Tooltip("Dialogue optionnel joué au Tournesol AVANT de lancer la musique de cet objet.")]
+    [SerializeField] private DialogueData itemDialogue;
+
+    [Tooltip("Liste des frappes/animations de baguettes sur le xylophone synchronisées avec la musique de cet objet.")]
+    [SerializeField] private SunflowerXylophone.MelodyNote[] itemMelodyNotes;
+
+    [Header("Concert Spécial Rock")]
+    [Tooltip("Indique si cet objet déclenche la séquence de concert rock spéciale du tournesol.")]
+    [SerializeField] private bool isSpecialRockItem = false;
 
     public int ItemKeyIndex => itemKeyIndex;
     public Color ItemColor => itemColor;
     public AudioClip ItemNoteSound => itemNoteSound;
+    public AudioClip ItemAudioClip => itemAudioClip != null ? itemAudioClip : itemNoteSound;
+    public DialogueData ItemDialogue => itemDialogue;
+    public SunflowerXylophone.MelodyNote[] ItemMelodyNotes => itemMelodyNotes;
+    public bool IsSpecialRockItem => isSpecialRockItem;
 
     private float preventDropTime = -1f;
 
@@ -76,6 +93,17 @@ public class CarriableItem : Interactable
     public void PreventDropThisFrame()
     {
         preventDropTime = Time.unscaledTime;
+    }
+
+    /// <summary>
+    /// Détruit définitivement l'indicateur visuel d'interaction ("?") pour cet objet.
+    /// Utile quand l'objet a été remis au Tournesol et ne doit plus jamais afficher le prompt.
+    /// </summary>
+    public void PermanentlyHideIndicator()
+    {
+        hasInteracted = true;
+        HideIndicator();
+        CleanupIndicator();
     }
 
     [Header("Réapparition en cas de Chute (Vide / Fosse)")]
@@ -405,6 +433,18 @@ public class CarriableItem : Interactable
         {
             HideIndicator();
             UpdateCarryPosition();
+
+            // Bloquer impérativement toute action pendant un gel du joueur (cinématique en cours)
+            if (PlayerLockManager.IsLocked)
+            {
+                return;
+            }
+
+            // Bloquer impérativement la dépose d'un objet pendant qu'un dialogue est actif ou vient tout juste de se fermer !
+            if (DialogueManager.Instance != null && (DialogueManager.Instance.IsDialogueActive || DialogueManager.Instance.JustEndedDialogue))
+            {
+                return;
+            }
 
             // Écouter l'input pour poser l'objet si allowDrop est activé (et pas d'interaction en cours ni PNJ à proximité)
             if (allowDrop && Time.unscaledTime - pickUpTime > 0.2f && Time.unscaledTime - preventDropTime > 0.1f)

@@ -17,6 +17,12 @@ public class GroupMemberInfo : MonoBehaviour
     [Tooltip("Le portrait de ce personnage à afficher dans le menu du groupe.")]
     [SerializeField] private Sprite portrait;
 
+    [Tooltip("Prefab GameObject d'objet UI animé pour le portrait.")]
+    [SerializeField] private GameObject portraitPrefab;
+
+    [Tooltip("Animator Controller appliqué au portrait.")]
+    [SerializeField] private RuntimeAnimatorController portraitAnimator;
+
     [Tooltip("L'icône ou sprite de ce personnage à afficher dans la liste (ScrollView).")]
     [SerializeField] private Sprite menuIcon;
 
@@ -51,6 +57,26 @@ public class GroupMemberInfo : MonoBehaviour
         {
             if (characterData != null) characterData.portrait = value;
             else portrait = value;
+        }
+    }
+
+    public GameObject PortraitPrefab
+    {
+        get => characterData != null ? characterData.portraitPrefab : portraitPrefab;
+        set
+        {
+            if (characterData != null) characterData.portraitPrefab = value;
+            else portraitPrefab = value;
+        }
+    }
+
+    public RuntimeAnimatorController PortraitAnimator
+    {
+        get => characterData != null ? characterData.portraitAnimator : portraitAnimator;
+        set
+        {
+            if (characterData != null) characterData.portraitAnimator = value;
+            else portraitAnimator = value;
         }
     }
 

@@ -239,7 +239,9 @@ public abstract class Interactable : MonoBehaviour
         }
 
         // Determine target alpha based on range, ability to interact, and interaction state
-        float targetAlpha = (isPlayerInRange && CanInteract() && !hasInteracted && !isDialogueActive) ? 1f : 0f;
+        // Also force-hide the indicator during any player lock (cinematic, combat, etc.)
+        bool isPlayerLocked = PlayerLockManager.IsLocked;
+        float targetAlpha = (isPlayerInRange && CanInteract() && !hasInteracted && !isDialogueActive && !isPlayerLocked) ? 1f : 0f;
 
         // Fade animation
         if (Mathf.Abs(currentAlpha - targetAlpha) > 0.001f)
@@ -332,11 +334,17 @@ public abstract class Interactable : MonoBehaviour
     }
 
     /// <summary>
-    /// Vérifie si l'interaction est possible (ex: jeu non en pause, pas de combat actif).
+    /// Vérifie si l'interaction est possible (ex: jeu non en pause, pas de combat actif, pas de cinématique).
     /// </summary>
     protected virtual bool CanInteract()
     {
         if (PauseManager.Instance != null && PauseManager.Instance.IsPaused)
+        {
+            return false;
+        }
+
+        // Bloquer toute interaction pendant une cinématique ou un gel du joueur
+        if (PlayerLockManager.IsLocked)
         {
             return false;
         }

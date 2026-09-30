@@ -16,6 +16,8 @@ MonoBehaviour:
   - nodeID: 0
     characterName: ???
     portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 9100000, guid: 3c74c7bb9694b2349980a0ebc05b6a73, type: 2}
     sentence: Cette Ame a commis un haut crime de vol a l'etalage, tu vas devoir
       la juger d'une condamnation !
     choices: []
@@ -23,6 +25,8 @@ MonoBehaviour:
   - nodeID: 1
     characterName: ???
     portrait: {fileID: -1746232888, guid: 938c781695b4a6549af555c8557bd0fd, type: 3}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 9100000, guid: 3c74c7bb9694b2349980a0ebc05b6a73, type: 2}
     sentence: 'Montre moi de qu''elle bois tu te chauffe ! '
     choices: []
     nextNodeID: 

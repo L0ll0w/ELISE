@@ -13,6 +13,12 @@ public class CharacterData : ScriptableObject
     [Tooltip("Portrait de haute résolution du personnage.")]
     public Sprite portrait;
 
+    [Tooltip("Prefab GameObject d'objet UI animé pour le portrait du personnage.")]
+    public GameObject portraitPrefab;
+
+    [Tooltip("Animator Controller appliqué au portrait du personnage.")]
+    public RuntimeAnimatorController portraitAnimator;
+
     [Tooltip("Icône ou sprite de petite taille pour l'affichage dans la liste du groupe.")]
     public Sprite menuIcon;
 

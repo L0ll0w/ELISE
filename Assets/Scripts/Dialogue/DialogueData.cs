@@ -18,7 +18,12 @@ public struct DialogueNode
 {
     public string nodeID;
     public string characterName;
+    [Tooltip("Sprite fixe de portrait (optionnel si portraitPrefab ou portraitAnimator est fourni).")]
     public Sprite portrait;
+    [Tooltip("Prefab GameObject d'objet UI animé pour le portrait (instancié dynamiquement dans le cadre).")]
+    public GameObject portraitPrefab;
+    [Tooltip("Animator Controller à appliquer au composant Image du portrait.")]
+    public RuntimeAnimatorController portraitAnimator;
     [TextArea(3, 5)]
     public string sentence;
     public ChoiceData[] choices;

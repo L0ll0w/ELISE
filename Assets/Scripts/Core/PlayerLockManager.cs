@@ -7,6 +7,8 @@ using Unity.Cinemachine;
 /// </summary>
 public static class PlayerLockManager
 {
+    /// <summary>Vrai si le joueur est actuellement verrouillé (cinématique, dialogue, combat...).</summary>
+    public static bool IsLocked { get; private set; }
     /// <summary>
     /// Verrouille ou déverrouille les déplacements du joueur principal et de son groupe.
     /// </summary>
@@ -25,6 +27,8 @@ public static class PlayerLockManager
         {
             return;
         }
+
+        IsLocked = isLocked;
 
         // 1. Gestion du groupe (GroupManager)
         if (GroupManager.Instance != null)

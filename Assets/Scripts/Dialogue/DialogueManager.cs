@@ -66,7 +66,19 @@ public class DialogueManager : MonoBehaviour
     private int dialogueEndFrame = -1;
     private int dialogueStartFrame = -1;
 
+    private GameObject currentInstantiatedPortrait;
+
+    private void ClearInstantiatedPortrait()
+    {
+        if (currentInstantiatedPortrait != null)
+        {
+            Destroy(currentInstantiatedPortrait);
+            currentInstantiatedPortrait = null;
+        }
+    }
+
     public bool IsDialogueActive => isDialogueActive;
+    public bool JustEndedDialogue => Time.frameCount <= dialogueEndFrame + 2;
     public bool CanStartDialogue
     {
         get
@@ -212,20 +224,10 @@ public class DialogueManager : MonoBehaviour
             namePanel.SetActive(!string.IsNullOrEmpty(node.characterName));
         }
 
-        bool hasPortrait = node.portrait != null;
+        // Nettoyer l'instance de portrait animé précédente s'il y en avait une
+        ClearInstantiatedPortrait();
 
-        if (portraitImage != null)
-        {
-            if (hasPortrait)
-            {
-                portraitImage.sprite = node.portrait;
-                portraitImage.gameObject.SetActive(true);
-            }
-            else
-            {
-                portraitImage.gameObject.SetActive(false);
-            }
-        }
+        bool hasPortrait = node.portraitPrefab != null || node.portrait != null || node.portraitAnimator != null;
 
         // Gérer le conteneur/cadre du portrait s'il est spécifié ou s'il s'agit d'un objet parent dédié
         GameObject containerToHide = portraitContainer;
@@ -234,7 +236,100 @@ public class DialogueManager : MonoBehaviour
             containerToHide = portraitImage.transform.parent.gameObject;
         }
 
-        if (containerToHide != null && containerToHide != portraitImage.gameObject)
+        // Si un prefab d'objet UI / GameObject est spécifié pour le portrait animé
+        if (node.portraitPrefab != null)
+        {
+            if (portraitImage != null)
+            {
+                portraitImage.enabled = false;
+                portraitImage.gameObject.SetActive(false);
+            }
+
+            Transform parentContainer = portraitContainer != null ? portraitContainer.transform : (portraitImage != null ? portraitImage.transform.parent : (dialoguePanel != null ? dialoguePanel.transform : transform));
+
+            currentInstantiatedPortrait = Instantiate(node.portraitPrefab, parentContainer, false);
+
+            // Ajuster le RectTransform
+            RectTransform rt = currentInstantiatedPortrait.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                rt.anchoredPosition = Vector2.zero;
+                rt.localScale = Vector3.one;
+                rt.localRotation = Quaternion.identity;
+            }
+
+            // Si le prefab utilise un SpriteRenderer (ex: animation 2D de sprite), on s'assure d'avoir un composant UI Image pour l'afficher sur le Canvas
+            SpriteRenderer sr = currentInstantiatedPortrait.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = currentInstantiatedPortrait.GetComponentInChildren<SpriteRenderer>(true);
+
+            Image img = currentInstantiatedPortrait.GetComponent<Image>();
+            if (img == null && sr != null)
+            {
+                img = currentInstantiatedPortrait.AddComponent<Image>();
+            }
+
+            if (img != null && sr != null)
+            {
+                UIAnimatedPortraitAdapter adapter = currentInstantiatedPortrait.GetComponent<UIAnimatedPortraitAdapter>();
+                if (adapter == null) adapter = currentInstantiatedPortrait.AddComponent<UIAnimatedPortraitAdapter>();
+                adapter.SetTargets(img, sr);
+                adapter.SyncSprite();
+            }
+        }
+        else if (portraitImage != null)
+        {
+            if (hasPortrait)
+            {
+                portraitImage.gameObject.SetActive(true);
+                portraitImage.sprite = node.portrait;
+
+                // Gérer l'Animator Controller sur l'image si spécifié
+                SpriteRenderer sr = portraitImage.GetComponent<SpriteRenderer>();
+                Animator anim = portraitImage.GetComponent<Animator>();
+
+                if (node.portraitAnimator != null)
+                {
+                    // S'assurer d'avoir un SpriteRenderer pour capter les animations de type 2D (classID 212)
+                    if (sr == null) sr = portraitImage.gameObject.AddComponent<SpriteRenderer>();
+                    sr.enabled = false; // Ne s'affiche pas directement en world space, juste utilisé par l'Animator
+
+                    if (anim == null) anim = portraitImage.gameObject.AddComponent<Animator>();
+                    anim.runtimeAnimatorController = node.portraitAnimator;
+                    anim.enabled = true;
+                    anim.Rebind();
+                    anim.Update(0f);
+
+                    UIAnimatedPortraitAdapter adapter = portraitImage.GetComponent<UIAnimatedPortraitAdapter>();
+                    if (adapter == null) adapter = portraitImage.gameObject.AddComponent<UIAnimatedPortraitAdapter>();
+                    adapter.SetTargets(portraitImage, sr);
+                    adapter.SyncSprite();
+                }
+                else
+                {
+                    if (anim != null) anim.enabled = false;
+                    UIAnimatedPortraitAdapter adapter = portraitImage.GetComponent<UIAnimatedPortraitAdapter>();
+                    if (adapter != null) adapter.enabled = false;
+
+                    // Désactiver l'image pour éviter le carré blanc Unity si aucun sprite n'est assigné
+                    portraitImage.enabled = (node.portrait != null);
+                }
+            }
+            else
+            {
+                portraitImage.enabled = false;
+                portraitImage.gameObject.SetActive(false);
+                Animator anim = portraitImage.GetComponent<Animator>();
+                if (anim != null) anim.enabled = false;
+                UIAnimatedPortraitAdapter adapter = portraitImage.GetComponent<UIAnimatedPortraitAdapter>();
+                if (adapter != null) adapter.enabled = false;
+            }
+        }
+
+        if (containerToHide != null && containerToHide != portraitImage?.gameObject && (currentInstantiatedPortrait == null || containerToHide != currentInstantiatedPortrait))
         {
             containerToHide.SetActive(hasPortrait);
         }
@@ -533,6 +628,7 @@ public class DialogueManager : MonoBehaviour
         isDialogueActive = false;
         areChoicesActive = false;
         ClearChoices();
+        ClearInstantiatedPortrait();
 
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
 

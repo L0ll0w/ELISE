@@ -16,12 +16,16 @@ MonoBehaviour:
   - nodeID: 0
     characterName: ???
     portrait: {fileID: 0}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 9100000, guid: 3c74c7bb9694b2349980a0ebc05b6a73, type: 2}
     sentence: Les ames ne vont pas se lesser faire
     choices: []
     nextNodeID: 1
   - nodeID: 1
     characterName: ???
     portrait: {fileID: 0}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 9100000, guid: 3c74c7bb9694b2349980a0ebc05b6a73, type: 2}
     sentence: 'Esquive leurs attaques en te deplacant autour d''eux '
     choices: []
     nextNodeID: 

@@ -78,6 +78,7 @@ public class MenuManager : MonoBehaviour
     [Header("UI Fiche Personnage Details")]
     [SerializeField] private TextMeshProUGUI detailNameText;
     [SerializeField] private Image detailPortraitImage;
+    private GameObject instantiatedDetailPortrait;
     [SerializeField] private TextMeshProUGUI levelText;
     [SerializeField] private TextMeshProUGUI hpText;
     [SerializeField] private TextMeshProUGUI mpText; // PC
@@ -720,6 +721,8 @@ public class MenuManager : MonoBehaviour
 
             string name = info != null ? info.CharacterName : memberGo.name;
             Sprite portrait = info != null ? info.Portrait : null;
+            GameObject portraitPrefab = info != null ? info.PortraitPrefab : null;
+            RuntimeAnimatorController portraitAnimator = info != null ? info.PortraitAnimator : null;
             Sprite listIcon = info != null ? info.MenuIcon : null;
 
             // Sécurité / Fallback : Si aucune icône n'est assignée pour la liste,
@@ -740,7 +743,7 @@ public class MenuManager : MonoBehaviour
                 // Alternance : pair (0, 2, 4...) -> portrait à gauche (isEven = true)
                 // impair (1, 3, 5...) -> portrait à droite (isEven = false)
                 bool isEven = (i % 2 == 0);
-                uiItem.Setup(name, listIcon, isEven);
+                uiItem.Setup(name, listIcon, isEven, portraitPrefab, portraitAnimator);
             }
             else
             {
@@ -766,6 +769,8 @@ public class MenuManager : MonoBehaviour
                     CharacterData fallbackData = ScriptableObject.CreateInstance<CharacterData>();
                     fallbackData.characterName = name;
                     fallbackData.portrait = portrait;
+                    fallbackData.portraitPrefab = portraitPrefab;
+                    fallbackData.portraitAnimator = portraitAnimator;
                     fallbackData.menuIcon = listIcon;
                     button.onClick.AddListener(() => {
                         lastSelectedGroupMemberButton = targetBtnObj;
@@ -798,17 +803,82 @@ public class MenuManager : MonoBehaviour
         if (charProfilePanel != null) charProfilePanel.SetActive(true);
         if (statPanel != null) statPanel.SetActive(true);
 
-        // 2. Remplir les données graphiques et textuelles du profil
+        // 2. Nettoyer l'instance de portrait animé précédente
+        if (instantiatedDetailPortrait != null)
+        {
+            Destroy(instantiatedDetailPortrait);
+            instantiatedDetailPortrait = null;
+        }
+
+        // 3. Remplir les données graphiques et textuelles du profil
         if (detailNameText != null)
         {
             detailNameText.gameObject.SetActive(true);
             detailNameText.text = data.characterName;
         }
+
         if (detailPortraitImage != null)
         {
-            detailPortraitImage.gameObject.SetActive(true);
-            detailPortraitImage.sprite = data.portrait;
-            detailPortraitImage.enabled = data.portrait != null;
+            if (data.portraitPrefab != null)
+            {
+                detailPortraitImage.enabled = false;
+                detailPortraitImage.gameObject.SetActive(false);
+                instantiatedDetailPortrait = Instantiate(data.portraitPrefab, detailPortraitImage.transform.parent, false);
+                RectTransform rt = instantiatedDetailPortrait.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                    rt.anchoredPosition = Vector2.zero;
+                    rt.localScale = Vector3.one;
+                    rt.localRotation = Quaternion.identity;
+                }
+
+                SpriteRenderer sr = instantiatedDetailPortrait.GetComponent<SpriteRenderer>();
+                if (sr == null) sr = instantiatedDetailPortrait.GetComponentInChildren<SpriteRenderer>(true);
+                Image img = instantiatedDetailPortrait.GetComponent<Image>();
+                if (img == null && sr != null) img = instantiatedDetailPortrait.AddComponent<Image>();
+                if (img != null && sr != null)
+                {
+                    UIAnimatedPortraitAdapter adapter = instantiatedDetailPortrait.GetComponent<UIAnimatedPortraitAdapter>();
+                    if (adapter == null) adapter = instantiatedDetailPortrait.AddComponent<UIAnimatedPortraitAdapter>();
+                    adapter.SetTargets(img, sr);
+                    adapter.SyncSprite();
+                }
+            }
+            else
+            {
+                detailPortraitImage.gameObject.SetActive(true);
+                detailPortraitImage.sprite = data.portrait;
+
+                SpriteRenderer sr = detailPortraitImage.GetComponent<SpriteRenderer>();
+                Animator anim = detailPortraitImage.GetComponent<Animator>();
+                if (data.portraitAnimator != null)
+                {
+                    if (sr == null) sr = detailPortraitImage.gameObject.AddComponent<SpriteRenderer>();
+                    sr.enabled = false;
+
+                    if (anim == null) anim = detailPortraitImage.gameObject.AddComponent<Animator>();
+                    anim.runtimeAnimatorController = data.portraitAnimator;
+                    anim.enabled = true;
+                    anim.Rebind();
+                    anim.Update(0f);
+
+                    UIAnimatedPortraitAdapter adapter = detailPortraitImage.GetComponent<UIAnimatedPortraitAdapter>();
+                    if (adapter == null) adapter = detailPortraitImage.gameObject.AddComponent<UIAnimatedPortraitAdapter>();
+                    adapter.SetTargets(detailPortraitImage, sr);
+                    adapter.SyncSprite();
+                }
+                else
+                {
+                    if (anim != null) anim.enabled = false;
+                    UIAnimatedPortraitAdapter adapter = detailPortraitImage.GetComponent<UIAnimatedPortraitAdapter>();
+                    if (adapter != null) adapter.enabled = false;
+                    detailPortraitImage.enabled = data.portrait != null;
+                }
+            }
         }
 
         // Statistiques
@@ -836,6 +906,12 @@ public class MenuManager : MonoBehaviour
     /// </summary>
     public void HideCharacterDetails()
     {
+        if (instantiatedDetailPortrait != null)
+        {
+            Destroy(instantiatedDetailPortrait);
+            instantiatedDetailPortrait = null;
+        }
+
         if (groupListContainer != null) groupListContainer.SetActive(true);
         if (notePanel != null) notePanel.SetActive(true);
         if (charProfilePanel != null) charProfilePanel.SetActive(false);
