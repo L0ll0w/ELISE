@@ -108,6 +108,13 @@ public class StatueInkController : MonoBehaviour
     [Tooltip("Vitesse de disparition/séchage de la larme sur la statue après l'impact.")]
     [SerializeField] private float tearFadeSpeed = 0.5f;
 
+    [Header("Timing de Spawn Précis")]
+    [Tooltip("Activer le déclenchement de l'animation de spawn précisément à un délai fixe.")]
+    [SerializeField] private bool useFixedSpawnTimer = true;
+
+    [Tooltip("Temps exact (en secondes) à partir du début de la scène/cinématique pour déclencher l'animation de spawn (ex: 44.0s).")]
+    [SerializeField] private float fixedSpawnDelaySeconds = 44.0f;
+
     private static readonly int InkProgressId = Shader.PropertyToID("_InkProgress");
     private static readonly int InkTrailProgressId = Shader.PropertyToID("_InkTrailProgress");
     private static readonly int PuddleSizeId = Shader.PropertyToID("_PuddleSize");
@@ -118,11 +125,13 @@ public class StatueInkController : MonoBehaviour
     private float targetPuddleSize;
     private float currentVisualPuddleSize;
     private bool hasTriggeredMaxSizeEvent = false;
+    private float sceneStartTime;
 
     private void Start()
     {
         Debug.Log($"[StatueInkController] Start() exécuté sur '{gameObject.name}'. Nombre de statues configurées : {statues.Count}");
         
+        sceneStartTime = Time.time;
         puddlePropBlock = new MaterialPropertyBlock();
         
         // Initialiser la taille de la flaque partagée
@@ -169,16 +178,8 @@ public class StatueInkController : MonoBehaviour
             ResetStatueVisuals(statue);
         }
 
-        // Auto-détection de l'Animator du joueur si non renseigné
-        if (spawnObjectAnimator == null)
-        {
-            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
-            if (pm != null)
-            {
-                spawnObjectAnimator = pm.GetComponent<Animator>();
-                if (spawnObjectAnimator == null) spawnObjectAnimator = pm.GetComponentInChildren<Animator>();
-            }
-        }
+        // Auto-détection de l'Animator du spawn/joueur si non renseigné
+        spawnObjectAnimator = FindSpawnAnimator();
 
         // Au début de la cinématique, placer le joueur/l'objet sur l'animation d'attente PlayerSpawnIdle
         if (spawnObjectAnimator != null && !string.IsNullOrEmpty(initialIdleAnimationName))
@@ -193,13 +194,34 @@ public class StatueInkController : MonoBehaviour
             {
                 StartCoroutine(InkCycleRoutine(statue));
             }
+
+            if (useFixedSpawnTimer)
+            {
+                StartCoroutine(FixedSpawnTimerRoutine());
+            }
+        }
+    }
+
+    private IEnumerator FixedSpawnTimerRoutine()
+    {
+        yield return new WaitForSeconds(fixedSpawnDelaySeconds);
+        if (!hasTriggeredMaxSizeEvent)
+        {
+            Debug.Log($"[StatueInkController] Chronomètre de {fixedSpawnDelaySeconds}s atteint ! Déclenchement de l'animation de spawn.");
+            TriggerMaxSizeEvent();
         }
     }
 
     private void Update()
     {
-        // Agrandir la flaque partagée de manière fluide vers la taille cible
-        if (currentVisualPuddleSize < targetPuddleSize)
+        if (useFixedSpawnTimer && fixedSpawnDelaySeconds > 0f && !hasTriggeredMaxSizeEvent)
+        {
+            float elapsed = Time.time - sceneStartTime;
+            float progress = Mathf.Clamp01(elapsed / fixedSpawnDelaySeconds);
+            currentVisualPuddleSize = Mathf.Lerp(startingPuddleSize, maxPuddleSizeLimit, progress);
+            SetSharedPuddleSize(currentVisualPuddleSize);
+        }
+        else if (currentVisualPuddleSize < targetPuddleSize)
         {
             currentVisualPuddleSize = Mathf.MoveTowards(currentVisualPuddleSize, targetPuddleSize, Time.deltaTime * puddleGrowthSpeed);
             SetSharedPuddleSize(currentVisualPuddleSize);
@@ -266,6 +288,42 @@ public class StatueInkController : MonoBehaviour
         SetSharedPuddleSize(currentVisualPuddleSize);
     }
 
+    private Animator FindSpawnAnimator()
+    {
+        if (spawnObjectAnimator != null) return spawnObjectAnimator;
+
+        // 1. Chercher un objet nommé PlayerSpawn / Player Spawn dans la scène
+        GameObject spawnObj = GameObject.Find("PlayerSpawn");
+        if (spawnObj == null) spawnObj = GameObject.Find("Player Spawn");
+        if (spawnObj != null)
+        {
+            Animator anim = spawnObj.GetComponent<Animator>();
+            if (anim == null) anim = spawnObj.GetComponentInChildren<Animator>();
+            if (anim != null) return anim;
+        }
+
+        // 2. Sinon chercher tout Animator possédant le contrôleur PlayerSpawn
+        Animator[] allAnimators = FindObjectsByType<Animator>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var anim in allAnimators)
+        {
+            if (anim.runtimeAnimatorController != null && anim.runtimeAnimatorController.name.ToLower().Contains("spawn"))
+            {
+                return anim;
+            }
+        }
+
+        // 3. Fallback sur le joueur principal
+        PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+        if (pm != null)
+        {
+            Animator anim = pm.GetComponent<Animator>();
+            if (anim == null) anim = pm.GetComponentInChildren<Animator>();
+            if (anim != null) return anim;
+        }
+
+        return null;
+    }
+
     private void TriggerMaxSizeEvent()
     {
         hasTriggeredMaxSizeEvent = true;
@@ -282,16 +340,8 @@ public class StatueInkController : MonoBehaviour
             if (spawnObjectAnimator == null) spawnObjectAnimator = spawnedInstance.GetComponentInChildren<Animator>();
         }
 
-        // Auto-détection de l'Animator du joueur si toujours nul
-        if (spawnObjectAnimator == null)
-        {
-            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
-            if (pm != null)
-            {
-                spawnObjectAnimator = pm.GetComponent<Animator>();
-                if (spawnObjectAnimator == null) spawnObjectAnimator = pm.GetComponentInChildren<Animator>();
-            }
-        }
+        // Auto-détection de l'Animator du spawn/joueur si toujours nul
+        spawnObjectAnimator = FindSpawnAnimator();
 
         // 2. Déclencher l'animation PlayerSpawn quand les conditions sont réunies (flaque max size)
         if (spawnObjectAnimator != null)

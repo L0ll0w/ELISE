@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Player
+  m_Name: Characteres
   m_Shader: {fileID: 4800000, guid: a1b0437090541bc4b953cec97fde2473, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

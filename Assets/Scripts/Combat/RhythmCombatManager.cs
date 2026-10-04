@@ -367,6 +367,7 @@ public class RhythmCombatManager : MonoBehaviour
     private List<Sprite> allyOriginalSprites = new List<Sprite>();
     private List<RuntimeAnimatorController> allyOriginalAnimators = new List<RuntimeAnimatorController>();
     private int activeAllyIndex = 0;
+    private Vector3 initialPlayerWorldPosition;
     
     private int enemyHP;
     private int enemyMaxHP = 300;
@@ -611,6 +612,7 @@ public class RhythmCombatManager : MonoBehaviour
         // Si le joueur est en l'air lors du déclenchement du combat, le remettre immédiatement au sol et réinitialiser sa physique
         if (leader != null)
         {
+            initialPlayerWorldPosition = leader.position;
             leader.position = SnapToGround(leader.position);
 
             Rigidbody playerRb = leader.GetComponent<Rigidbody>();
@@ -2197,6 +2199,19 @@ public class RhythmCombatManager : MonoBehaviour
         {
             PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
             if (pm != null) targetLeader = pm.transform;
+        }
+
+        if (targetLeader != null && initialPlayerWorldPosition != Vector3.zero)
+        {
+            targetLeader.position = SnapToGround(initialPlayerWorldPosition);
+
+            Rigidbody playerRb = targetLeader.GetComponent<Rigidbody>();
+            if (playerRb == null) playerRb = targetLeader.GetComponentInChildren<Rigidbody>();
+            if (playerRb != null)
+            {
+                playerRb.linearVelocity = Vector3.zero;
+                playerRb.angularVelocity = Vector3.zero;
+            }
         }
 
         if (virtualCamera == null)
@@ -4111,15 +4126,65 @@ public class RhythmCombatManager : MonoBehaviour
 
             // Calcul du point de tir du doigt
             Vector3 spawnPos;
-            if (playerFingerTip != null)
+
+            Transform pTrans = (activeAllyIndex >= 0 && activeAllyIndex < allies.Count && allies[activeAllyIndex] != null) 
+                ? allies[activeAllyIndex] 
+                : null;
+            if (pTrans == null)
             {
-                spawnPos = playerFingerTip.position;
+                PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+                if (pm != null) pTrans = pm.transform;
+            }
+
+            Transform fingerPoint = playerFingerTip;
+            if (fingerPoint == null && pTrans != null)
+            {
+                // Chercher dynamiquement l'objet "shoot position", "finger", ou "hand" dans la hiérarchie du joueur
+                Transform foundShoot = pTrans.Find("shoot position");
+                if (foundShoot == null)
+                {
+                    foreach (Transform child in pTrans.GetComponentsInChildren<Transform>())
+                    {
+                        string nameLower = child.name.ToLower();
+                        if (nameLower.Contains("shoot") || nameLower.Contains("finger") || nameLower.Contains("doigt") || nameLower.Contains("hand"))
+                        {
+                            foundShoot = child;
+                            break;
+                        }
+                    }
+                }
+                fingerPoint = foundShoot;
+            }
+
+            if (pTrans != null && fingerPoint != null)
+            {
+                Vector3 localOffset = pTrans.InverseTransformPoint(fingerPoint.position);
+                SpriteRenderer sr = pTrans.GetComponent<SpriteRenderer>();
+                if (sr == null) sr = pTrans.GetComponentInChildren<SpriteRenderer>();
+
+                if (sr != null && sr.flipX)
+                {
+                    // Si le sprite est retourné à gauche (flipX == true), inverser X pour sortir du bout du doigt vers la gauche
+                    localOffset.x = -Mathf.Abs(localOffset.x);
+                }
+                else
+                {
+                    localOffset.x = Mathf.Abs(localOffset.x);
+                }
+
+                spawnPos = pTrans.TransformPoint(localOffset);
+            }
+            else if (pTrans != null)
+            {
+                SpriteRenderer sr = pTrans.GetComponent<SpriteRenderer>();
+                if (sr == null) sr = pTrans.GetComponentInChildren<SpriteRenderer>();
+                float sideDir = (sr != null && sr.flipX) ? -1f : 1f;
+
+                spawnPos = pTrans.position + Vector3.up * 0.8f + pTrans.right * (0.5f * sideDir);
             }
             else
             {
-                PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
-                Transform pTrans = pm != null ? pm.transform : transform;
-                spawnPos = pTrans.position + Vector3.up * 1.2f + pTrans.forward * 0.5f;
+                spawnPos = transform.position + Vector3.up * 1.2f + transform.forward * 0.5f;
             }
 
             // Instancier le projectile d'encre

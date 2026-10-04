@@ -73,6 +73,7 @@ public class CombatManager : MonoBehaviour
 
     private int currentAllyIndex = 0;
     private bool isPlayerActionActive = false;
+    private Vector3 initialPlayerWorldPosition;
 
     // Références Caméra
     private CinemachineCamera virtualCamera;
@@ -170,6 +171,7 @@ public class CombatManager : MonoBehaviour
         // Si le joueur est en l'air lors du déclenchement du combat, le remettre immédiatement au sol et réinitialiser sa physique
         if (leader != null)
         {
+            initialPlayerWorldPosition = leader.position;
             leader.position = SnapToGround(leader.position);
 
             Rigidbody playerRb = leader.GetComponent<Rigidbody>();
@@ -357,6 +359,20 @@ public class CombatManager : MonoBehaviour
         }
 
         // 5. Réactiver les contrôles du joueur et le suivi du groupe
+        Transform targetLeader = GroupManager.Instance != null && GroupManager.Instance.Leader != null 
+            ? GroupManager.Instance.Leader 
+            : null;
+
+        if (targetLeader == null)
+        {
+            PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+            if (pm != null) targetLeader = pm.transform;
+        }
+
+        if (targetLeader != null && initialPlayerWorldPosition != Vector3.zero)
+        {
+            targetLeader.position = SnapToGround(initialPlayerWorldPosition);
+        }
         PlayerLockManager.SetPlayerLocked(false, force: true);
 
         yield return new WaitForSeconds(0.2f);

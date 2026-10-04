@@ -166,22 +166,47 @@ public class AudioManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Met en pause la musique de zone active en prévision d'un combat, en sauvegardant le temps de lecture.
+    /// Met en pause la musique de zone active avec un fondu de sortie (fade out)
+    /// pour laisser jouer une mélodie d'objet ou une cinématique.
     /// </summary>
-    public void PauseZoneMusicForCombat(float fadeDuration = 0.8f)
+    public void PauseZoneMusic(float fadeDuration = 1.0f)
     {
-        // 1. Pause de la musique de zone gérée par l'AudioManager
         AudioSource active = ActiveAudioSource;
         if (active != null && active.isPlaying)
         {
             savedZoneMusic = active.clip;
             savedZoneMusicTime = active.time;
             isMusicPausedForCombat = true;
-            Debug.Log($"[AudioManager] Musique de zone '{savedZoneMusic.name}' mise en pause pour le combat à {savedZoneMusicTime:F1}s.");
+            Debug.Log($"[AudioManager] Musique de zone '{savedZoneMusic.name}' mise en pause en fondu ({fadeDuration:F1}s) à {savedZoneMusicTime:F1}s.");
 
             if (crossfadeCoroutine != null) StopCoroutine(crossfadeCoroutine);
             crossfadeCoroutine = StartCoroutine(FadeOutCurrentMusicRoutine(fadeDuration, pauseInsteadOfStop: true));
         }
+    }
+
+    /// <summary>
+    /// Restaure la musique de zone mise en pause avec un fondu d'entrée (fade in).
+    /// </summary>
+    public void ResumeZoneMusic(float fadeDuration = 1.0f)
+    {
+        if (isMusicPausedForCombat && savedZoneMusic != null)
+        {
+            Debug.Log($"[AudioManager] Reprise de la musique de zone '{savedZoneMusic.name}' en fondu ({fadeDuration:F1}s).");
+            CurrentZoneMusic = savedZoneMusic;
+            isMusicPausedForCombat = false;
+
+            if (crossfadeCoroutine != null) StopCoroutine(crossfadeCoroutine);
+            crossfadeCoroutine = StartCoroutine(ResumeMusicRoutine(savedZoneMusic, savedZoneMusicTime, fadeDuration));
+        }
+    }
+
+    /// <summary>
+    /// Met en pause la musique de zone active en prévision d'un combat, en sauvegardant le temps de lecture.
+    /// </summary>
+    public void PauseZoneMusicForCombat(float fadeDuration = 0.8f)
+    {
+        // 1. Pause de la musique de zone gérée par l'AudioManager
+        PauseZoneMusic(fadeDuration);
 
         // 2. Pause de toutes les sources audio environnementales / de musique actives dans la scène (ex: Player P, ambiances de scène)
         PauseExternalAudioSources(fadeDuration);
@@ -194,15 +219,7 @@ public class AudioManager : MonoBehaviour
     public void ResumeZoneMusicAfterCombat(float fadeDuration = 0.8f)
     {
         // 1. Reprise de la musique de zone AudioManager
-        if (isMusicPausedForCombat && savedZoneMusic != null)
-        {
-            Debug.Log($"[AudioManager] Reprise de la musique de zone '{savedZoneMusic.name}' après le combat.");
-            CurrentZoneMusic = savedZoneMusic;
-            isMusicPausedForCombat = false;
-
-            if (crossfadeCoroutine != null) StopCoroutine(crossfadeCoroutine);
-            crossfadeCoroutine = StartCoroutine(ResumeMusicRoutine(savedZoneMusic, savedZoneMusicTime, fadeDuration));
-        }
+        ResumeZoneMusic(fadeDuration);
 
         // 2. Reprise des sources environnementales externes
         ResumeExternalAudioSources(fadeDuration);

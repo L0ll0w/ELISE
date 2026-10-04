@@ -590,7 +590,19 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
                 // Déplacer la caméra principale manuellement à côté de sa trajectoire de base (mouvement linéaire et stable)
                 if (virtualCamera != null)
                 {
-                    virtualCamera.transform.position = basePos + cameraOffset;
+                    Vector3 camPos = basePos + cameraOffset;
+                    virtualCamera.transform.position = camPos;
+
+                    Vector3 targetCenter = gardenerPos + Vector3.up * 1.2f;
+                    if (sprite != null && sprite.bounds.size.sqrMagnitude > 0.01f)
+                    {
+                        targetCenter = sprite.bounds.center;
+                    }
+                    Vector3 lookDir = targetCenter - camPos;
+                    if (lookDir.sqrMagnitude > 0.001f)
+                    {
+                        virtualCamera.transform.rotation = Quaternion.LookRotation(lookDir, Vector3.up);
+                    }
                 }
 
                 yield return null;
@@ -602,7 +614,19 @@ public class GardenerCinematicTriggerZone : CinematicTriggerZone
         {
             float targetYaw = zoomYaw >= 0f ? zoomYaw : virtualCamera.transform.rotation.eulerAngles.y;
             Vector3 cameraOffset = Quaternion.Euler(0f, targetYaw, 0f) * new Vector3(0f, zoomHeight, -zoomOutDistance);
-            virtualCamera.transform.position = target + cameraOffset;
+            Vector3 camPos = target + cameraOffset;
+            virtualCamera.transform.position = camPos;
+
+            Vector3 targetCenter = target + Vector3.up * 1.2f;
+            if (sprite != null && sprite.bounds.size.sqrMagnitude > 0.01f)
+            {
+                targetCenter = sprite.bounds.center;
+            }
+            Vector3 lookDir = targetCenter - camPos;
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                virtualCamera.transform.rotation = Quaternion.LookRotation(lookDir, Vector3.up);
+            }
         }
     }
 }

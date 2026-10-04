@@ -379,18 +379,27 @@ public class SunflowerXylophone : MonoBehaviour
             }
         }
 
-        if (audioSource != null && enableDistanceAttenuation)
+        if (audioSource != null)
         {
-            audioSource.spatialBlend = spatialBlend;
-            audioSource.minDistance = minAudioDistance;
-            audioSource.maxDistance = maxAudioDistance;
-            audioSource.rolloffMode = rolloffMode;
+            audioSource.dopplerLevel = 0f;
+            audioSource.pitch = 1.0f;
+
+            if (enableDistanceAttenuation)
+            {
+                audioSource.spatialBlend = spatialBlend;
+                audioSource.minDistance = minAudioDistance;
+                audioSource.maxDistance = maxAudioDistance;
+                audioSource.rolloffMode = rolloffMode;
+            }
         }
     }
 
     private void UpdateDistanceAttenuation()
     {
         if (audioSource == null) return;
+
+        audioSource.dopplerLevel = 0f;
+        audioSource.pitch = 1.0f;
 
         if (!enableDistanceAttenuation)
         {
@@ -858,12 +867,24 @@ public class SunflowerXylophone : MonoBehaviour
     {
         if (item == null) yield break;
 
+        // Mettre en pause la musique de fond de la zone avec un fondu de sortie
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PauseZoneMusic(1.0f);
+        }
+
         // --- ÉVÉNEMENT SPÉCIAL CONCERT ROCK ---
         if (item.IsSpecialRockItem)
         {
             // Supprimer définitivement l'indicateur "?" de l'objet dès qu'il est remis au Tournesol
             item.PermanentlyHideIndicator();
             yield return StartCoroutine(PlaySpecialRockConcertRoutine(item));
+            
+            // Reprendre la musique de fond après le concert rock
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.ResumeZoneMusic(1.5f);
+            }
             yield break;
         }
 
@@ -875,7 +896,7 @@ public class SunflowerXylophone : MonoBehaviour
             audioSource.Stop();
         }
 
-        // Pause avant le morceau
+        // Pause avant le morceau (le fondu de la musique de fond s'effectue pendant ce délai)
         yield return new WaitForSeconds(delayBeforeItemNote);
 
         // Récupérer le clip audio et les notes associées
@@ -914,11 +935,22 @@ public class SunflowerXylophone : MonoBehaviour
         // Remettre les baguettes au repos
         ReturnMalletsToRest();
 
+        // Pause après le morceau si nécessaire
+        if (delayAfterItemNote > 0f)
+        {
+            yield return new WaitForSeconds(delayAfterItemNote);
+        }
+
+        // Reprendre la musique de fond de la zone avec un fondu d'entrée
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.ResumeZoneMusic(1.0f);
+        }
+
         // Reprise selon la configuration
         if (resumeMelodyAfterItem)
         {
             Debug.Log($"[SunflowerXylophone] 🌻 Morceau de l'objet terminé. Pause de {delayAfterItemNote}s avant de reprendre la mélodie...");
-            yield return new WaitForSeconds(delayAfterItemNote);
             PlayMelody();
         }
         else
@@ -1209,7 +1241,12 @@ public class SunflowerXylophone : MonoBehaviour
     {
         if (!useFullWavAudio && keyAudioClips != null && keyIndex < keyAudioClips.Length && keyAudioClips[keyIndex] != null)
         {
-            audioSource.PlayOneShot(keyAudioClips[keyIndex]);
+            if (audioSource != null)
+            {
+                audioSource.dopplerLevel = 0f;
+                audioSource.pitch = 1.0f;
+                audioSource.PlayOneShot(keyAudioClips[keyIndex]);
+            }
         }
     }
 

@@ -253,13 +253,25 @@ public class CinematicTriggerZone : MonoBehaviour
 
         // Calcul des valeurs cibles
         float targetYaw = zoomYaw >= 0f ? zoomYaw : startRot.eulerAngles.y;
-        float targetPitch = zoomPitch >= 0f ? zoomPitch : startRot.eulerAngles.x;
-        Quaternion targetRot = Quaternion.Euler(targetPitch, targetYaw, 0f);
         
         // Tourner le décalage de la caméra selon la rotation Y ciblée
         Vector3 localOffset = new Vector3(0f, zoomHeight, -zoomOutDistance);
         Vector3 targetOffset = Quaternion.Euler(0f, targetYaw, 0f) * localOffset;
         Vector3 targetPos = target.position + targetOffset;
+
+        // Déterminer le point central de la cible à viser (center of bounds si renderer présent, sinon offset Y de 1.2m)
+        Vector3 targetCenter = target.position + Vector3.up * 1.2f;
+        Renderer targetRenderer = target.GetComponent<Renderer>();
+        if (targetRenderer == null) targetRenderer = target.GetComponentInChildren<Renderer>();
+        if (targetRenderer != null && targetRenderer.bounds.size.sqrMagnitude > 0.01f)
+        {
+            targetCenter = targetRenderer.bounds.center;
+        }
+
+        Vector3 lookDir = targetCenter - targetPos;
+        Quaternion targetRot = lookDir.sqrMagnitude > 0.001f 
+            ? Quaternion.LookRotation(lookDir, Vector3.up) 
+            : Quaternion.Euler(zoomPitch >= 0f ? zoomPitch : startRot.eulerAngles.x, targetYaw, 0f);
 
         float elapsed = 0f;
         float duration = Mathf.Max(0.05f, transitionInDuration);

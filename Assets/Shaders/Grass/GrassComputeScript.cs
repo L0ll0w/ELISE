@@ -4,8 +4,10 @@
 // for the base setup for compute shaders
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [ExecuteInEditMode]
 public class GrassComputeScript : MonoBehaviour
@@ -513,6 +515,13 @@ public class GrassComputeScript : MonoBehaviour
         if (m_MainCamera == null && Application.isPlaying)
         {
             m_MainCamera = Camera.main;
+            // Fallback : si Camera.main est momentanément null (fade cinématique, transition),
+            // chercher toute caméra active plutôt que de sauter le dispatch (ce qui causerait du blanc)
+            if (m_MainCamera == null)
+            {
+                Camera[] cams = Camera.allCameras;
+                if (cams != null && cams.Length > 0) m_MainCamera = cams[0];
+            }
         }
 
         if (m_MainCamera != null)
