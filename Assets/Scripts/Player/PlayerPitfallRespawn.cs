@@ -355,6 +355,22 @@ public class PlayerPitfallRespawn : MonoBehaviour
     }
 
     /// <summary>
+    /// Met à jour manuellement la position sûre du joueur (utilisé par exemple lors des téléportations légitimes).
+    /// Réinitialise également l'historique pour éviter toute fausse détection de chute relative.
+    /// </summary>
+    public void SetSafePosition(Vector3 newSafePos, Collider groundCollider = null)
+    {
+        lastSafePosition = newSafePos;
+        lastSafeCollider = groundCollider;
+        lastJumpTakeoffPosition = Vector3.zero;
+        lastJumpTakeoffCollider = null;
+        wasJumpTriggered = false;
+        safePositionHistory.Clear();
+        safePositionHistory.Add(newSafePos);
+        Debug.Log($"[PlayerPitfallRespawn] Nouvelle position sûre définie manuellement : {newSafePos:F2}");
+    }
+
+    /// <summary>
     /// Calcule la position de réapparition : s'il s'agit d'un saut raté, réapparaît au point de départ du saut.
     /// </summary>
     /// <summary>

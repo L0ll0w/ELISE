@@ -68,8 +68,15 @@ public static class PlayerLockManager
                 if (anim == null) anim = pm.GetComponentInChildren<Animator>();
                 if (anim != null)
                 {
-                    anim.Play("idle");
-                    anim.SetBool("isWalking", false);
+                    if (CarriableItem.CurrentlyCarriedItem != null && CarriableItem.CurrentlyCarriedItem.IsCarried)
+                    {
+                        CarriableItem.CurrentlyCarriedItem.ReapplyCarryAnimation();
+                    }
+                    else
+                    {
+                        anim.Play("idle");
+                        anim.SetBool("isWalking", false);
+                    }
                 }
             }
         }

@@ -84,6 +84,7 @@ public class CarriableItem : Interactable
     public DialogueData ItemDialogue => itemDialogue;
     public SunflowerXylophone.MelodyNote[] ItemMelodyNotes => itemMelodyNotes;
     public bool IsSpecialRockItem => isSpecialRockItem;
+    public Vector3 CarryOffset => carryOffset;
 
     private float preventDropTime = -1f;
 
@@ -104,6 +105,18 @@ public class CarriableItem : Interactable
         hasInteracted = true;
         HideIndicator();
         CleanupIndicator();
+    }
+
+    private bool isDissolving = false;
+    public bool IsDissolving => isDissolving;
+
+    /// <summary>
+    /// Prépare l'objet pour sa disparition en fondu de poussière (bloque le repositionnement par LateUpdate).
+    /// </summary>
+    public void PrepareForDissolve()
+    {
+        isDissolving = true;
+        PermanentlyHideIndicator();
     }
 
     [Header("Réapparition en cas de Chute (Vide / Fosse)")]
@@ -427,12 +440,104 @@ public class CarriableItem : Interactable
         lastPlacedPosition = transform.position;
     }
 
+    /// <summary>
+    /// Consomme l'objet porté (ex: offert au Tournesol), le détruit,
+    /// libère le joueur et remet son animation sur 'idle'.
+    /// </summary>
+    public void Consume()
+    {
+        Transform oldCarrier = carryingPlayer;
+
+        if (CurrentlyCarriedItem == this)
+        {
+            CurrentlyCarriedItem = null;
+        }
+
+        isCarried = false;
+        isDissolving = false;
+        isPlayerInRange = false;
+        hasInteracted = false;
+        HideIndicator();
+        CleanupIndicator();
+
+        // 1. Restaurer l'animation du joueur sur idle
+        Animator anim = playerAnimator;
+        if (anim == null && oldCarrier != null)
+        {
+            anim = oldCarrier.GetComponent<Animator>();
+            if (anim == null) anim = oldCarrier.GetComponentInChildren<Animator>();
+        }
+
+        if (anim == null)
+        {
+            GameObject pObj = GameObject.FindGameObjectWithTag("Player");
+            if (pObj == null)
+            {
+                PlayerMovement pMov = Object.FindFirstObjectByType<PlayerMovement>();
+                if (pMov != null) pObj = pMov.gameObject;
+            }
+            if (pObj != null)
+            {
+                anim = pObj.GetComponent<Animator>();
+                if (anim == null) anim = pObj.GetComponentInChildren<Animator>();
+            }
+        }
+
+        if (anim != null)
+        {
+            if (!string.IsNullOrEmpty(animatorBoolParameter))
+            {
+                anim.SetBool(animatorBoolParameter, false);
+            }
+
+            anim.SetBool("isHolding", false);
+            anim.SetBool("isWalking", false);
+            anim.SetBool("isJumping", false);
+
+            int idleHash = Animator.StringToHash("idle");
+            if (anim.HasState(0, idleHash))
+            {
+                anim.Play(idleHash, 0, 0f);
+            }
+            else
+            {
+                int upperIdleHash = Animator.StringToHash("Idle");
+                if (anim.HasState(0, upperIdleHash))
+                {
+                    anim.Play(upperIdleHash, 0, 0f);
+                }
+            }
+        }
+
+        if (playerHoldSprite != null && originalPlayerSprite != null)
+        {
+            if (playerSpriteRenderer == null && oldCarrier != null)
+            {
+                playerSpriteRenderer = oldCarrier.GetComponent<SpriteRenderer>();
+                if (playerSpriteRenderer == null) playerSpriteRenderer = oldCarrier.GetComponentInChildren<SpriteRenderer>();
+            }
+            if (playerSpriteRenderer != null)
+            {
+                playerSpriteRenderer.sprite = originalPlayerSprite;
+            }
+        }
+
+        carryingPlayer = null;
+
+        // 2. Désactiver puis détruire l'objet
+        gameObject.SetActive(false);
+        Destroy(gameObject, 0.1f);
+    }
+
     protected override void Update()
     {
         if (isCarried)
         {
             HideIndicator();
-            UpdateCarryPosition();
+            if (!isDissolving)
+            {
+                UpdateCarryPosition();
+            }
 
             // Bloquer impérativement toute action pendant un gel du joueur (cinématique en cours)
             if (PlayerLockManager.IsLocked)
@@ -615,7 +720,7 @@ public class CarriableItem : Interactable
 
     private void LateUpdate()
     {
-        if (isCarried)
+        if (isCarried && !isDissolving)
         {
             UpdateCarryPosition();
         }
@@ -625,7 +730,7 @@ public class CarriableItem : Interactable
     {
         if (carryingPlayer == null) return;
 
-        Vector3 targetPos = carryingPlayer.position + carryOffset;
+        Vector3 targetPos = carryingPlayer.position + CurrentCarryOffset;
         transform.position = targetPos;
 
         // Ajuster l'ordre de rendu du sprite de l'objet pour qu'il s'affiche devant/au-dessus du joueur
@@ -633,6 +738,97 @@ public class CarriableItem : Interactable
         if (itemSR != null && playerSpriteRenderer != null)
         {
             itemSR.sortingOrder = playerSpriteRenderer.sortingOrder + 1;
+        }
+    }
+
+    // Blend cinématique : 0 = au-dessus de la tête (carryOffset), 1 = au centre du joueur
+    private float carryCenterBlend = 0f;
+    private Vector3 carryCenterOffset = Vector3.zero;
+
+    private Vector3 CurrentCarryOffset => Vector3.LerpUnclamped(carryOffset, carryCenterOffset, carryCenterBlend);
+
+    /// <summary>
+    /// Déplace l'objet porté entre sa position au-dessus de la tête (blend 0) et le centre du joueur (blend 1).
+    /// </summary>
+    public void SetCarryCenterBlend(Vector3 centerOffset, float blend)
+    {
+        carryCenterOffset = centerOffset;
+        carryCenterBlend = blend;
+        if (isCarried && !isDissolving) UpdateCarryPosition();
+    }
+
+    /// <summary>
+    /// Met à jour immédiatement la position de l'objet porté au-dessus du joueur.
+    /// </summary>
+    public void ForceUpdatePosition(Vector3 playerPosition)
+    {
+        transform.position = playerPosition + CurrentCarryOffset;
+    }
+
+    /// <summary>
+    /// Réapplique l'animation et le sprite de portage au joueur (ex: après une cinématique, un saut ou un TP).
+    /// </summary>
+    public void ReapplyCarryAnimation()
+    {
+        if (!isCarried) return;
+
+        if (carryingPlayer == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null) carryingPlayer = playerObj.transform;
+        }
+
+        if (playerAnimator == null && carryingPlayer != null)
+        {
+            playerAnimator = carryingPlayer.GetComponent<Animator>();
+            if (playerAnimator == null) playerAnimator = carryingPlayer.GetComponentInChildren<Animator>();
+        }
+
+        if (playerSpriteRenderer == null && carryingPlayer != null)
+        {
+            playerSpriteRenderer = carryingPlayer.GetComponent<SpriteRenderer>();
+            if (playerSpriteRenderer == null) playerSpriteRenderer = carryingPlayer.GetComponentInChildren<SpriteRenderer>();
+        }
+
+        if (playerAnimator != null)
+        {
+            if (!string.IsNullOrEmpty(animatorBoolParameter))
+            {
+                playerAnimator.SetBool(animatorBoolParameter, true);
+            }
+
+            bool played = false;
+            if (!string.IsNullOrEmpty(animatorStateToPlay))
+            {
+                int stateHash = Animator.StringToHash(animatorStateToPlay);
+                if (playerAnimator.HasState(0, stateHash))
+                {
+                    playerAnimator.Play(stateHash, 0, 0f);
+                    played = true;
+                }
+            }
+
+            if (!played)
+            {
+                int holdingHash = Animator.StringToHash("holding");
+                if (playerAnimator.HasState(0, holdingHash))
+                {
+                    playerAnimator.Play(holdingHash, 0, 0f);
+                }
+                else
+                {
+                    int tennirHash = Animator.StringToHash("Tennir");
+                    if (playerAnimator.HasState(0, tennirHash))
+                    {
+                        playerAnimator.Play(tennirHash, 0, 0f);
+                    }
+                }
+            }
+        }
+
+        if (playerHoldSprite != null && playerSpriteRenderer != null)
+        {
+            playerSpriteRenderer.sprite = playerHoldSprite;
         }
     }
 

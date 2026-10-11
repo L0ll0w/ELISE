@@ -181,8 +181,8 @@ public class SunflowerXylophone : MonoBehaviour
     [Tooltip("Délai de pause (en secondes) après l'interaction avant de jouer le morceau de l'objet.")]
     public float delayBeforeItemNote = 1.0f;
 
-    [Tooltip("Délai de pause (en secondes) après le morceau si resumeMelodyAfterItem est activé.")]
-    public float delayAfterItemNote = 1.0f;
+    [Tooltip("Délai de pause (en secondes) après le morceau avant que le Tournesol ne reprenne son cycle.")]
+    public float delayAfterItemNote = 0.5f;
 
     [Tooltip("Si vrai, reprend la mélodie de fond après le son de l'objet. Si faux (par défaut), le Tournesol s'arrête complètement de jouer quand le son est fini.")]
     public bool resumeMelodyAfterItem = false;
@@ -237,8 +237,8 @@ public class SunflowerXylophone : MonoBehaviour
     [Tooltip("Durée de lévitation / descente (secondes)")]
     public float levitateDuration = 2.0f;
 
-    [Tooltip("Nom de l'état ou du booléen d'animation Rock (ex: 'Rock')")]
-    public string rockAnimationState = "Rock";
+    [Tooltip("Nom de l'état ou du booléen d'animation Rock (ex: 'DevoveoGuitar' ou 'Rock')")]
+    public string rockAnimationState = "DevoveoGuitar";
 
     [Tooltip("Nom de l'animation Devoveo (animation de base du personnage) jouée juste avant qu'il se repose au sol (ex: 'Devoveo' ou 'Idle').")]
     public string devoveoAnimationState = "Devoveo";
@@ -275,6 +275,35 @@ public class SunflowerXylophone : MonoBehaviour
 
     [Tooltip("Intensité renforcée du shake caméra après l'apparition des flammes (ex: 0.12)")]
     public float fireBeatCameraShakeIntensity = 0.13f;
+
+    [Tooltip("Décalage (s) du premier temps dans la musique, pour caler le punch pile sur la grosse caisse")]
+    public float concertBeatOffset = 0f;
+
+    [Tooltip("Rotation (roll) en degrés du punch caméra sur chaque beat (avant les flammes)")]
+    public float beatShakeRollDegrees = 0.8f;
+
+    [Tooltip("Rotation (roll) en degrés du punch caméra sur chaque beat (après les flammes)")]
+    public float fireBeatShakeRollDegrees = 2.2f;
+
+    [Tooltip("Vitesse d'amortissement du punch (plus haut = plus sec / claquant)")]
+    public float beatShakeDecay = 11f;
+
+    [Tooltip("Fréquence du rebond ressort après l'impact (Hz)")]
+    public float beatShakeSpringFrequency = 6f;
+
+    [Tooltip("Multiplicateur d'impact sur le 1er temps de chaque mesure")]
+    public float downbeatAccent = 1.6f;
+
+    [Tooltip("Nombre de temps par mesure (pour l'accent du 1er temps)")]
+    public int beatsPerBar = 4;
+
+    // Offset de shake appliqué uniquement au moment du rendu (n'interfère pas avec Cinemachine)
+    private Camera concertShakeCam;
+    private Vector3 concertShakeOffset;
+    private float concertShakeRoll;
+    private Vector3 concertShakeSavedPos;
+    private Quaternion concertShakeSavedRot;
+    private bool concertShakeApplied;
 
     [Tooltip("Activer l'effet de lumières de scène rotatives et colorées (spotlights de concert)")]
     public bool enableStageLights = true;
@@ -333,6 +362,20 @@ public class SunflowerXylophone : MonoBehaviour
         }
 
         CacheDefaultKeyTransforms();
+
+        // S'assurer que le modèle de guitare 3D est masqué au repos
+        Transform sun = GetSunflowerCharacterTransform();
+        if (sun != null)
+        {
+            Transform[] sunTransforms = sun.GetComponentsInChildren<Transform>(true);
+            foreach (var t in sunTransforms)
+            {
+                if (t != null && t.name == "scene (1)")
+                {
+                    t.gameObject.SetActive(false);
+                }
+            }
+        }
     }
 
     private void CacheDefaultKeyTransforms()
@@ -867,42 +910,12 @@ public class SunflowerXylophone : MonoBehaviour
     {
         if (item == null) yield break;
 
-        // Mettre en pause la musique de fond de la zone avec un fondu de sortie
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PauseZoneMusic(1.0f);
-        }
-
-        // --- ÉVÉNEMENT SPÉCIAL CONCERT ROCK ---
-        if (item.IsSpecialRockItem)
-        {
-            // Supprimer définitivement l'indicateur "?" de l'objet dès qu'il est remis au Tournesol
-            item.PermanentlyHideIndicator();
-            yield return StartCoroutine(PlaySpecialRockConcertRoutine(item));
-            
-            // Reprendre la musique de fond après le concert rock
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.ResumeZoneMusic(1.5f);
-            }
-            yield break;
-        }
-
-        Debug.Log($"[SunflowerXylophone] 🌻 Interaction avec '{item.gameObject.name}'. Pause de {delayBeforeItemNote}s avant de jouer son morceau audio...");
-
-        // Stopper le jeu aléatoire en cours
-        if (audioSource != null && audioSource.isPlaying)
-        {
-            audioSource.Stop();
-        }
-
-        // Pause avant le morceau (le fondu de la musique de fond s'effectue pendant ce délai)
-        yield return new WaitForSeconds(delayBeforeItemNote);
-
-        // Récupérer le clip audio et les notes associées
+        // 1. Sauvegarder toutes les propriétés de l'objet avant sa consommation / destruction
         AudioClip clipToPlay = item.ItemAudioClip;
         Color flashColor = item.ItemColor;
         int primaryKeyIndex = item.ItemKeyIndex;
+        bool isRock = item.IsSpecialRockItem;
+        string itemName = item.gameObject.name;
         List<MelodyNote> noteSequence = null;
 
         if (item.ItemMelodyNotes != null && item.ItemMelodyNotes.Length > 0)
@@ -926,40 +939,215 @@ public class SunflowerXylophone : MonoBehaviour
 
         if (clipToPlay == null) clipToPlay = item.ItemNoteSound;
 
-        // Lancer la lecture audio et les animations de frappe
-        if (clipToPlay != null)
+        // Supprimer définitivement l'indicateur "?" de l'objet
+        item.PermanentlyHideIndicator();
+
+        // Verrouiller le joueur pour qu'il assiste à la scène sans bouger
+        PlayerLockManager.SetPlayerLocked(true);
+
+        try
         {
-            yield return StartCoroutine(PlayAudioSequenceRoutine(clipToPlay, item.gameObject.name, primaryKeyIndex, flashColor, noteSequence));
+            // Mettre en pause la musique de fond de la zone avec un fondu de sortie
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PauseZoneMusic(1.0f);
+            }
+
+            // Stopper le jeu aléatoire en cours
+            if (audioSource != null && audioSource.isPlaying)
+            {
+                audioSource.Stop();
+            }
+
+            // Pause initiale avant la disparition
+            float preDissolveWait = Mathf.Max(0.25f, delayBeforeItemNote * 0.4f);
+            yield return new WaitForSeconds(preDissolveWait);
+
+            Debug.Log($"[SunflowerXylophone] ✨ Disparition en poussière de '{itemName}' juste avant la mélodie...");
+
+            // --- FONDU DE POUSSIÈRE ET DISPARITION DE L'OBJET ---
+            // Juste avant la mélodie, l'objet s'évapore dans un nuage de poussière magique.
+            // Au même moment précis où il a disparu, le player reprend son animation idle !
+            yield return StartCoroutine(DisappearItemInDustRoutine(item, flashColor));
+
+            // Petit temps naturel pour laisser la poussière tournoyer doucement avant le premier coup de baguette
+            yield return new WaitForSeconds(0.35f);
+
+            // --- ÉVÉNEMENT SPÉCIAL CONCERT ROCK ---
+            if (isRock)
+            {
+                yield return StartCoroutine(PlaySpecialRockConcertRoutine(clipToPlay, flashColor, itemName));
+            }
+            else
+            {
+                // Lancer la lecture audio et les animations de frappe des baguettes
+                if (clipToPlay != null)
+                {
+                    yield return StartCoroutine(PlayAudioSequenceRoutine(clipToPlay, itemName, primaryKeyIndex, flashColor, noteSequence));
+                }
+
+                // Remettre les baguettes au repos
+                ReturnMalletsToRest();
+
+                // --- DÉVERROUILLER LE JOUEUR IMMÉDIATEMENT APRÈS LA MÉLODIE ! ---
+                PlayerLockManager.SetPlayerLocked(false);
+
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.ResumeZoneMusic(1.0f);
+                }
+
+                // Pause pour le Tournesol uniquement (le joueur peut déjà bouger librement !)
+                if (delayAfterItemNote > 0f)
+                {
+                    yield return new WaitForSeconds(delayAfterItemNote);
+                }
+
+                // Reprise selon la configuration
+                if (resumeMelodyAfterItem)
+                {
+                    Debug.Log($"[SunflowerXylophone] 🌻 Morceau de l'objet terminé. Reprise de la mélodie...");
+                    PlayMelody();
+                }
+                else
+                {
+                    Debug.Log($"[SunflowerXylophone] 🌻 Morceau de l'objet terminé. Reprise du cycle aléatoire hors dialogue.");
+                    StartIdleRandomRoutine();
+                }
+            }
+        }
+        finally
+        {
+            // Toujours déverrouiller le joueur et reprendre la musique de zone à la fin
+            PlayerLockManager.SetPlayerLocked(false);
+
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.ResumeZoneMusic(1.0f);
+            }
+
+            itemInteractionRoutine = null;
+        }
+    }
+
+    /// <summary>
+    /// Fait disparaître l'objet porté dans un nuage de poussière féerique juste avant que le tournesol ne joue la mélodie.
+    /// Au moment précis où l'objet a disparu, item.Consume() est appelé et le player reprend immédiatement son animation 'idle'.
+    /// </summary>
+    private IEnumerator DisappearItemInDustRoutine(CarriableItem item, Color flashColor)
+    {
+        if (item == null) yield break;
+
+        // 1. Préparer l'objet pour la dissolution (empêcher le recentrage automatique sur le joueur par LateUpdate)
+        item.PrepareForDissolve();
+
+        Vector3 startPos = item.transform.position;
+        Vector3 startScale = item.transform.localScale;
+
+        // 2. Faire spawner le nuage de poussière magique double couche (poussière + étincelles)
+        Color dustTint = (flashColor != Color.clear && flashColor != Color.black) ? flashColor : new Color(0.95f, 0.88f, 0.72f);
+        ProceduralDustEffect.Spawn(startPos, dustTint);
+
+        // Récupérer tous les SpriteRenderers de l'objet pour le fondu d'opacité
+        SpriteRenderer[] srs = item.GetComponentsInChildren<SpriteRenderer>(true);
+        Dictionary<SpriteRenderer, Color> origColors = new Dictionary<SpriteRenderer, Color>();
+        foreach (var sr in srs)
+        {
+            if (sr != null) origColors[sr] = sr.color;
         }
 
-        // Remettre les baguettes au repos
-        ReturnMalletsToRest();
-
-        // Pause après le morceau si nécessaire
-        if (delayAfterItemNote > 0f)
+        // Récupérer également les matériaux des MeshRenderers si l'objet est un modèle 3D
+        MeshRenderer[] mrs = item.GetComponentsInChildren<MeshRenderer>(true);
+        List<Material> clonedMaterials = new List<Material>();
+        foreach (var mr in mrs)
         {
-            yield return new WaitForSeconds(delayAfterItemNote);
+            if (mr != null && mr.materials != null)
+            {
+                foreach (var mat in mr.materials)
+                {
+                    if (mat != null) clonedMaterials.Add(mat);
+                }
+            }
         }
 
-        // Reprendre la musique de fond de la zone avec un fondu d'entrée
-        if (AudioManager.Instance != null)
+        // 3. Animation du fondu : rétrécissement vers 0, légère ascension et fondu alpha vers 0
+        float fadeDuration = 0.50f;
+        float elapsed = 0f;
+
+        while (elapsed < fadeDuration)
         {
-            AudioManager.Instance.ResumeZoneMusic(1.0f);
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / fadeDuration);
+            float tSmooth = Mathf.SmoothStep(0f, 1f, t);
+
+            if (item != null)
+            {
+                // Rétrécissement vers 0
+                item.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, tSmooth);
+                // Légère ascension délicate dans la poussière
+                item.transform.position = startPos + Vector3.up * (0.12f * tSmooth);
+                // Rotation douce et légère
+                item.transform.Rotate(Vector3.forward, 45f * Time.deltaTime);
+
+                // Fondu alpha des sprites
+                foreach (var kvp in origColors)
+                {
+                    if (kvp.Key != null)
+                    {
+                        Color c = kvp.Value;
+                        kvp.Key.color = new Color(c.r, c.g, c.b, Mathf.Lerp(c.a, 0f, tSmooth));
+                    }
+                }
+
+                // Fondu alpha des matériaux 3D
+                foreach (var mat in clonedMaterials)
+                {
+                    if (mat != null)
+                    {
+                        if (mat.HasProperty("_Color"))
+                        {
+                            Color c = mat.color;
+                            mat.color = new Color(c.r, c.g, c.b, Mathf.Lerp(c.a, 0f, tSmooth));
+                        }
+                        else if (mat.HasProperty("_BaseColor"))
+                        {
+                            Color c = mat.GetColor("_BaseColor");
+                            mat.SetColor("_BaseColor", new Color(c.r, c.g, c.b, Mathf.Lerp(c.a, 0f, tSmooth)));
+                        }
+                    }
+                }
+            }
+
+            yield return null;
         }
 
-        // Reprise selon la configuration
-        if (resumeMelodyAfterItem)
+        // 4. L'OBJET A TOTALEMENT DISPARU : Au même moment précis, libérer le joueur et forcer l'animation 'idle' !
+        if (item != null)
         {
-            Debug.Log($"[SunflowerXylophone] 🌻 Morceau de l'objet terminé. Pause de {delayAfterItemNote}s avant de reprendre la mélodie...");
-            PlayMelody();
-        }
-        else
-        {
-            Debug.Log($"[SunflowerXylophone] 🌻 Morceau de l'objet terminé. Reprise du cycle aléatoire hors dialogue.");
-            StartIdleRandomRoutine();
+            item.Consume();
         }
 
-        itemInteractionRoutine = null;
+        // Forcer immédiatement et explicitement l'animation 'idle' sur le joueur
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj == null)
+        {
+            PlayerMovement pm = Object.FindFirstObjectByType<PlayerMovement>();
+            if (pm != null) playerObj = pm.gameObject;
+        }
+
+        if (playerObj != null)
+        {
+            Animator playerAnim = playerObj.GetComponent<Animator>();
+            if (playerAnim == null) playerAnim = playerObj.GetComponentInChildren<Animator>();
+
+            if (playerAnim != null)
+            {
+                playerAnim.SetBool("isHolding", false);
+                playerAnim.SetBool("isWalking", false);
+                playerAnim.SetBool("isJumping", false);
+                playerAnim.Play("idle", 0, 0f);
+            }
+        }
     }
 
     private IEnumerator PlayWavMelodyRoutine()
@@ -1331,9 +1519,16 @@ public class SunflowerXylophone : MonoBehaviour
     /// </summary>
     private IEnumerator PlaySpecialRockConcertRoutine(CarriableItem item)
     {
-        if (item == null) yield break;
+        AudioClip clip = item != null ? item.ItemAudioClip : null;
+        if (clip == null && item != null) clip = item.ItemNoteSound;
+        Color col = item != null ? item.ItemColor : Color.white;
+        string name = item != null ? item.gameObject.name : "Rock";
+        return PlaySpecialRockConcertRoutine(clip, col, name);
+    }
 
-        Debug.Log($"[SunflowerXylophone] 🎸🔥 ROCK CONCERT ULTIME avec '{item.gameObject.name}' !");
+    private IEnumerator PlaySpecialRockConcertRoutine(AudioClip clipToPlay, Color concertColor, string itemName)
+    {
+        Debug.Log($"[SunflowerXylophone] 🎸🔥 ROCK CONCERT ULTIME avec '{itemName}' !");
 
         // ============================================================
         //   ROCK CONCERT ULTIME — Séquence cinématique complète
@@ -1344,8 +1539,7 @@ public class SunflowerXylophone : MonoBehaviour
         // 1. Verrouiller le joueur pendant TOUTE l'action
         PlayerLockManager.SetPlayerLocked(true);
 
-        // 2. Récupérer le clip audio à jouer
-        AudioClip clipToPlay = item.ItemAudioClip;
+        // 2. Récupérer le clip audio à jouer s'il n'est pas déjà spécifié
         if (clipToPlay == null && itemAudioSequences != null && itemAudioSequences.Length > 0)
         {
             foreach (var seq in itemAudioSequences)
@@ -1353,7 +1547,6 @@ public class SunflowerXylophone : MonoBehaviour
                 if (seq.audioClip != null) { clipToPlay = seq.audioClip; break; }
             }
         }
-        if (clipToPlay == null) clipToPlay = item.ItemNoteSound;
 
         // 3. Bandes noires cinéma (letterbox)
         GameObject topBarObj = null;
@@ -1558,17 +1751,36 @@ public class SunflowerXylophone : MonoBehaviour
         // Horodatage de départ de la lévitation (pour la courbe en infini)
         float levitationStartTime = Time.time;
 
-        // 7. Animation Rock
+        // 7. Animation Rock (DevoveoGuitar -> DevoveoRock)
         Animator anim = sunChar.GetComponent<Animator>();
-        if (anim == null) anim = sunChar.GetComponentInChildren<Animator>();
+        if (anim == null) anim = sunChar.GetComponentInChildren<Animator>(true);
         if (anim == null) anim = GetComponent<Animator>();
-        if (anim == null) anim = GetComponentInChildren<Animator>();
+        if (anim == null) anim = GetComponentInChildren<Animator>(true);
 
-        if (anim != null && !string.IsNullOrEmpty(rockAnimationState))
+        if (anim != null)
         {
-            int rockHash = Animator.StringToHash(rockAnimationState);
-            if (anim.HasState(0, rockHash)) anim.Play(rockHash);
-            else anim.SetBool(rockAnimationState, true);
+            anim.enabled = true;
+
+            int rockHash = !string.IsNullOrEmpty(rockAnimationState) ? Animator.StringToHash(rockAnimationState) : 0;
+            int devoveoGuitarHash = Animator.StringToHash("DevoveoGuitar");
+            int devoveoRockHash = Animator.StringToHash("DevoveoRock");
+
+            if (rockHash != 0 && anim.HasState(0, rockHash))
+            {
+                anim.Play(rockHash, 0, 0f);
+            }
+            else if (anim.HasState(0, devoveoGuitarHash))
+            {
+                anim.Play(devoveoGuitarHash, 0, 0f);
+            }
+            else if (anim.HasState(0, devoveoRockHash))
+            {
+                anim.Play(devoveoRockHash, 0, 0f);
+            }
+            else if (rockHash != 0)
+            {
+                anim.SetBool(rockAnimationState, true);
+            }
         }
 
         // 8. Lancement audio avec Fade In
@@ -1609,9 +1821,22 @@ public class SunflowerXylophone : MonoBehaviour
         float tapInterval = itemTapBeatSubdivision * secondsPerBeat;
         if (tapInterval < 0.15f) tapInterval = 0.15f;
         float nextTapTime = 0f;
-        float nextBeatPulseTime = 0f;
         float currentBeatPulseOffset = 0f;
-        float nextBeatShakeTime = 0f;
+
+        // Horloge musicale lissée (audioSource.time avance par paquets DSP -> saccades)
+        float smoothClock = 0f;
+        int lastBeatIndex = -1;
+        float lastBeatTime = -10f;
+        float kickAmp = 0f;
+        float kickRoll = 0f;
+        float kickDirX = 0f;
+        float kickPulse = 0f;
+
+        concertShakeCam = mainCam;
+        concertShakeOffset = Vector3.zero;
+        concertShakeRoll = 0f;
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering += OnConcertBeginCameraRendering;
+        UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += OnConcertEndCameraRendering;
 
         float origFOV = 40f;
         if (cineCam != null) origFOV = cineCam.Lens.FieldOfView;
@@ -1637,7 +1862,33 @@ public class SunflowerXylophone : MonoBehaviour
         while (audioSource != null && audioSource.isPlaying)
         {
             float currentTrackTime = audioSource.time;
-            bool onBeat = currentTrackTime >= nextBeatPulseTime;
+
+            // Horloge lissée : avance au deltaTime, corrigée doucement vers le temps audio réel
+            smoothClock += Time.deltaTime;
+            float clockDrift = currentTrackTime - smoothClock;
+            if (Mathf.Abs(clockDrift) > 0.1f) smoothClock = currentTrackTime;
+            else smoothClock += clockDrift * Mathf.Clamp01(Time.deltaTime * 4f);
+
+            // Détection du beat calée sur la grille (aucune dérive cumulée)
+            bool onBeat = false;
+            float beatClock = smoothClock - concertBeatOffset;
+            if (beatClock >= 0f)
+            {
+                int beatIndex = Mathf.FloorToInt(beatClock / secondsPerBeat);
+                if (beatIndex > lastBeatIndex)
+                {
+                    lastBeatIndex = beatIndex;
+                    lastBeatTime = concertBeatOffset + beatIndex * secondsPerBeat;
+                    onBeat = true;
+
+                    bool downbeat = beatsPerBar > 0 && (beatIndex % beatsPerBar) == 0;
+                    float accent = downbeat ? downbeatAccent : 1f;
+                    kickAmp = (event12SecTriggered ? fireBeatCameraShakeIntensity : beatCameraShakeIntensity) * accent;
+                    kickRoll = (event12SecTriggered ? fireBeatShakeRollDegrees : beatShakeRollDegrees) * accent * ((beatIndex % 2 == 0) ? 1f : -1f);
+                    kickDirX = ((beatIndex % 2 == 0) ? 1f : -1f) * Random.Range(0.4f, 1f);
+                    kickPulse = beatPulseAmount * accent * (event12SecTriggered ? 1.4f : 1f);
+                }
+            }
 
             // ---- LEMNISCATE DE BERNOULLI (∞) : Mouvement en infini pendant la lévitation ----
             infinityPhase += Time.deltaTime * infinityDriftSpeed;
@@ -1654,10 +1905,8 @@ public class SunflowerXylophone : MonoBehaviour
             camProxyObj.transform.position = sunChar.position;
 
             // ---- PULSATION FOV SUR LE BEAT ----
-            if (enableCameraBeatPulse && onBeat)
+            if (onBeat)
             {
-                currentBeatPulseOffset = beatPulseAmount;
-                nextBeatPulseTime = currentTrackTime + secondsPerBeat;
 
                 // Changement de couleur des projecteurs latéraux sur chaque beat
                 stageLightColorIndex = (stageLightColorIndex + 1) % stageColors.Length;
@@ -1676,18 +1925,27 @@ public class SunflowerXylophone : MonoBehaviour
                 float zoomCurve = Mathf.SmoothStep(0f, 1f, songProgress);
                 currentBaseFOV = origFOV + progressiveZoomOutAmount * zoomCurve;
 
-                currentBeatPulseOffset = Mathf.Lerp(currentBeatPulseOffset, 0f, Time.deltaTime * beatPulseReturnSpeed);
+                // Punch FOV : attaque instantanée puis retour exponentiel calé sur le temps depuis le beat
+                float tPulse = Mathf.Max(0f, smoothClock - lastBeatTime);
+                currentBeatPulseOffset = kickPulse * Mathf.Exp(-beatPulseReturnSpeed * tPulse);
                 // Les pulsations beat zooment (diminuent le FOV) autour du baseFOV qui grandit
                 float pulsedFOV = currentBaseFOV - currentBeatPulseOffset;
                 if (cineCam != null) cineCam.Lens.FieldOfView = pulsedFOV;
                 if (mainCam != null) mainCam.fieldOfView = pulsedFOV;
             }
 
-            // ---- TREMBLEMENT CAMÉRA SUR LE BEAT ----
-            if (currentTrackTime >= nextBeatShakeTime)
+            // ---- PUNCH CAMÉRA SUR LE BEAT (impact sec + rebond ressort + roll) ----
             {
-                nextBeatShakeTime = currentTrackTime + secondsPerBeat;
-                StartCoroutine(BeatCameraShakeRoutine(mainCam, event12SecTriggered ? fireBeatCameraShakeIntensity : beatCameraShakeIntensity, 0.12f));
+                float tb = Mathf.Max(0f, smoothClock - lastBeatTime);
+                float env = Mathf.Exp(-beatShakeDecay * tb);
+                float spring = Mathf.Cos(tb * Mathf.PI * 2f * beatShakeSpringFrequency);
+                float grit = (Mathf.PerlinNoise(smoothClock * 28f, 0.37f) - 0.5f) * 2f;
+
+                concertShakeOffset = new Vector3(
+                    kickAmp * env * (0.45f * kickDirX * spring + 0.25f * grit),
+                    -kickAmp * env * spring,
+                    0f);
+                concertShakeRoll = kickRoll * env * spring;
             }
 
             // ---- PROJECTEURS LATÉRAUX : rotation / balayage continu ----
@@ -1713,7 +1971,7 @@ public class SunflowerXylophone : MonoBehaviour
             if (currentTrackTime >= nextTapTime)
             {
                 int numKeys = keys != null && keys.Length > 0 ? keys.Length : 8;
-                TriggerNoteAnimation(new MelodyNote(rng.Next(0, numKeys), currentTrackTime), playKeySoundsWithWav, item.ItemColor);
+                TriggerNoteAnimation(new MelodyNote(rng.Next(0, numKeys), currentTrackTime), playKeySoundsWithWav, concertColor);
                 nextTapTime = currentTrackTime + tapInterval;
             }
 
@@ -1775,35 +2033,43 @@ public class SunflowerXylophone : MonoBehaviour
         // ==============================================================
         Debug.Log("[SunflowerXylophone] 🎸 Fin du concert ! Transition de retour...");
 
+        // Arrêter le punch caméra
+        StopConcertShake();
+
         // Couper les flammes immédiatement
         if (fire1Obj != null) Destroy(fire1Obj);
         if (fire2Obj != null) Destroy(fire2Obj);
 
-        // Retirer les bandes cinéma
+        // Retirer les bandes cinéma rapidement
+        float descentDuration = 0.8f;
         if (topBar != null && bottomBar != null)
-            StartCoroutine(AnimateConcertCinemaBars(topBar, bottomBar, false, levitateDuration));
+            StartCoroutine(AnimateConcertCinemaBars(topBar, bottomBar, false, descentDuration));
 
         // Reset animation Rock → Devoveo AVANT la descente
-        if (anim != null && !string.IsNullOrEmpty(rockAnimationState))
+        if (anim != null)
         {
-            int rockHash = Animator.StringToHash(rockAnimationState);
-            // 1er choix : l'animation Devoveo (animation de base du personnage)
-            int devoveoHash = Animator.StringToHash(devoveoAnimationState);
-            // 2e choix fallback : idle / Idle
+            int devoveoHash = !string.IsNullOrEmpty(devoveoAnimationState) ? Animator.StringToHash(devoveoAnimationState) : 0;
             int idleHash = Animator.StringToHash("idle");
             int upperIdleHash = Animator.StringToHash("Idle");
 
-            if (anim.HasState(0, rockHash))
-            {
-                if (!string.IsNullOrEmpty(devoveoAnimationState) && anim.HasState(0, devoveoHash))
-                    anim.Play(devoveoHash);
-                else if (anim.HasState(0, idleHash))
-                    anim.Play(idleHash);
-                else if (anim.HasState(0, upperIdleHash))
-                    anim.Play(upperIdleHash);
-            }
-            else
+            if (devoveoHash != 0 && anim.HasState(0, devoveoHash))
+                anim.Play(devoveoHash, 0, 0f);
+            else if (anim.HasState(0, idleHash))
+                anim.Play(idleHash, 0, 0f);
+            else if (anim.HasState(0, upperIdleHash))
+                anim.Play(upperIdleHash, 0, 0f);
+            else if (!string.IsNullOrEmpty(rockAnimationState))
                 anim.SetBool(rockAnimationState, false);
+        }
+
+        // Cacher la guitare après le concert
+        Transform[] sunTransforms = sunChar.GetComponentsInChildren<Transform>(true);
+        foreach (var t in sunTransforms)
+        {
+            if (t != null && t.name == "scene (1)")
+            {
+                t.gameObject.SetActive(false);
+            }
         }
 
         Color currentSky = RenderSettings.ambientSkyColor;
@@ -1822,10 +2088,10 @@ public class SunflowerXylophone : MonoBehaviour
         Vector3 levitateEndPos = sunChar.position;
 
         elapsed = 0f;
-        while (elapsed < levitateDuration)
+        while (elapsed < descentDuration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, elapsed / levitateDuration);
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / descentDuration);
 
             // Descente depuis la dernière position de la trajectoire ∞ vers le sol (recentrage + descente)
             sunChar.position = Vector3.Lerp(levitateEndPos, startSunPos, t);
@@ -1885,10 +2151,13 @@ public class SunflowerXylophone : MonoBehaviour
             if (wfMat.HasProperty("_FresnelColor")) wfMat.SetColor("_FresnelColor", origWfFresnel);
         }
 
-        // Panoramique retour Fleur → Joueur
+        // Déverrouiller le joueur dès que la fleur a atterri !
+        PlayerLockManager.SetPlayerLocked(false);
+
+        // Panoramique rapide de recentrage caméra sur le joueur
         Vector3 endPlayerPos = playerObj != null ? playerObj.transform.position : startSunPos;
         float returnPanElapsed = 0f;
-        float returnPanDuration = 1.5f;
+        float returnPanDuration = 0.5f;
         while (returnPanElapsed < returnPanDuration)
         {
             returnPanElapsed += Time.deltaTime;
@@ -1909,8 +2178,6 @@ public class SunflowerXylophone : MonoBehaviour
         ReturnMalletsToRest();
         if (audioSource != null) audioSource.volume = origAudioVolume;
 
-        // 11. Déverrouiller le joueur
-        PlayerLockManager.SetPlayerLocked(false);
         itemInteractionRoutine = null;
         StartIdleRandomRoutine();
     }
@@ -1919,23 +2186,40 @@ public class SunflowerXylophone : MonoBehaviour
     //   HELPERS CONCERT — Tremblement, Flash, Titre Punk
     // =====================================================================
 
-    /// <summary>Tremblement de caméra sur le beat.</summary>
-    private IEnumerator BeatCameraShakeRoutine(Camera cam, float intensity, float duration)
+    /// <summary>Applique le punch caméra juste avant le rendu (après Cinemachine), puis le retire.</summary>
+    private void OnConcertBeginCameraRendering(UnityEngine.Rendering.ScriptableRenderContext ctx, Camera cam)
     {
-        if (cam == null || intensity <= 0f) yield break;
-        float elapsed = 0f;
-        Vector3 origPos = cam.transform.position;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float shake = intensity * (1f - elapsed / duration);
-            cam.transform.position = origPos + new Vector3(
-                Random.Range(-shake, shake),
-                Random.Range(-shake, shake),
-                0f);
-            yield return null;
-        }
-        cam.transform.position = origPos;
+        if (cam == null || cam != concertShakeCam || concertShakeApplied) return;
+        Transform t = cam.transform;
+        concertShakeSavedPos = t.position;
+        concertShakeSavedRot = t.rotation;
+        t.position = concertShakeSavedPos + concertShakeSavedRot * concertShakeOffset;
+        t.rotation = concertShakeSavedRot * Quaternion.Euler(0f, 0f, concertShakeRoll);
+        concertShakeApplied = true;
+    }
+
+    private void OnConcertEndCameraRendering(UnityEngine.Rendering.ScriptableRenderContext ctx, Camera cam)
+    {
+        if (cam == null || cam != concertShakeCam || !concertShakeApplied) return;
+        cam.transform.SetPositionAndRotation(concertShakeSavedPos, concertShakeSavedRot);
+        concertShakeApplied = false;
+    }
+
+    private void StopConcertShake()
+    {
+        UnityEngine.Rendering.RenderPipelineManager.beginCameraRendering -= OnConcertBeginCameraRendering;
+        UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= OnConcertEndCameraRendering;
+        if (concertShakeApplied && concertShakeCam != null)
+            concertShakeCam.transform.SetPositionAndRotation(concertShakeSavedPos, concertShakeSavedRot);
+        concertShakeApplied = false;
+        concertShakeOffset = Vector3.zero;
+        concertShakeRoll = 0f;
+        concertShakeCam = null;
+    }
+
+    private void OnDisable()
+    {
+        StopConcertShake();
     }
 
     /// <summary>Flash blanc stroboscopique à l'apparition des flammes.</summary>
