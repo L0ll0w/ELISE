@@ -121,6 +121,9 @@ public class OcclusionCullingManager : MonoBehaviour
             distances[waterLillyLayer] = waterLillyCullDistance;
         }
 
+        // Toujours préserver TransparentFX (effets visuels et halos)
+        distances[1] = 0f;
+
         // Appliquer à la caméra principale
         mainCamera.layerCullDistances = distances;
         mainCamera.layerCullSpherical = true;

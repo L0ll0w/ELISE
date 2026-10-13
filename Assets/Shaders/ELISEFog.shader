@@ -200,16 +200,16 @@ Shader "Custom/ELISEFog"
                 float rawDepth = SampleSceneDepth(input.uv);
                 float linearDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
                 
-                // Détecter si le pixel appartient à la Skybox
-                #if UNITY_REVERSED_Z
-                    bool isSkybox = rawDepth <= 0.00001;
-                #else
-                    bool isSkybox = rawDepth >= 0.99999;
-                #endif
-
                 // Reconstruire la position dans l'espace monde
                 float3 posWS = ComputeWorldSpacePosition(input.uv, rawDepth, UNITY_MATRIX_I_VP);
                 float3 camPos = _WorldSpaceCameraPos;
+
+                // Détecter si le pixel appartient à la Skybox ou au Soleil céleste (immunité totale au brouillard)
+                #if UNITY_REVERSED_Z
+                    bool isSkybox = (rawDepth <= 0.00001) || (posWS.y > 80.0 && linearDepth > 150.0);
+                #else
+                    bool isSkybox = (rawDepth >= 0.99999) || (posWS.y > 80.0 && linearDepth > 150.0);
+                #endif
                 
                 // Calculer la distance réelle du pixel par rapport à la caméra
                 float dist = length(posWS - camPos);

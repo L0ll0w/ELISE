@@ -72,6 +72,9 @@ public class SceneLightingSetup : MonoBehaviour
         ApplyLightingSetup();
     }
 
+    [Header("Skysphere / Skybox Matériau")]
+    [SerializeField] private Material dreamcoreSkyMaterial;
+
     /// <summary>
     /// Applique l'ensemble de la configuration d'éclairage atmosphérique à la scène.
     /// </summary>
@@ -96,7 +99,10 @@ public class SceneLightingSetup : MonoBehaviour
             RenderSettings.fogDensity = fogDensity;
         }
 
-        // 4. Lumière d'accentuation de la Cascade
+        // 4. Application du Skybox Dreamcore
+        SetupSkyboxMaterial();
+
+        // 5. Lumière d'accentuation de la Cascade
         if (enableWaterfallGlow)
         {
             SetupWaterfallLight();
@@ -106,7 +112,7 @@ public class SceneLightingSetup : MonoBehaviour
             waterfallGlowLight.gameObject.SetActive(false);
         }
 
-        // 5. Lumière d'accentuation du Joueur / Centre
+        // 6. Lumière d'accentuation du Joueur / Centre
         if (enablePlayerFillLight)
         {
             SetupPlayerFillLight();
@@ -114,6 +120,25 @@ public class SceneLightingSetup : MonoBehaviour
         else if (playerFillLight != null)
         {
             playerFillLight.gameObject.SetActive(false);
+        }
+    }
+
+    private void SetupSkyboxMaterial()
+    {
+        if (dreamcoreSkyMaterial == null)
+        {
+            dreamcoreSkyMaterial = Resources.Load<Material>("DreamcoreSkybox");
+#if UNITY_EDITOR
+            if (dreamcoreSkyMaterial == null)
+            {
+                dreamcoreSkyMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/DreamcoreSkybox.mat");
+            }
+#endif
+        }
+
+        if (dreamcoreSkyMaterial != null)
+        {
+            RenderSettings.skybox = dreamcoreSkyMaterial;
         }
     }
 
@@ -139,10 +164,21 @@ public class SceneLightingSetup : MonoBehaviour
             directionalLight.type = LightType.Directional;
         }
 
+        // Aligner automatiquement la direction de la lumière avec le Soleil 3D de la scène
+        GameObject physicalSun = GameObject.Find("SUN");
+        if (physicalSun == null) physicalSun = GameObject.Find("Sun");
+        if (physicalSun != null)
+        {
+            Camera cam = Camera.main;
+            Vector3 origin = cam != null ? cam.transform.position : Vector3.zero;
+            Vector3 toSun = (physicalSun.transform.position - origin).normalized;
+            sunRotation = Quaternion.LookRotation(-toSun, Vector3.up).eulerAngles;
+        }
+
         directionalLight.intensity = sunIntensity;
         directionalLight.color = sunColor;
         directionalLight.shadows = LightShadows.Soft;
-        directionalLight.shadowStrength = 0.82f;
+        directionalLight.shadowStrength = 0.85f;
         directionalLight.transform.rotation = Quaternion.Euler(sunRotation);
     }
 
@@ -220,29 +256,43 @@ public class SceneLightingSetup : MonoBehaviour
         playerFillLight.range = playerFillRange;
     }
 
-    [ContextMenu("🎨 Style : Rêve Féerique 2.5D RPG (Cyan / Or / Indigo)")]
+    [ContextMenu("🎨 Style : Rêve Féerique Dreamcore (Jardin & Soleil)")]
     public void PresetDreamcoreFairy()
     {
         activePreset = PresetStyle.DreamcoreFairy;
         sunIntensity = 1.9f;
-        sunColor = new Color(1.0f, 0.94f, 0.82f);
-        sunRotation = new Vector3(46f, -38f, 0f);
+        sunColor = new Color(1.0f, 0.94f, 0.84f);
 
-        skyColor = new Color(0.38f, 0.72f, 0.94f);
-        equatorColor = new Color(0.28f, 0.38f, 0.58f);
-        groundColor = new Color(0.12f, 0.16f, 0.25f);
+        // Orientation alignée sur le soleil si présent
+        GameObject physicalSun = GameObject.Find("SUN");
+        if (physicalSun == null) physicalSun = GameObject.Find("Sun");
+        if (physicalSun != null)
+        {
+            Camera cam = Camera.main;
+            Vector3 origin = cam != null ? cam.transform.position : Vector3.zero;
+            Vector3 toSun = (physicalSun.transform.position - origin).normalized;
+            sunRotation = Quaternion.LookRotation(-toSun, Vector3.up).eulerAngles;
+        }
+        else
+        {
+            sunRotation = new Vector3(45f, -38f, 0f);
+        }
+
+        skyColor = new Color(0.38f, 0.32f, 0.54f);     // Lilas / Violet doux
+        equatorColor = new Color(0.34f, 0.30f, 0.44f); // Rose lavande
+        groundColor = new Color(0.14f, 0.12f, 0.22f);  // Indigo doux jardin
 
         enableFog = true;
-        fogColor = new Color(0.32f, 0.58f, 0.78f);
-        fogDensity = 0.007f;
+        fogColor = new Color(0.40f, 0.38f, 0.58f);     // Brume d'horizon lavande douce
+        fogDensity = 0.003f;
 
-        waterfallGlowColor = new Color(0.2f, 0.95f, 1.0f);
-        waterfallGlowIntensity = 4.2f;
+        waterfallGlowColor = new Color(0.25f, 0.95f, 1.0f);
+        waterfallGlowIntensity = 4.5f;
         waterfallGlowRange = 18.0f;
 
-        playerFillColor = new Color(1.0f, 0.92f, 0.76f);
-        playerFillIntensity = 2.2f;
-        playerFillRange = 9.0f;
+        playerFillColor = new Color(1.0f, 0.92f, 0.82f);
+        playerFillIntensity = 1.8f;
+        playerFillRange = 8.0f;
 
         ApplyLightingSetup();
     }

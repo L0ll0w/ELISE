@@ -65,6 +65,22 @@ public class SceneLightingSetupEditor : Editor
         }
         EditorGUILayout.EndHorizontal();
 
+        EditorGUILayout.Space(4);
+        if (GUILayout.Button("🌸 Ajouter / Configurer Skysphere Dreamcore", GUILayout.Height(28)))
+        {
+            DreamcoreSkysphere existing = Object.FindFirstObjectByType<DreamcoreSkysphere>();
+            if (existing == null)
+            {
+                GameObject skyObj = new GameObject("DreamcoreSkysphere");
+                existing = skyObj.AddComponent<DreamcoreSkysphere>();
+                Undo.RegisterCreatedObjectUndo(skyObj, "Create DreamcoreSkysphere");
+            }
+            existing.PresetPastelGarden();
+            Selection.activeObject = existing.gameObject;
+            Debug.Log("[DreamcoreSkysphere] Skysphere Dreamcore synchronisée !");
+            SceneView.RepaintAll();
+        }
+
         EditorGUILayout.EndVertical();
 
         EditorGUILayout.Space(8);

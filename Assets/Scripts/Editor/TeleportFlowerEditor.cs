@@ -126,7 +126,45 @@ public class TeleportFlowerEditor : Editor
 
         EditorGUILayout.Space(5);
 
-        // 3. Test en mode Play
+        // 3. Réglage Caméra Arrivée
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("📷 Caméra à l'Arrivée sur cette Fleur", EditorStyles.boldLabel);
+        
+        TeleportFlower.ArrivalCameraMode effectiveMode = flower.GetEffectiveCameraMode();
+        string infoMsg = effectiveMode switch
+        {
+            TeleportFlower.ArrivalCameraMode.LookAtTarget => $"☀️ Cette fleur cadrera le SOLEIL ({flower.GetEffectiveFocusTarget()?.name ?? "Recherche auto"}) pendant le fondu noir.",
+            TeleportFlower.ArrivalCameraMode.RestoreOriginal => "🌊 Cette fleur restaurera la caméra d'origine (CASCADE) pendant le fondu noir.",
+            _ => "⏸️ Aucun changement d'orientation caméra (conserve le cadrage actuel)."
+        };
+        EditorGUILayout.HelpBox(infoMsg, effectiveMode == TeleportFlower.ArrivalCameraMode.Unchanged ? MessageType.None : MessageType.Info);
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("☀️ Cadrer le Soleil", GUILayout.Height(24)))
+        {
+            Undo.RecordObject(flower, "Set Sun Camera Arrival");
+            flower.ArrivalCamMode = TeleportFlower.ArrivalCameraMode.LookAtTarget;
+            flower.ArrivalFocusTarget = flower.GetEffectiveFocusTarget();
+            EditorUtility.SetDirty(flower);
+        }
+        if (GUILayout.Button("🌊 Restaurer Cascade", GUILayout.Height(24)))
+        {
+            Undo.RecordObject(flower, "Set Restore Camera Arrival");
+            flower.ArrivalCamMode = TeleportFlower.ArrivalCameraMode.RestoreOriginal;
+            EditorUtility.SetDirty(flower);
+        }
+        if (GUILayout.Button("🔄 Défaut", GUILayout.Height(24)))
+        {
+            Undo.RecordObject(flower, "Reset Camera Arrival");
+            flower.ArrivalCamMode = TeleportFlower.ArrivalCameraMode.Unchanged;
+            EditorUtility.SetDirty(flower);
+        }
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.Space(5);
+
+        // 4. Test en mode Play
         if (Application.isPlaying)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);

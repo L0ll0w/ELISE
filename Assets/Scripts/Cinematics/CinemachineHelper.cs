@@ -131,21 +131,27 @@ public class CinemachineHelper : MonoBehaviour
     {
         get
         {
-            if (faceFocalPoint && focalPointTarget != null)
-            {
-                Transform refTarget = dummyTarget != null ? dummyTarget : (targetPlayer != null ? targetPlayer : transform);
-                Vector3 dirToFocal = focalPointTarget.position - refTarget.position;
-                dirToFocal.y = 0f;
-
-                if (dirToFocal.sqrMagnitude > 0.01f)
-                {
-                    dirToFocal.Normalize();
-                    if (invertFocalDirection) dirToFocal = -dirToFocal;
-                    return Mathf.Atan2(dirToFocal.x, dirToFocal.z) * Mathf.Rad2Deg;
-                }
-            }
-            return yawAngle;
+            Transform refTarget = dummyTarget != null ? dummyTarget : (targetPlayer != null ? targetPlayer : transform);
+            return GetYawForPosition(refTarget.position);
         }
+    }
+
+    public float GetYawForPosition(Vector3 refPos)
+    {
+        Transform activeFocal = ActiveFocal;
+        if (activeFocal != null)
+        {
+            Vector3 dirToFocal = ActiveFocalPosition - refPos;
+            dirToFocal.y = 0f;
+
+            if (dirToFocal.sqrMagnitude > 0.01f)
+            {
+                dirToFocal.Normalize();
+                if (ActiveInvert) dirToFocal = -dirToFocal;
+                return Mathf.Atan2(dirToFocal.x, dirToFocal.z) * Mathf.Rad2Deg;
+            }
+        }
+        return yawAngle;
     }
 
     public Vector3 OriginalFollowOffset
@@ -279,6 +285,67 @@ public class CinemachineHelper : MonoBehaviour
         originalFollowOffset = Quaternion.Euler(0f, CurrentYaw, 0f) * baseOffset;
         originalLocalRotation = Quaternion.Euler(pitchAngle, CurrentYaw, 0f);
         originalFOV = defaultFOV > 0f ? defaultFOV : 40f;
+    }
+
+    public Transform FocalPointTarget => focalPointTarget;
+    public bool FaceFocalPoint => faceFocalPoint;
+    public bool InvertFocalDirection { get => invertFocalDirection; set => invertFocalDirection = value; }
+
+    private bool focalLookVertical = false;
+    public bool FocalLookVertical { get => focalLookVertical; set => focalLookVertical = value; }
+
+    // --- Override temporaire du point focal (ex: soleil) ---
+    // Prioritaire sur le point focal de base (ex: cascade). L'effacer restaure automatiquement la caméra d'origine.
+    private Transform focalOverride;
+    private bool overrideLookVertical = true;
+    private bool overrideInvert = false;
+
+    public Transform FocalOverride => focalOverride;
+
+    public void SetFocalOverride(Transform target, bool lookVertical = true, bool invert = false)
+    {
+        focalOverride = target;
+        overrideLookVertical = lookVertical;
+        overrideInvert = invert;
+    }
+
+    public void ClearFocalOverride()
+    {
+        focalOverride = null;
+    }
+
+    private Transform ActiveFocal => focalOverride != null ? focalOverride : (faceFocalPoint ? focalPointTarget : null);
+    private bool ActiveLookVertical => focalOverride != null ? overrideLookVertical : focalLookVertical;
+    private bool ActiveInvert => focalOverride != null ? overrideInvert : invertFocalDirection;
+    private Vector3 ActiveFocalPosition
+    {
+        get
+        {
+            Transform f = ActiveFocal;
+            if (f == null) return Vector3.zero;
+            return focalOverride != null ? GetVisualCenter(f) : f.position;
+        }
+    }
+
+    /// <summary>Centre visible d'un objet (centre de ses meshes), même si son pivot est ailleurs.</summary>
+    public static Vector3 GetVisualCenter(Transform t)
+    {
+        if (t == null) return Vector3.zero;
+        Bounds b = default;
+        bool has = false;
+        foreach (var r in t.GetComponentsInChildren<Renderer>())
+        {
+            if (r.name == "SunHalo" || r is ParticleSystemRenderer) continue;
+            if (!has) { b = r.bounds; has = true; } else b.Encapsulate(r.bounds);
+        }
+        return has ? b.center : t.position;
+    }
+
+    private Quaternion LookAtActiveFocal(Vector3 camWorldPos, Quaternion fallback)
+    {
+        Vector3 d = ActiveFocalPosition - camWorldPos;
+        if (ActiveInvert) d = -d;
+        return d.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(d.normalized, Vector3.up) : fallback;
     }
 
     public void SetFocalPointTarget(Transform focalTarget, bool enable = true)
@@ -588,15 +655,16 @@ public class CinemachineHelper : MonoBehaviour
 
         // 6. Orientation Yaw (Focal Point ou Yaw personnalisé)
         float targetYaw = yawAngle;
-        if (faceFocalPoint && focalPointTarget != null && dummyTarget != null)
+        bool hasActiveFocal = ActiveFocal != null;
+        if (hasActiveFocal && dummyTarget != null)
         {
-            Vector3 dirToFocal = focalPointTarget.position - dummyTarget.position;
+            Vector3 dirToFocal = ActiveFocalPosition - dummyTarget.position;
             dirToFocal.y = 0f;
 
             if (dirToFocal.sqrMagnitude > 0.01f)
             {
                 dirToFocal.Normalize();
-                if (invertFocalDirection) dirToFocal = -dirToFocal;
+                if (ActiveInvert) dirToFocal = -dirToFocal;
                 targetYaw = Mathf.Atan2(dirToFocal.x, dirToFocal.z) * Mathf.Rad2Deg;
             }
         }
@@ -604,7 +672,7 @@ public class CinemachineHelper : MonoBehaviour
         // 7. Lissage et application finale avec vitesse de suivi et de rotation personnalisables
         if (followComponent != null)
         {
-            float activeFollowSpeed = faceFocalPoint ? focalPointLerpSpeed : cameraFollowSpeed;
+            float activeFollowSpeed = hasActiveFocal ? focalPointLerpSpeed : cameraFollowSpeed;
             float lerpFactor = 1f - Mathf.Exp(-activeFollowSpeed * deltaTime);
             float rotLerpFactor = 1f - Mathf.Exp(-rotationLerpSpeed * deltaTime);
             
@@ -612,6 +680,13 @@ public class CinemachineHelper : MonoBehaviour
             Vector3 baseOffset = new Vector3(offsetX, targetHeight, -activeDistance);
             Vector3 targetOffset = Quaternion.Euler(0f, targetYaw, 0f) * baseOffset;
             Quaternion targetRot = Quaternion.Euler(targetPitch, targetYaw, currentRoll);
+
+            // Regard direct vers le point focal (ex: soleil) depuis la position RÉELLE de la caméra
+            if (hasActiveFocal && ActiveLookVertical)
+            {
+                Quaternion worldLook = LookAtActiveFocal(transform.position, transform.rotation);
+                targetRot = transform.parent != null ? Quaternion.Inverse(transform.parent.rotation) * worldLook : worldLook;
+            }
 
             if (isFirstFrameAfterEnable)
             {
@@ -749,7 +824,7 @@ public class CinemachineHelper : MonoBehaviour
 
     public void GetCalculatedFollowOffsetAndRotation(Vector3 targetWorldPos, out Vector3 calculatedOffset, out Quaternion calculatedRotation)
     {
-        float targetYaw = CurrentYaw;
+        float targetYaw = GetYawForPosition(targetWorldPos);
         float targetPitch = pitchAngle;
         float targetHeight = height;
         float currentDistance = distance;
@@ -770,6 +845,104 @@ public class CinemachineHelper : MonoBehaviour
         Vector3 baseOffset = new Vector3(offsetX, targetHeight, -currentDistance);
         calculatedOffset = Quaternion.Euler(0f, targetYaw, 0f) * baseOffset;
         calculatedRotation = Quaternion.Euler(targetPitch, targetYaw, 0f);
+
+        if (ActiveFocal != null && ActiveLookVertical)
+        {
+            calculatedRotation = LookAtActiveFocal(targetWorldPos + calculatedOffset, calculatedRotation);
+        }
+    }
+
+    /// <summary>
+    /// Positionne et oriente immédiatement la caméra sur sa cible (joueur + point focal actuel),
+    /// sans aucun lissage, délai ou interpolation.
+    /// À appeler pendant les fondus au noir (téléportations, respawn, etc.).
+    /// </summary>
+    public void SnapToTarget(Vector3? overrideTargetPos = null)
+    {
+        if (targetPlayer == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj == null)
+            {
+                PlayerMovement pm = FindFirstObjectByType<PlayerMovement>();
+                if (pm != null) playerObj = pm.gameObject;
+            }
+            if (playerObj != null) targetPlayer = playerObj.transform;
+        }
+
+        Vector3 targetPos = overrideTargetPos ?? (targetPlayer != null ? targetPlayer.position : transform.position);
+
+        if (dummyTarget != null)
+        {
+            if (targetPlayer != null && dummyTarget.parent != targetPlayer)
+            {
+                dummyTarget.SetParent(targetPlayer);
+                dummyTarget.localPosition = Vector3.zero;
+            }
+            dummyTarget.position = targetPos;
+        }
+
+        lastPlayerPos = targetPos;
+        currentLookAhead = Vector3.zero;
+        currentVerticalSpeed = 0f;
+        currentZoomOutOffset = 0f;
+        currentZoomOutFOVOffset = 0f;
+        currentRoll = 0f;
+        smoothTerrainOffset = 0f;
+        isCameraLockedToPlatform = false;
+
+        if (cinemachineCamera == null)
+        {
+            cinemachineCamera = GetComponent<CinemachineCamera>();
+        }
+
+        if (followComponent == null)
+        {
+            followComponent = GetComponent<CinemachineFollow>();
+            if (followComponent == null) followComponent = GetComponentInChildren<CinemachineFollow>();
+        }
+
+        GetCalculatedFollowOffsetAndRotation(targetPos, out Vector3 targetOffset, out Quaternion targetRot);
+
+        if (followComponent != null)
+        {
+            followComponent.TrackerSettings.BindingMode = hasSavedOriginalSettings ? originalBindingMode : BindingMode.WorldSpace;
+            followComponent.FollowOffset = targetOffset;
+        }
+
+        Vector3 finalCamPos = targetPos + targetOffset;
+        transform.position = finalCamPos;
+        transform.localRotation = targetRot;
+
+        if (cinemachineCamera != null)
+        {
+            if (dummyTarget != null) cinemachineCamera.Follow = dummyTarget;
+            else if (targetPlayer != null) cinemachineCamera.Follow = targetPlayer;
+
+            cinemachineCamera.LookAt = null;
+
+            if (defaultFOV > 0f) cinemachineCamera.Lens.FieldOfView = defaultFOV;
+
+            cinemachineCamera.ForceCameraPosition(finalCamPos, targetRot);
+            if (targetPlayer != null)
+            {
+                cinemachineCamera.OnTargetObjectWarped(targetPlayer, Vector3.zero);
+            }
+        }
+
+        if (Camera.main != null)
+        {
+            Camera.main.transform.position = finalCamPos;
+            Camera.main.transform.rotation = targetRot;
+
+            CinemachineBrain brain = Camera.main.GetComponent<CinemachineBrain>();
+            if (brain != null)
+            {
+                brain.ManualUpdate();
+            }
+        }
+
+        isFirstFrameAfterEnable = true;
     }
 
     public void UpdateCameraSettings(bool smoothTransition = false)
@@ -827,7 +1000,7 @@ public class CinemachineHelper : MonoBehaviour
             {
                 Vector3 calculatedOffset = transform.position - currentTargetPos;
 
-                followComponent.FollowOffset = (faceFocalPoint && focalPointTarget != null) ? targetOffset : calculatedOffset;
+                followComponent.FollowOffset = (ActiveFocal != null) ? targetOffset : calculatedOffset;
                 transform.localRotation = targetRot;
             }
             else

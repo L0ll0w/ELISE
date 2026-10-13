@@ -92,6 +92,29 @@ public class TeleportFlower : Interactable
     [Tooltip("Masquer le sprite du joueur et de l'objet porté pendant qu'il est enfermé dans la fleur / pendant le TP au noir.")]
     [SerializeField] private bool hidePlayerWhileEnclosed = true;
 
+    public enum ArrivalCameraMode
+    {
+        [Tooltip("Ne touche pas à l'orientation actuelle de la caméra.")]
+        Unchanged,
+        [Tooltip("La caméra se fixe sur 'Arrival Focus Target' (ex : le soleil).")]
+        LookAtTarget,
+        [Tooltip("La caméra retrouve son orientation d'origine (ex : vers la cascade).")]
+        RestoreOriginal
+    }
+
+    [Header("Caméra à l'arrivée sur CETTE fleur")]
+    [Tooltip("Ce que fait la caméra pendant le fondu noir quand on arrive sur cette fleur.")]
+    [SerializeField] private ArrivalCameraMode arrivalCameraMode = ArrivalCameraMode.Unchanged;
+
+    [Tooltip("Cible regardée à l'arrivée (ex : le Soleil). Utilisé si mode = LookAtTarget.")]
+    [SerializeField] private Transform arrivalFocusTarget;
+
+    [Tooltip("La caméra lève/baisse la tête pour cadrer la cible (nécessaire pour un soleil en hauteur).")]
+    [SerializeField] private bool arrivalLookVertically = true;
+
+    [Tooltip("Inverser la direction du regard (si la caméra regarde à l'opposé).")]
+    [SerializeField] private bool arrivalInvertDirection = false;
+
     [Header("Effets Sonores & Visuels (Optionnels)")]
     [Tooltip("Effet sonore joué lors de la fermeture de la fleur.")]
     [SerializeField] private AudioClip closeSFX;
@@ -116,6 +139,8 @@ public class TeleportFlower : Interactable
 
     // État interne partagé et instance
     private static TeleportFlower activeTeleportFlower = null;
+    public static TeleportFlower ActiveTeleportFlower => activeTeleportFlower;
+    public static bool IsAnyFlowerTeleporting => activeTeleportFlower != null;
     private static float globalCooldownUntil = 0f;
     private bool isTeleporting = false;
 
@@ -786,6 +811,9 @@ public class TeleportFlower : Interactable
         Physics.SyncTransforms();
     }
 
+    public ArrivalCameraMode ArrivalCamMode { get => arrivalCameraMode; set => arrivalCameraMode = value; }
+    public Transform ArrivalFocusTarget { get => arrivalFocusTarget; set => arrivalFocusTarget = value; }
+
     /// <summary>
     /// Positionne immédiatement et stabilise la caméra sur la cible avant de lever le fondu noir.
     /// </summary>
@@ -797,17 +825,20 @@ public class TeleportFlower : Interactable
             foreach (var vcam in vcams)
             {
                 if (vcam == null) continue;
-                vcam.Follow = playerTransform;
                 CinemachineHelper helper = vcam.GetComponent<CinemachineHelper>();
+                if (helper == null) helper = vcam.GetComponentInChildren<CinemachineHelper>();
+
                 if (helper != null)
                 {
+                    connectedFlower?.ApplyArrivalCamera(helper);
                     helper.UnlockCameraFromPlatform();
-                    helper.ResetDynamicState();
                     helper.SetTargetPlayer(playerTransform);
-                    helper.UpdateCameraSettings(false);
-
-                    helper.GetCalculatedFollowOffsetAndRotation(playerTransform.position, out Vector3 calculatedOffset, out Quaternion calculatedRotation);
-                    vcam.ForceCameraPosition(playerTransform.position + calculatedOffset, calculatedRotation);
+                    helper.SnapToTarget(playerTransform.position);
+                }
+                else
+                {
+                    vcam.Follow = playerTransform;
+                    vcam.ForceCameraPosition(playerTransform.position, vcam.transform.rotation);
                 }
             }
         }
@@ -821,6 +852,97 @@ public class TeleportFlower : Interactable
         if (blackScreenSettleTime > 0f)
         {
             yield return new WaitForSeconds(blackScreenSettleTime);
+        }
+    }
+
+    /// <summary>
+    /// Détermine le mode effectif de caméra pour l'arrivée sur CETTE fleur (avec détection automatique intelligente).
+    /// </summary>
+    public ArrivalCameraMode GetEffectiveCameraMode()
+    {
+        if (arrivalCameraMode != ArrivalCameraMode.Unchanged)
+        {
+            return arrivalCameraMode;
+        }
+
+        // 1. Cible explicitement assignée
+        if (arrivalFocusTarget != null)
+        {
+            return ArrivalCameraMode.LookAtTarget;
+        }
+
+        // 2. Si cette fleur est la fleur du soleil (en altitude ou nommée Sun)
+        if (IsSunFlower())
+        {
+            return ArrivalCameraMode.LookAtTarget;
+        }
+
+        // 3. Si on revient depuis la fleur du soleil vers le bas (cascade)
+        if (connectedFlower != null && connectedFlower.IsSunFlower())
+        {
+            return ArrivalCameraMode.RestoreOriginal;
+        }
+
+        return ArrivalCameraMode.Unchanged;
+    }
+
+    public bool IsSunFlower()
+    {
+        string n = gameObject.name.ToLower();
+        if (n.Contains("sun") || n.Contains("soleil")) return true;
+        // Dans Nowhere dev 1, la plateforme du soleil est à Y ≈ 171m (les fleurs du bas sont à Y ≈ 121m)
+        if (transform.position.y > 150f) return true;
+        if (connectedFlower != null && transform.position.y > connectedFlower.transform.position.y + 30f) return true;
+        return false;
+    }
+
+    public Transform GetEffectiveFocusTarget()
+    {
+        if (arrivalFocusTarget != null) return arrivalFocusTarget;
+
+        GameObject sun = GameObject.Find("SUN");
+        if (sun == null) sun = GameObject.Find("Sun");
+        if (sun == null) sun = GameObject.Find("the_sun");
+        if (sun == null)
+        {
+            SunGlow glow = Object.FindFirstObjectByType<SunGlow>();
+            if (glow != null) sun = glow.gameObject;
+        }
+        if (sun == null)
+        {
+            SunEyeBlinker blinker = Object.FindFirstObjectByType<SunEyeBlinker>();
+            if (blinker != null) sun = blinker.gameObject;
+        }
+
+        return sun != null ? sun.transform : null;
+    }
+
+    /// <summary>
+    /// Applique le réglage caméra d'arrivée de CETTE fleur (appelé pendant le fondu noir).
+    /// </summary>
+    public void ApplyArrivalCamera(CinemachineHelper helper)
+    {
+        if (helper == null) return;
+        ArrivalCameraMode mode = GetEffectiveCameraMode();
+        switch (mode)
+        {
+            case ArrivalCameraMode.LookAtTarget:
+                Transform target = GetEffectiveFocusTarget();
+                if (target != null)
+                {
+                    helper.SetFocalOverride(target, arrivalLookVertically, arrivalInvertDirection);
+                    Debug.Log($"[TeleportFlower] Caméra fixée sur '{target.name}' à l'arrivée sur {name}.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[TeleportFlower] {name} : mode LookAtTarget mais aucune cible soleil trouvée.");
+                }
+                break;
+
+            case ArrivalCameraMode.RestoreOriginal:
+                helper.ClearFocalOverride();
+                Debug.Log($"[TeleportFlower] Caméra restaurée à son orientation d'origine à l'arrivée sur {name}.");
+                break;
         }
     }
 

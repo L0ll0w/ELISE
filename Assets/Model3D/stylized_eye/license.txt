@@ -1,0 +1,11 @@
+Model Information:
+* title:	Stylized Eye
+* source:	https://sketchfab.com/3d-models/stylized-eye-4fed6c71faca4932926c70a9385a7cee
+* author:	merrychuu (https://sketchfab.com/merrynguyen)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Stylized Eye" (https://sketchfab.com/3d-models/stylized-eye-4fed6c71faca4932926c70a9385a7cee) by merrychuu (https://sketchfab.com/merrynguyen) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
