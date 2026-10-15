@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
+  m_Name: Gardener Bench
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  nodes:
+  - nodeID: 0
+    characterName: Gardener
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 0}
+    sentence: DEVOVEO ! NON !
+    choices: []
+    nextNodeID: 1
+  - nodeID: 1
+    characterName: Gardener
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 0}
+    sentence: Tu sais qu'il ne dois pas te voir !
+    choices: []
+    nextNodeID: 2
+  - nodeID: 2
+    characterName: Gardener
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 0}
+    sentence: "Il serait sans piti\xE9 , il se debarraserait de toi , il se debarraserait
+      de moi !"
+    choices: []
+    nextNodeID: 3
+  - nodeID: 3
+    characterName: Gardener
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 2171618739374429775, guid: 4df3bf5dd6f18d14aa9d470a3c7d8aab, type: 3}
+    portraitAnimator: {fileID: 0}
+    sentence: Retourne te cacher ! La lumiere n'est pas pour toi mon ami...
+    choices: []
+    nextNodeID: 

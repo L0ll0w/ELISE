@@ -506,11 +506,36 @@ public class LiveCinematicTrigger : MonoBehaviour
 
             if (wateringCan != null)
             {
-                Transform targetToUse = wateringTargetPoint;
-                if (targetToUse == null && waypoints != null && waypoints.Count > 0)
+                Transform targetToUse = null;
+
+                // 1. Priorité 1 : wateringTargetPoint s'il est assigné et n'est pas le placeholder obsolète "wathering point"
+                if (wateringTargetPoint != null && !wateringTargetPoint.name.Equals("wathering point", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    targetToUse = waypoints[waypoints.Count - 1];
+                    targetToUse = wateringTargetPoint;
                 }
+                // 2. Priorité 2 : TargetPoint déjà configuré sur le HandWateringCan (ex: TargetWater dans l'inspecteur)
+                else if (wateringCan.TargetPoint != null)
+                {
+                    targetToUse = wateringCan.TargetPoint;
+                }
+                // 3. Priorité 3 : Recherche automatique d'un objet nommé "TargetWater" dans la scène
+                else
+                {
+                    GameObject targetWaterObj = GameObject.Find("TargetWater");
+                    if (targetWaterObj != null)
+                    {
+                        targetToUse = targetWaterObj.transform;
+                    }
+                    else if (wateringTargetPoint != null)
+                    {
+                        targetToUse = wateringTargetPoint;
+                    }
+                    else if (waypoints != null && waypoints.Count > 0)
+                    {
+                        targetToUse = waypoints[waypoints.Count - 1];
+                    }
+                }
+
                 if (targetToUse != null)
                 {
                     wateringCan.SetTargetPoint(targetToUse);
@@ -1256,6 +1281,19 @@ public class LiveCinematicTrigger : MonoBehaviour
             Gizmos.DrawSphere(returnTarget, 0.25f);
             Gizmos.color = new Color(0f, 1f, 0f, 0.7f);
             Gizmos.DrawLine(tableWaypoint.position, returnTarget);
+
+            Transform waterTarget = wateringTargetPoint;
+            if ((waterTarget == null || waterTarget.name == "wathering point") && wateringCan != null)
+            {
+                waterTarget = wateringCan.TargetPoint;
+            }
+            if (waterTarget != null)
+            {
+                Gizmos.color = Color.blue;
+                Gizmos.DrawWireSphere(waterTarget.position, 0.15f);
+                Gizmos.color = new Color(0.2f, 0.5f, 1f, 0.8f);
+                Gizmos.DrawLine(returnTarget + Vector3.up * levitateHeight, waterTarget.position);
+            }
         }
     }
 }

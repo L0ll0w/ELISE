@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc07d09482799ee4cbf6c437ab32990c, type: 3}
+  m_Name: Devoveo Bench
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  nodes:
+  - nodeID: 0
+    characterName: 
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 0}
+    portraitAnimator: {fileID: 0}
+    sentence: Vous qui observer le soleil , vous ressentez sa chaleur se pauser sur
+      votre peau
+    choices: []
+    nextNodeID: 1
+  - nodeID: 1
+    characterName: 
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 0}
+    portraitAnimator: {fileID: 0}
+    sentence: "Il est agreable se soleil, c'est que Devoveo doit se dire, lui qui
+      est pauser la a le regarder a cot\xE9 de vous"
+    choices: []
+    nextNodeID: 2
+  - nodeID: 2
+    characterName: 
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 0}
+    portraitAnimator: {fileID: 0}
+    sentence: "Il est vrai qu'a le regarder comme \xE7a, il semble vraiment apprecier
+      cette douce chaleur..."
+    choices: []
+    nextNodeID: 3
+  - nodeID: 3
+    characterName: 
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 0}
+    portraitAnimator: {fileID: 0}
+    sentence: "Vous aussi vous l'appr\xE9ciez..."
+    choices: []
+    nextNodeID: 4
+  - nodeID: 4
+    characterName: 
+    portrait: {fileID: 0}
+    portraitPrefab: {fileID: 0}
+    portraitAnimator: {fileID: 0}
+    sentence: Cette chaleur...
+    choices: []
+    nextNodeID: 

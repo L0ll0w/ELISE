@@ -185,21 +185,23 @@ public class HandWateringCan : MonoBehaviour
             if (h > 0f)
             {
                 // Temps de chute exact depuis la hauteur du bec jusqu'à la cible sous gravité
+                // Résolution exacte de : 0.5 * g * t^2 + v0 * t - h = 0
                 float v0 = Mathf.Abs(initialVy);
-                tFall = (v0 + Mathf.Sqrt(v0 * v0 + 2f * g * h)) / g;
+                tFall = (-v0 + Mathf.Sqrt(v0 * v0 + 2f * g * h)) / g;
             }
             else
             {
-                tFall = Mathf.Max(0.1f, (dropLifetime.x + dropLifetime.y) * 0.5f);
+                tFall = Mathf.Max(0.2f, (dropLifetime.x + dropLifetime.y) * 0.5f);
             }
 
             tFall = Mathf.Clamp(tFall, 0.2f, 2.5f);
 
-            // Ajuster la durée de vie pour que l'eau disparaisse pile à l'atterrissage sur la cible
-            main.startLifetime = new ParticleSystem.MinMaxCurve(tFall * 0.85f, tFall * 1.05f);
+            // Durée de vie calibrée pour que les gouttes touchent précisément la cible avant de disparaître
+            main.startLifetime = new ParticleSystem.MinMaxCurve(tFall * 0.98f, tFall * 1.05f);
 
             float vx = delta.x / tFall;
-            float vy = initialVy; // L'eau s'écoule directement vers le bas depuis le bec (pas d'arc vers le haut)
+            // Vitesse verticale calculée pour garantir que y(tFall) == targetPos.y quelle que soit la hauteur relative ou le clamp
+            float vy = (delta.y + 0.5f * g * tFall * tFall) / tFall;
             float vz = delta.z / tFall;
 
             vel.x = new ParticleSystem.MinMaxCurve(vx);
@@ -208,6 +210,7 @@ public class HandWateringCan : MonoBehaviour
         }
         else
         {
+            main.startLifetime = new ParticleSystem.MinMaxCurve(dropLifetime.x, dropLifetime.y);
             vel.x = new ParticleSystem.MinMaxCurve(forwardSpeed * dir);
             vel.y = new ParticleSystem.MinMaxCurve(downSpeed);
             vel.z = new ParticleSystem.MinMaxCurve(depthSpeed);
@@ -293,8 +296,38 @@ public class HandWateringCan : MonoBehaviour
         if (targetPoint != null)
         {
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(targetPoint.position, 0.1f);
-            Gizmos.DrawLine(p, targetPoint.position);
+            Gizmos.DrawWireSphere(targetPoint.position, 0.08f);
+
+            // Dessiner la trajectoire parabolique exacte de l'eau
+            Vector3 delta = targetPoint.position - p;
+            float h = -delta.y;
+            float g = Mathf.Max(0.1f, gravity * 9.81f);
+            float initialVy = downSpeed;
+            float tFall;
+            if (h > 0f)
+            {
+                float v0 = Mathf.Abs(initialVy);
+                tFall = (-v0 + Mathf.Sqrt(v0 * v0 + 2f * g * h)) / g;
+            }
+            else
+            {
+                tFall = Mathf.Max(0.2f, (dropLifetime.x + dropLifetime.y) * 0.5f);
+            }
+            tFall = Mathf.Clamp(tFall, 0.2f, 2.5f);
+            float vx = delta.x / tFall;
+            float vy = (delta.y + 0.5f * g * tFall * tFall) / tFall;
+            float vz = delta.z / tFall;
+
+            Gizmos.color = Color.cyan;
+            Vector3 prev = p;
+            int steps = 24;
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = tFall * (i / (float)steps);
+                Vector3 current = p + new Vector3(vx * t, vy * t - 0.5f * g * t * t, vz * t);
+                Gizmos.DrawLine(prev, current);
+                prev = current;
+            }
         }
         else
         {

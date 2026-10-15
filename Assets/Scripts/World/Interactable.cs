@@ -175,6 +175,28 @@ public abstract class Interactable : MonoBehaviour
         indicatorInstance.SetActive(false);
     }
 
+    /// <summary>
+    /// Centre de référence de l'objet pour les calculs de distance et l'affichage de l'indicateur.
+    /// Utilise en priorité le centre du Collider d'interaction s'il existe (pour gérer les pivots décalés),
+    /// sinon la position du Transform.
+    /// </summary>
+    public virtual Vector3 InteractionCenter
+    {
+        get
+        {
+            if (interactionCollider != null)
+            {
+                return interactionCollider.bounds.center;
+            }
+            Renderer r = GetComponent<Renderer>();
+            if (r != null)
+            {
+                return r.bounds.center;
+            }
+            return transform.position;
+        }
+    }
+
     private void UpdateIndicator()
     {
         InteractionPromptSettings settings = ActiveSettings;
@@ -222,7 +244,7 @@ public abstract class Interactable : MonoBehaviour
 
             if (playerObj != null)
             {
-                float dist = Vector3.Distance(transform.position, playerObj.transform.position);
+                float dist = Vector3.Distance(InteractionCenter, playerObj.transform.position);
                 float maxDist = 6f;
                 if (interactionCollider != null)
                 {
@@ -264,7 +286,7 @@ public abstract class Interactable : MonoBehaviour
             }
 
             // Update Position (World Space)
-            Vector3 basePosition = transform.position;
+            Vector3 basePosition = InteractionCenter;
             Vector3 topRightOffset = Vector3.zero;
 
             Camera mainCam = OcclusionCullingManager.MainCamera;
@@ -367,7 +389,7 @@ public abstract class Interactable : MonoBehaviour
 
     protected virtual void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
+        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null || other.GetComponentInParent<PlayerMovement>() != null)
         {
             isPlayerInRange = true;
             hasInteracted = false;
@@ -375,9 +397,18 @@ public abstract class Interactable : MonoBehaviour
         }
     }
 
+    protected virtual void OnTriggerStay(Collider other)
+    {
+        if (!isPlayerInRange && (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null || other.GetComponentInParent<PlayerMovement>() != null))
+        {
+            isPlayerInRange = true;
+            activeInteractablesInRange.Add(this);
+        }
+    }
+
     protected virtual void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null)
+        if (other.CompareTag("Player") || other.GetComponent<PlayerMovement>() != null || other.GetComponentInParent<PlayerMovement>() != null)
         {
             isPlayerInRange = false;
             hasInteracted = false;

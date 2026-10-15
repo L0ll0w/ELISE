@@ -47,4 +47,9 @@ public class StoryStateManager : MonoBehaviour
         if (string.IsNullOrEmpty(name)) return false;
         return flags.TryGetValue(name.Trim().ToLower(), out bool val) && val;
     }
+
+    /// <summary>
+    /// Alias pour GetFlag(name).
+    /// </summary>
+    public bool HasFlag(string name) => GetFlag(name);
 }

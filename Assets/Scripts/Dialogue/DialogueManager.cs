@@ -88,6 +88,15 @@ public class DialogueManager : MonoBehaviour
     }
     public RectTransform DialoguePanelRect => dialoguePanel != null ? dialoguePanel.GetComponent<RectTransform>() : null;
 
+    /// <summary>Dernier choix sélectionné par le joueur.</summary>
+    public ChoiceData LastSelectedChoice { get; private set; }
+
+    /// <summary>Index du dernier choix sélectionné (0 pour le premier choix).</summary>
+    public int LastSelectedChoiceIndex { get; private set; } = -1;
+
+    /// <summary>Événement déclenché lorsqu'un choix interactif est validé.</summary>
+    public event System.Action<ChoiceData> OnChoiceSelected;
+
     private void Awake()
     {
         if (instance == null)
@@ -191,6 +200,8 @@ public class DialogueManager : MonoBehaviour
         activeDialogue = data;
         isDialogueActive = true;
         areChoicesActive = false;
+        LastSelectedChoice = default;
+        LastSelectedChoiceIndex = -1;
         onDialogueCompleteCallback = onComplete;
         dialogueStartFrame = Time.frameCount; // Enregistre la frame de départ
 
@@ -600,6 +611,9 @@ public class DialogueManager : MonoBehaviour
     private void SubmitChoice()
     {
         ChoiceData chosen = activeChoices[selectedChoiceIndex];
+        LastSelectedChoice = chosen;
+        LastSelectedChoiceIndex = selectedChoiceIndex;
+        try { OnChoiceSelected?.Invoke(chosen); } catch (System.Exception ex) { Debug.LogException(ex); }
         ClearChoices();
 
         if (!string.IsNullOrEmpty(chosen.nextNodeID))

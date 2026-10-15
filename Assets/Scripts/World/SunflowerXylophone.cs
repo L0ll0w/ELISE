@@ -57,11 +57,14 @@ public class SunflowerXylophone : MonoBehaviour
     [Range(0f, 1f)]
     public float maxAudioVolume = 1.0f;
 
-    [Tooltip("Distance (en mètres) jusqu'à laquelle le xylophone est entendu au volume maximal (100%).")]
-    public float minAudioDistance = 3.0f;
+    [Tooltip("Distance 3D (en mètres) jusqu'à laquelle le xylophone est entendu au volume maximal (100%).")]
+    public float minAudioDistance = 4.0f;
 
-    [Tooltip("Distance (en mètres) à partir de laquelle le xylophone est totalement inaudible (volume = 0%).")]
-    public float maxAudioDistance = 18.0f;
+    [Tooltip("Distance 3D (en mètres) à partir de laquelle le xylophone est totalement inaudible (volume = 0%).")]
+    public float maxAudioDistance = 16.0f;
+
+    [Tooltip("Distance verticale maximale (en mètres). Si le joueur se trouve sur un autre étage ou niveau (ex: après une téléportation en hauteur), le xylophone devient inaudible.")]
+    public float maxVerticalDistance = 7.0f;
 
     [Tooltip("Intensité de la spatialisation 3D (0.0 = son 2D partout, 1.0 = son 3D spatialisé).")]
     [Range(0f, 1f)]
@@ -395,6 +398,16 @@ public class SunflowerXylophone : MonoBehaviour
 
     private void Start()
     {
+        // S'assurer que les distances d'atténuation permettent de ne l'entendre que lorsqu'on est proche
+        if (maxAudioDistance > 20f)
+        {
+            maxAudioDistance = 16f;
+        }
+        if (minAudioDistance > 6f)
+        {
+            minAudioDistance = 4f;
+        }
+
         if (enableRandomIdleAudios)
         {
             // Si les audios aléatoires automatiques sont activés, on stoppe la mélodie fixe de fond
@@ -457,6 +470,13 @@ public class SunflowerXylophone : MonoBehaviour
 
         if (!audioSource.isPlaying && !isPlaying) return;
 
+        // Si le joueur est en train d'utiliser une fleur de téléportation, couper immédiatement le son
+        if (TeleportFlower.IsAnyFlowerTeleporting)
+        {
+            audioSource.volume = 0f;
+            return;
+        }
+
         if (cachedPlayerTransform == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -472,7 +492,17 @@ public class SunflowerXylophone : MonoBehaviour
         {
             Vector3 selfPos = transform.position;
             Vector3 playerPos = cachedPlayerTransform.position;
-            float distance = Vector2.Distance(new Vector2(selfPos.x, selfPos.z), new Vector2(playerPos.x, playerPos.z));
+
+            // Vérification de la distance verticale : si le joueur est sur un autre étage/niveau (ex: téléporté en hauteur ou en fosse)
+            float verticalDistance = Mathf.Abs(playerPos.y - selfPos.y);
+            if (maxVerticalDistance > 0f && verticalDistance > maxVerticalDistance)
+            {
+                audioSource.volume = 0f;
+                return;
+            }
+
+            // Calcul de la distance 3D réelle (prend en compte X, Y et Z)
+            float distance = Vector3.Distance(selfPos, playerPos);
 
             float volumeFactor = 1.0f;
             if (distance <= minAudioDistance)
